@@ -1,0 +1,33 @@
+// SPECIFICATION INPUT: JOCKY frontend and source execution are not implemented in P0.
+hunt "system-baseline" {
+    targets {
+        group "SIH-LAB"
+        os windows | linux
+    }
+    runtime {
+        backend llvm
+        execution memory
+        variant {
+            enabled true
+            seed auto
+            profile balanced
+        }
+    }
+    capabilities {
+        system.read
+    }
+    budget {
+        cpu <= 20%
+        memory <= 256MB
+        io <= 150MB
+        duration <= 120s
+    }
+    collect system as sys
+    timeline {
+        source sys
+    }
+    export report {
+        format json
+        include evidence
+    }
+}

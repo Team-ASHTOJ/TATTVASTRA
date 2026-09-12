@@ -1,0 +1,107 @@
+name: jocky
+services:
+  postgres:
+    image: postgres:17.6-bookworm
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jocky}
+      POSTGRES_DB: ${POSTGRES_DB:-jocky}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run make configure-local}
+    ports: ["127.0.0.1:15432:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  redis:
+    image: redis:7.4.5-bookworm
+    command: ["redis-server", "--appendonly", "yes"]
+    # No public host port; local service network only.
+    volumes: ["redis_data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-jocky-local}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Run make configure-local}
+    ports: ["127.0.0.1:19000:9000", "127.0.0.1:19001:9001"]
+    volumes: ["minio_data:/data"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  control-plane:
+    profiles: ["app"]
+    build:
+      context: ../..
+      dockerfile: infra/docker/control-plane.Dockerfile
+    environment:
+      JOCKY_ENVIRONMENT: development
+      JOCKY_MODE: ${JOCKY_MODE:-REAL}
+    ports: ["127.0.0.1:8000:8000"]
+    healthcheck:
+      # Liveness only: execution readiness intentionally remains 503.
+      test:
+        [
+          "CMD",
+          "/app/.venv/bin/python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live')",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  dashboard:
+    profiles: ["app"]
+    build:
+      context: ../..
+      dockerfile: infra/docker/dashboard.Dockerfile
+    environment:
+      JOCKY_API_URL: http://control-plane:8000
+      NEXT_TELEMETRY_DISABLED: "1"
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on:
+      control-plane:
+        condition: service_healthy
+  prometheus:
+    profiles: ["monitoring"]
+    image: prom/prometheus:v3.5.0
+    volumes: ["../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    ports: ["127.0.0.1:19090:9090"]
+  grafana:
+    profiles: ["monitoring"]
+    image: grafana/grafana:12.1.1
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Run make configure-local}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../monitoring/grafana:/etc/grafana/provisioning:ro
+    ports: ["127.0.0.1:13001:3000"]
+  otel-collector:
+    profiles: ["monitoring"]
+    image: otel/opentelemetry-collector-contrib:0.135.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes: ["../monitoring/otel.yaml:/etc/otelcol/config.yaml:ro"]
+  relay:
+    profiles: ["relay"]
+    image: nginx:1.28.0-alpine
+    ports: ["127.0.0.1:18443:443"]
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx/certs:/etc/nginx/certs:ro
+    # Requires operator certificates and app profile. Not production mTLS.
+    depends_on:
+      control-plane:
+        condition: service_healthy
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  grafana_data:

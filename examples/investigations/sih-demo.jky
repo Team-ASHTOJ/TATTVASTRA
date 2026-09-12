@@ -1,0 +1,57 @@
+// SPECIFICATION INPUT. Execute only on authorized SIH-LAB endpoints after P1-P7 acceptance.
+// Executable hashing additionally requires filesystem.read and an approved agent path scope.
+hunt "sih-demo" {
+    targets {
+        group "SIH-LAB"
+        os windows | linux
+    }
+    runtime {
+        backend llvm
+        execution memory
+        variant {
+            enabled true
+            seed auto
+            profile balanced
+        }
+    }
+    capabilities {
+        system.read
+        process.read
+        network.read
+        filesystem.metadata
+        filesystem.read
+        logs.read
+        drivers.read
+    }
+    budget {
+        cpu <= 20%
+        memory <= 256MB
+        io <= 150MB
+        duration <= 120s
+    }
+    collect system as sys
+    collect processes {
+        fields [pid, parent_pid, name, path, user, start_time, signed, sha256]
+    } as proc
+    collect connections as net
+    collect drivers as drivers
+    let external = net | where remote.is_public == true
+    let unsigned = proc | where signed == false
+    correlate unsigned.pid with external.pid as suspicious_connections
+    finding "Unsigned process with external communication" {
+        when count(suspicious_connections) > 0
+        severity high
+        evidence suspicious_connections
+    }
+    timeline {
+        source sys
+        source proc
+        source net
+    }
+    export report {
+        format pdf
+        include timeline
+        include evidence
+        include audit
+    }
+}

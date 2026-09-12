@@ -1,0 +1,10 @@
+// SPECIFICATION INPUT; no timings have been measured for this JOCKY workload yet.
+hunt "process-projection" {
+    targets { group "BENCH-LAB" os windows | linux }
+    runtime { backend llvm execution native }
+    capabilities { process.read }
+    budget { cpu <= 20% memory <= 128MB io <= 10MB duration <= 30s }
+    collect processes { fields [pid, name] } as proc
+    let sample = proc | sort pid asc | limit 100
+    export report { format json include evidence }
+}

@@ -1,0 +1,30 @@
+[package]
+name = "jocky-agent"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+build = "build.rs"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+tokio = { version = "1.48", features = ["macros", "rt-multi-thread", "signal", "time"] }
+tonic = { version = "0.14", features = ["tls-ring"] }
+tonic-prost = "0.14"
+prost = "0.14"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.37", features = ["bundled"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_System_ProcessStatus", "Win32_NetworkManagement_IpHelper", "Win32_System_SystemInformation"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
+[build-dependencies]
+tonic-prost-build = "0.14"
+
+[lints]
+workspace = true

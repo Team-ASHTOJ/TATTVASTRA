@@ -1,0 +1,9 @@
+{
+  "name": "@jocky/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "types": "generated/contracts.d.ts",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

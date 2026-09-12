@@ -1,0 +1,67 @@
+syntax = "proto3";
+package jocky.v1;
+
+// Protocol definitions only. No gRPC service is hosted in the foundation release.
+service AgentControl {
+  rpc Enroll(EnrollmentRequest) returns (EnrollmentResponse);
+  rpc Exchange(stream AgentFrame) returns (stream ControlFrame);
+}
+
+message CanonicalDocument {
+  // UTF-8 schema-normalized RFC 8785 JSON. Validate schema_version and schema
+  // before trust. This preserves identical signed bytes across protobuf runtimes.
+  bytes json_utf8 = 1;
+}
+
+message EnrollmentRequest {
+  string schema_version = 1;
+  string one_time_token = 2;
+  bytes certificate_signing_request_pem = 3;
+  string agent_version = 4;
+  string target_os = 5;
+  string target_arch = 6;
+  optional bool simulation = 7;
+}
+
+message EnrollmentResponse {
+  string endpoint_id = 1;
+  bytes certificate_chain_pem = 2;
+  bytes trust_bundle_pem = 3;
+  string expires_at = 4;
+}
+
+message Heartbeat {
+  string timestamp = 1;
+  string state = 2;
+  optional double cpu_percent = 3;
+  optional uint64 memory_bytes = 4;
+  string active_job_id = 5;
+}
+
+message AgentFrame {
+  string schema_version = 1;
+  string endpoint_id = 2;
+  uint64 sequence = 3;
+  // Presence is required by application validation. Unset never means REAL.
+  optional bool simulation = 4;
+  oneof body {
+    Heartbeat heartbeat = 10;
+    CanonicalDocument observation = 11;
+    CanonicalDocument evidence_manifest = 12;
+    CanonicalDocument job_progress = 13;
+  }
+}
+
+message Acknowledgement {
+  uint64 accepted_sequence = 1;
+  string receipt_id = 2;
+}
+
+message ControlFrame {
+  string schema_version = 1;
+  oneof body {
+    CanonicalDocument signed_job = 10;
+    CanonicalDocument signed_cancellation = 11;
+    Acknowledgement acknowledgement = 12;
+  }
+}

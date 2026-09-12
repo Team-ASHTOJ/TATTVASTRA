@@ -1,0 +1,17 @@
+node_modules
+.next
+.venv
+.cache
+.tools
+build
+target
+dist
+uv.lock
+Cargo.lock
+package-lock.json
+packages/contracts/generated
+services/control-plane/src/jocky_control_plane/data
+docs/REQUIREMENT_TRACEABILITY.md
+test-results
+playwright-report
+fixtures/evidence/*.canonical.json

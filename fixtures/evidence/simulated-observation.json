@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "simulation": true,
+  "simulation_label": "SIMULATED: static evidence-verification fixture; no compiler or endpoint execution",
+  "observation_id": "fixture-observation-001",
+  "case_id": "fixture-case",
+  "endpoint_id": "fixture-endpoint",
+  "job_id": "fixture-job",
+  "collector_id": "fixture-system",
+  "timestamp": "2026-09-12T00:00:00Z",
+  "source_time": null,
+  "type": "Endpoint",
+  "data": {
+    "hostname": "simulated-lab-host",
+    "origin": "SIMULATED fixture service input"
+  },
+  "variant_id": "fixture-variant-not-a-build",
+  "source_hash": "af45da29422e6350994610544f6ae7138148857d4633ce8e8a2fad6a3c7bdae4",
+  "jir_hash": "36f91f350307244ac08f52636c03b42ec94deb9d2b86795f47c3513bb2b25757",
+  "integrity_hash": "19456b5cad8ed8c713a009e0f18e95a0ffc79e90d7d98f734ced335db093aa78"
+}

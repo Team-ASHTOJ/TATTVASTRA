@@ -1,0 +1,48 @@
+name: foundation
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  contracts-api-dashboard:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.7.16"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: make bootstrap verify-foundation
+      - run: PLAYWRIGHT_BROWSERS_PATH=.cache/playwright npx playwright install --with-deps chromium
+      - run: make test-e2e
+  native:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: make verify-native-container
+  agent:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: make verify-agent-container
+  windows-agent:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - run: choco install protoc --no-progress -y
+      - run: rustup toolchain install 1.90.0 --component rustfmt --component clippy
+      - run: cargo fmt --all -- --check
+      - run: cargo build --workspace --locked
+      - run: cargo test --workspace --locked
+      - run: cargo clippy --workspace --locked --all-targets -- -D warnings
+  infrastructure:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/configure_local.py
+      - run: make infra-check

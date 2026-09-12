@@ -1,0 +1,3102 @@
+{
+  "$defs": {
+    "Artifact": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "case_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "collector_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Collector Id",
+          "type": "string"
+        },
+        "content_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Content Hash",
+          "type": "string"
+        },
+        "endpoint_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Endpoint Id",
+          "type": "string"
+        },
+        "job_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "media_type": {
+          "title": "Media Type",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "storage_key": {
+          "title": "Storage Key",
+          "type": "string"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "variant_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Variant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "artifact_id",
+        "case_id",
+        "job_id",
+        "endpoint_id",
+        "collector_id",
+        "variant_id",
+        "content_hash",
+        "size_bytes",
+        "storage_key",
+        "media_type",
+        "timestamp"
+      ],
+      "title": "Artifact",
+      "type": "object"
+    },
+    "AuditEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "title": "Action",
+          "type": "string"
+        },
+        "actor_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Actor Id",
+          "type": "string"
+        },
+        "data": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Data",
+          "type": "object"
+        },
+        "integrity_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Integrity Hash",
+          "type": "string"
+        },
+        "organization_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Organization Id",
+          "type": "string"
+        },
+        "previous_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Previous Hash",
+          "type": "string"
+        },
+        "resource_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Resource Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "sequence": {
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "sequence",
+        "organization_id",
+        "actor_id",
+        "action",
+        "timestamp",
+        "resource_id",
+        "previous_hash",
+        "data",
+        "integrity_hash"
+      ],
+      "title": "AuditEvent",
+      "type": "object"
+    },
+    "AuditVerification": {
+      "additionalProperties": false,
+      "properties": {
+        "checked_events": {
+          "title": "Checked Events",
+          "type": "integer"
+        },
+        "externally_anchored": {
+          "const": false,
+          "default": false,
+          "title": "Externally Anchored",
+          "type": "boolean"
+        },
+        "first_invalid_sequence": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "First Invalid Sequence"
+        },
+        "integrity_valid": {
+          "title": "Integrity Valid",
+          "type": "boolean"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "integrity_valid",
+        "checked_events",
+        "first_invalid_sequence"
+      ],
+      "title": "AuditVerification",
+      "type": "object"
+    },
+    "BenchmarkRun": {
+      "additionalProperties": false,
+      "properties": {
+        "benchmark_run_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Benchmark Run Id",
+          "type": "string"
+        },
+        "compiler_metrics": {
+          "$ref": "#/$defs/CompilerMetrics"
+        },
+        "environment": {
+          "title": "Environment",
+          "type": "string"
+        },
+        "execution_mode": {
+          "$ref": "#/$defs/ExecutionMode"
+        },
+        "peak_memory_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Peak Memory Bytes"
+        },
+        "repetitions": {
+          "minimum": 1,
+          "title": "Repetitions",
+          "type": "integer"
+        },
+        "runtime_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Runtime Ms"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "variant_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Variant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "benchmark_run_id",
+        "environment",
+        "variant_id",
+        "execution_mode",
+        "repetitions",
+        "compiler_metrics"
+      ],
+      "title": "BenchmarkRun",
+      "type": "object"
+    },
+    "Budget": {
+      "additionalProperties": false,
+      "properties": {
+        "cpu_percent": {
+          "exclusiveMinimum": 0,
+          "maximum": 100,
+          "title": "Cpu Percent",
+          "type": "integer"
+        },
+        "duration_ms": {
+          "exclusiveMinimum": 0,
+          "maximum": 86400000,
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "io_bytes": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Io Bytes",
+          "type": "integer"
+        },
+        "memory_bytes": {
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991,
+          "title": "Memory Bytes",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cpu_percent",
+        "memory_bytes",
+        "io_bytes",
+        "duration_ms"
+      ],
+      "title": "Budget",
+      "type": "object"
+    },
+    "CapabilityStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "demo_evidence": {
+          "title": "Demo Evidence",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "implementation": {
+          "title": "Implementation",
+          "type": "string"
+        },
+        "phase": {
+          "title": "Phase",
+          "type": "string"
+        },
+        "safety_environment_note": {
+          "title": "Safety Environment Note",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "status": {
+          "$ref": "#/$defs/ImplementationStatus"
+        },
+        "subsystem": {
+          "title": "Subsystem",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "id",
+        "title",
+        "implementation",
+        "subsystem",
+        "demo_evidence",
+        "status",
+        "phase",
+        "safety_environment_note"
+      ],
+      "title": "CapabilityStatus",
+      "type": "object"
+    },
+    "Case": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "organization_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Organization Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "state": {
+          "enum": [
+            "OPEN",
+            "CLOSED",
+            "ARCHIVED"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "case_id",
+        "organization_id",
+        "title",
+        "created_at",
+        "state"
+      ],
+      "title": "Case",
+      "type": "object"
+    },
+    "CompatibilityRun": {
+      "additionalProperties": false,
+      "properties": {
+        "alert_observed": {
+          "enum": [
+            "YES",
+            "NO",
+            "NOT_OBSERVED"
+          ],
+          "title": "Alert Observed",
+          "type": "string"
+        },
+        "compatibility_run_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Compatibility Run Id",
+          "type": "string"
+        },
+        "completed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Completed"
+        },
+        "correctness": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "NOT_MEASURED"
+          ],
+          "title": "Correctness",
+          "type": "string"
+        },
+        "cpu_percent": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cpu Percent"
+        },
+        "environment": {
+          "title": "Environment",
+          "type": "string"
+        },
+        "execution_mode": {
+          "$ref": "#/$defs/ExecutionMode"
+        },
+        "notes": {
+          "title": "Notes",
+          "type": "string"
+        },
+        "peak_memory_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Peak Memory Bytes"
+        },
+        "runtime_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Runtime Ms"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "security_product_label": {
+          "title": "Security Product Label",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "variant_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Variant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "compatibility_run_id",
+        "environment",
+        "security_product_label",
+        "variant_id",
+        "execution_mode",
+        "completed",
+        "correctness",
+        "alert_observed",
+        "notes"
+      ],
+      "title": "CompatibilityRun",
+      "type": "object"
+    },
+    "Compilation": {
+      "additionalProperties": false,
+      "properties": {
+        "compilation_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Compilation Id",
+          "type": "string"
+        },
+        "metrics": {
+          "$ref": "#/$defs/CompilerMetrics"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "script_version_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Script Version Id",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "source_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Hash",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "REQUESTED",
+            "RUNNING",
+            "SUCCESS",
+            "FAILED",
+            "CANCELLED"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "variant_ids": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "type": "string"
+          },
+          "title": "Variant Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "simulation",
+        "compilation_id",
+        "script_version_id",
+        "source_hash",
+        "state",
+        "metrics",
+        "variant_ids"
+      ],
+      "title": "Compilation",
+      "type": "object"
+    },
+    "CompileRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "execution_mode": {
+          "$ref": "#/$defs/ExecutionMode"
+        },
+        "profile": {
+          "default": "balanced",
+          "enum": [
+            "minimal",
+            "balanced"
+          ],
+          "title": "Profile",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "source": {
+          "maxLength": 262144,
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/Target"
+        },
+        "variant_seed": {
+          "default": "0000000000000000",
+          "pattern": "^[0-9a-f]{16}$",
+          "title": "Variant Seed",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "source",
+        "target",
+        "execution_mode"
+      ],
+      "title": "CompileRequest",
+      "type": "object"
+    },
+    "CompilerMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "aot_compile_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Aot Compile Ms"
+        },
+        "jir_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Jir Ms"
+        },
+        "jit_compile_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Jit Compile Ms"
+        },
+        "lex_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lex Ms"
+        },
+        "llvm_generation_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Llvm Generation Ms"
+        },
+        "optimize_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Optimize Ms"
+        },
+        "parse_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parse Ms"
+        },
+        "peak_memory_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Peak Memory Bytes"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "semantic_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Semantic Ms"
+        }
+      },
+      "title": "CompilerMetrics",
+      "type": "object"
+    },
+    "Contract": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "Contract",
+      "type": "object"
+    },
+    "Diagnostic": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "column": {
+          "minimum": 1,
+          "title": "Column",
+          "type": "integer"
+        },
+        "end_column": {
+          "minimum": 1,
+          "title": "End Column",
+          "type": "integer"
+        },
+        "end_line": {
+          "minimum": 1,
+          "title": "End Line",
+          "type": "integer"
+        },
+        "line": {
+          "minimum": 1,
+          "title": "Line",
+          "type": "integer"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "error",
+            "warning",
+            "info"
+          ],
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "message",
+        "line",
+        "column",
+        "end_line",
+        "end_column"
+      ],
+      "title": "Diagnostic",
+      "type": "object"
+    },
+    "Endpoint": {
+      "additionalProperties": false,
+      "properties": {
+        "active_job_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_.:-]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Active Job Id"
+        },
+        "agent_version": {
+          "title": "Agent Version",
+          "type": "string"
+        },
+        "capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "cpu_percent": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cpu Percent"
+        },
+        "endpoint_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Endpoint Id",
+          "type": "string"
+        },
+        "hostname": {
+          "title": "Hostname",
+          "type": "string"
+        },
+        "identity_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Identity Fingerprint",
+          "type": "string"
+        },
+        "last_seen": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Last Seen"
+        },
+        "memory_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Memory Bytes"
+        },
+        "organization_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Organization Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "state": {
+          "$ref": "#/$defs/EndpointState"
+        },
+        "target": {
+          "$ref": "#/$defs/Target"
+        }
+      },
+      "required": [
+        "simulation",
+        "endpoint_id",
+        "organization_id",
+        "hostname",
+        "target",
+        "agent_version",
+        "state",
+        "last_seen",
+        "identity_fingerprint",
+        "capabilities"
+      ],
+      "title": "Endpoint",
+      "type": "object"
+    },
+    "EndpointList": {
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "const": false,
+          "default": false,
+          "title": "Available",
+          "type": "boolean"
+        },
+        "items": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "maxItems": 0,
+          "title": "Items",
+          "type": "array"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        }
+      },
+      "required": [
+        "simulation",
+        "reason"
+      ],
+      "title": "EndpointList",
+      "type": "object"
+    },
+    "EndpointState": {
+      "enum": [
+        "ONLINE",
+        "IDLE",
+        "BUSY",
+        "OFFLINE",
+        "DEGRADED",
+        "QUARANTINED",
+        "UNTRUSTED",
+        "VERSION_MISMATCH"
+      ],
+      "title": "EndpointState",
+      "type": "string"
+    },
+    "EvidenceManifest": {
+      "additionalProperties": false,
+      "properties": {
+        "agent_identity": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Agent Identity",
+          "type": "string"
+        },
+        "artifact_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Artifact Hash",
+          "type": "string"
+        },
+        "case_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "completed_at": {
+          "format": "date-time",
+          "title": "Completed At",
+          "type": "string"
+        },
+        "endpoint_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Endpoint Id",
+          "type": "string"
+        },
+        "execution_mode": {
+          "$ref": "#/$defs/ExecutionMode"
+        },
+        "jir_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Jir Hash",
+          "type": "string"
+        },
+        "job_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "llvm_ir_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Llvm Ir Hash",
+          "type": "string"
+        },
+        "observation_hashes": {
+          "items": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "title": "Observation Hashes",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "signature": {
+          "$ref": "#/$defs/Signature"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "source_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Hash",
+          "type": "string"
+        },
+        "started_at": {
+          "format": "date-time",
+          "title": "Started At",
+          "type": "string"
+        },
+        "variant_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Variant Id",
+          "type": "string"
+        },
+        "variant_seed": {
+          "pattern": "^[0-9a-f]{16}$",
+          "title": "Variant Seed",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "case_id",
+        "endpoint_id",
+        "agent_identity",
+        "job_id",
+        "source_hash",
+        "jir_hash",
+        "llvm_ir_hash",
+        "variant_id",
+        "variant_seed",
+        "artifact_hash",
+        "execution_mode",
+        "started_at",
+        "completed_at",
+        "observation_hashes",
+        "signature"
+      ],
+      "title": "EvidenceManifest",
+      "type": "object"
+    },
+    "ExecutionMode": {
+      "enum": [
+        "native",
+        "memory",
+        "vm"
+      ],
+      "title": "ExecutionMode",
+      "type": "string"
+    },
+    "ExecutionPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "budget": {
+          "$ref": "#/$defs/Budget"
+        },
+        "case_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "endpoint_ids": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "minItems": 1,
+          "title": "Endpoint Ids",
+          "type": "array"
+        },
+        "execution_mode": {
+          "$ref": "#/$defs/ExecutionMode"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "jir_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Jir Hash",
+          "type": "string"
+        },
+        "plan_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Plan Id",
+          "type": "string"
+        },
+        "policy_version": {
+          "title": "Policy Version",
+          "type": "string"
+        },
+        "required_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Capabilities",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "source_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "plan_id",
+        "case_id",
+        "source_hash",
+        "jir_hash",
+        "endpoint_ids",
+        "required_capabilities",
+        "execution_mode",
+        "budget",
+        "policy_version",
+        "expires_at"
+      ],
+      "title": "ExecutionPlan",
+      "type": "object"
+    },
+    "Finding": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "finding_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Finding Id",
+          "type": "string"
+        },
+        "observation_ids": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Observation Ids",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "finding_id",
+        "case_id",
+        "title",
+        "severity",
+        "observation_ids",
+        "timestamp"
+      ],
+      "title": "Finding",
+      "type": "object"
+    },
+    "Health": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "service": {
+          "title": "Service",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "status": {
+          "enum": [
+            "alive",
+            "not_ready"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "status",
+        "service",
+        "version"
+      ],
+      "title": "Health",
+      "type": "object"
+    },
+    "ImplementationStatus": {
+      "enum": [
+        "PLANNED",
+        "SCAFFOLDED",
+        "IMPLEMENTED",
+        "VERIFIED",
+        "BLOCKED_ENVIRONMENT"
+      ],
+      "title": "ImplementationStatus",
+      "type": "string"
+    },
+    "IntegrityResult": {
+      "additionalProperties": false,
+      "properties": {
+        "computed_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Computed Hash",
+          "type": "string"
+        },
+        "expected_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Expected Hash",
+          "type": "string"
+        },
+        "integrity_valid": {
+          "title": "Integrity Valid",
+          "type": "boolean"
+        },
+        "observation_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "signature_status": {
+          "const": "NOT_CHECKED",
+          "default": "NOT_CHECKED",
+          "title": "Signature Status",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "verification_scope": {
+          "const": "SUBMITTED_OBSERVATION_ONLY",
+          "default": "SUBMITTED_OBSERVATION_ONLY",
+          "title": "Verification Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "observation_id",
+        "expected_hash",
+        "computed_hash",
+        "integrity_valid"
+      ],
+      "title": "IntegrityResult",
+      "type": "object"
+    },
+    "Job": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt": {
+          "minimum": 1,
+          "title": "Attempt",
+          "type": "integer"
+        },
+        "case_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "endpoint_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Endpoint Id",
+          "type": "string"
+        },
+        "job_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "plan_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Plan Id",
+          "type": "string"
+        },
+        "retry_of": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_.:-]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retry Of"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "state": {
+          "$ref": "#/$defs/JobState"
+        }
+      },
+      "required": [
+        "simulation",
+        "job_id",
+        "case_id",
+        "endpoint_id",
+        "plan_id",
+        "state",
+        "attempt"
+      ],
+      "title": "Job",
+      "type": "object"
+    },
+    "JobState": {
+      "enum": [
+        "CREATED",
+        "COMPILED",
+        "VALIDATED",
+        "QUEUED",
+        "DISPATCHED",
+        "RUNNING",
+        "SUCCESS",
+        "FAILED",
+        "CANCELLED",
+        "VERIFIED",
+        "ARCHIVED"
+      ],
+      "title": "JobState",
+      "type": "string"
+    },
+    "JsonValue": {},
+    "LiteralEncryption": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "anyOf": [
+            {
+              "enum": [
+                "AES-256-GCM",
+                "ChaCha20-Poly1305"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Algorithm"
+        },
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "key_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_.:-]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Key Id"
+        },
+        "nonce_policy": {
+          "anyOf": [
+            {
+              "const": "unique-per-key-and-build",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nonce Policy"
+        },
+        "pool_hash": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pool Hash"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "title": "LiteralEncryption",
+      "type": "object"
+    },
+    "Mode": {
+      "enum": [
+        "REAL",
+        "DEMO"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "Observation": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "collector_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Collector Id",
+          "type": "string"
+        },
+        "data": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Data",
+          "type": "object"
+        },
+        "endpoint_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Endpoint Id",
+          "type": "string"
+        },
+        "integrity_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Integrity Hash",
+          "type": "string"
+        },
+        "jir_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Jir Hash",
+          "type": "string"
+        },
+        "job_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "observation_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "source_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Hash",
+          "type": "string"
+        },
+        "source_time": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Time"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "type": {
+          "minLength": 1,
+          "title": "Type",
+          "type": "string"
+        },
+        "variant_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Variant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "observation_id",
+        "case_id",
+        "endpoint_id",
+        "job_id",
+        "collector_id",
+        "timestamp",
+        "source_time",
+        "type",
+        "data",
+        "variant_id",
+        "source_hash",
+        "jir_hash",
+        "integrity_hash"
+      ],
+      "title": "Observation",
+      "type": "object"
+    },
+    "Organization": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "organization_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Organization Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        }
+      },
+      "required": [
+        "simulation",
+        "organization_id",
+        "name"
+      ],
+      "title": "Organization",
+      "type": "object"
+    },
+    "PlatformStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "capabilities": {
+          "items": {
+            "$ref": "#/$defs/CapabilityStatus"
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "mode": {
+          "$ref": "#/$defs/Mode"
+        },
+        "name": {
+          "const": "JOCKY",
+          "default": "JOCKY",
+          "title": "Name",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "operational": {
+          "title": "Operational",
+          "type": "boolean"
+        },
+        "phase": {
+          "title": "Phase",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "tagline": {
+          "const": "One Language. Every Endpoint. No Noise.",
+          "title": "Tagline",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "version",
+        "tagline",
+        "phase",
+        "mode",
+        "operational",
+        "observed_at",
+        "capabilities"
+      ],
+      "title": "PlatformStatus",
+      "type": "object"
+    },
+    "Problem": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "detail": {
+          "title": "Detail",
+          "type": "string"
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
+        "retryable": {
+          "default": false,
+          "title": "Retryable",
+          "type": "boolean"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "status": {
+          "maximum": 599,
+          "minimum": 400,
+          "title": "Status",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "simulation",
+        "code",
+        "detail",
+        "status"
+      ],
+      "title": "Problem",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        }
+      },
+      "required": [
+        "simulation"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    },
+    "Report": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "case_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "format": {
+          "enum": [
+            "json",
+            "pdf"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "title": "Generated At",
+          "type": "string"
+        },
+        "report_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Report Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        }
+      },
+      "required": [
+        "simulation",
+        "report_id",
+        "case_id",
+        "format",
+        "artifact_id",
+        "generated_at"
+      ],
+      "title": "Report",
+      "type": "object"
+    },
+    "Script": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "organization_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Organization Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "script_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Script Id",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        }
+      },
+      "required": [
+        "simulation",
+        "script_id",
+        "organization_id",
+        "name"
+      ],
+      "title": "Script",
+      "type": "object"
+    },
+    "ScriptVersion": {
+      "additionalProperties": false,
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "script_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Script Id",
+          "type": "string"
+        },
+        "script_version_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Script Version Id",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "source_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Hash",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "simulation",
+        "script_version_id",
+        "script_id",
+        "source",
+        "source_hash",
+        "version",
+        "created_at"
+      ],
+      "title": "ScriptVersion",
+      "type": "object"
+    },
+    "Severity": {
+      "enum": [
+        "INFO",
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "Signature": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "anyOf": [
+            {
+              "const": "Ed25519",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Algorithm"
+        },
+        "key_id": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_.:-]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Key Id"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "UNSIGNED",
+            "SIGNED",
+            "VERIFIED",
+            "INVALID",
+            "UNAVAILABLE"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "value_base64": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value Base64"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "Signature",
+      "type": "object"
+    },
+    "SignedJob": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Artifact Hash",
+          "type": "string"
+        },
+        "budget": {
+          "$ref": "#/$defs/Budget"
+        },
+        "case_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "endpoint_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Endpoint Id",
+          "type": "string"
+        },
+        "execution_mode": {
+          "$ref": "#/$defs/ExecutionMode"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "issued_at": {
+          "format": "date-time",
+          "title": "Issued At",
+          "type": "string"
+        },
+        "jir_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Jir Hash",
+          "type": "string"
+        },
+        "job_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "nonce": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Nonce",
+          "type": "string"
+        },
+        "organization_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Organization Id",
+          "type": "string"
+        },
+        "plan_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Plan Id",
+          "type": "string"
+        },
+        "required_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Capabilities",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "signature": {
+          "$ref": "#/$defs/Signature"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "source_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Hash",
+          "type": "string"
+        },
+        "variant_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Variant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "job_id",
+        "case_id",
+        "organization_id",
+        "endpoint_id",
+        "plan_id",
+        "variant_id",
+        "artifact_hash",
+        "source_hash",
+        "jir_hash",
+        "execution_mode",
+        "required_capabilities",
+        "budget",
+        "nonce",
+        "issued_at",
+        "expires_at",
+        "signature"
+      ],
+      "title": "SignedJob",
+      "type": "object"
+    },
+    "Target": {
+      "additionalProperties": false,
+      "properties": {
+        "arch": {
+          "enum": [
+            "x86_64",
+            "aarch64"
+          ],
+          "title": "Arch",
+          "type": "string"
+        },
+        "os": {
+          "enum": [
+            "windows",
+            "linux"
+          ],
+          "title": "Os",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "os",
+        "arch"
+      ],
+      "title": "Target",
+      "type": "object"
+    },
+    "TimelineEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "endpoint_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Endpoint Id",
+          "type": "string"
+        },
+        "event_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "observation_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "time_basis": {
+          "enum": [
+            "source",
+            "collection"
+          ],
+          "title": "Time Basis",
+          "type": "string"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "event_id",
+        "case_id",
+        "endpoint_id",
+        "observation_id",
+        "timestamp",
+        "time_basis",
+        "severity",
+        "summary"
+      ],
+      "title": "TimelineEvent",
+      "type": "object"
+    },
+    "Timestamped": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "timestamp"
+      ],
+      "title": "Timestamped",
+      "type": "object"
+    },
+    "User": {
+      "additionalProperties": false,
+      "properties": {
+        "organization_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Organization Id",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "viewer",
+            "analyst",
+            "operator",
+            "administrator"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "subject": {
+          "title": "Subject",
+          "type": "string"
+        },
+        "user_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "user_id",
+        "organization_id",
+        "subject",
+        "role"
+      ],
+      "title": "User",
+      "type": "object"
+    },
+    "VariantManifest": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Artifact Hash",
+          "type": "string"
+        },
+        "compiler_version": {
+          "title": "Compiler Version",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "execution_mode": {
+          "$ref": "#/$defs/ExecutionMode"
+        },
+        "jir_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Jir Hash",
+          "type": "string"
+        },
+        "literal_encryption": {
+          "$ref": "#/$defs/LiteralEncryption"
+        },
+        "llvm_ir_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Llvm Ir Hash",
+          "type": "string"
+        },
+        "llvm_version": {
+          "title": "Llvm Version",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "semantic_test_hash": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Semantic Test Hash"
+        },
+        "semantic_test_status": {
+          "enum": [
+            "NOT_RUN",
+            "PASS",
+            "FAIL"
+          ],
+          "title": "Semantic Test Status",
+          "type": "string"
+        },
+        "signature": {
+          "$ref": "#/$defs/Signature"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "source_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Hash",
+          "type": "string"
+        },
+        "target_arch": {
+          "enum": [
+            "x86_64",
+            "aarch64"
+          ],
+          "title": "Target Arch",
+          "type": "string"
+        },
+        "target_os": {
+          "enum": [
+            "windows",
+            "linux"
+          ],
+          "title": "Target Os",
+          "type": "string"
+        },
+        "variant_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Variant Id",
+          "type": "string"
+        },
+        "variant_seed": {
+          "pattern": "^[0-9a-f]{16}$",
+          "title": "Variant Seed",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "source_hash",
+        "jir_hash",
+        "llvm_ir_hash",
+        "variant_id",
+        "variant_seed",
+        "compiler_version",
+        "llvm_version",
+        "target_os",
+        "target_arch",
+        "execution_mode",
+        "artifact_hash",
+        "semantic_test_hash",
+        "semantic_test_status",
+        "created_at",
+        "signature",
+        "literal_encryption"
+      ],
+      "title": "VariantManifest",
+      "type": "object"
+    }
+  },
+  "$id": "https://jocky.invalid/contracts/v1.0.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Generated from Pydantic; do not edit. Refinement rules also apply in Python.",
+  "properties": {
+    "Artifact": {
+      "$ref": "#/$defs/Artifact"
+    },
+    "AuditEvent": {
+      "$ref": "#/$defs/AuditEvent"
+    },
+    "AuditVerification": {
+      "$ref": "#/$defs/AuditVerification"
+    },
+    "BenchmarkRun": {
+      "$ref": "#/$defs/BenchmarkRun"
+    },
+    "Budget": {
+      "$ref": "#/$defs/Budget"
+    },
+    "CapabilityStatus": {
+      "$ref": "#/$defs/CapabilityStatus"
+    },
+    "Case": {
+      "$ref": "#/$defs/Case"
+    },
+    "CompatibilityRun": {
+      "$ref": "#/$defs/CompatibilityRun"
+    },
+    "Compilation": {
+      "$ref": "#/$defs/Compilation"
+    },
+    "CompileRequest": {
+      "$ref": "#/$defs/CompileRequest"
+    },
+    "CompilerMetrics": {
+      "$ref": "#/$defs/CompilerMetrics"
+    },
+    "Contract": {
+      "$ref": "#/$defs/Contract"
+    },
+    "Diagnostic": {
+      "$ref": "#/$defs/Diagnostic"
+    },
+    "Endpoint": {
+      "$ref": "#/$defs/Endpoint"
+    },
+    "EndpointList": {
+      "$ref": "#/$defs/EndpointList"
+    },
+    "EvidenceManifest": {
+      "$ref": "#/$defs/EvidenceManifest"
+    },
+    "ExecutionPlan": {
+      "$ref": "#/$defs/ExecutionPlan"
+    },
+    "Finding": {
+      "$ref": "#/$defs/Finding"
+    },
+    "Health": {
+      "$ref": "#/$defs/Health"
+    },
+    "IntegrityResult": {
+      "$ref": "#/$defs/IntegrityResult"
+    },
+    "Job": {
+      "$ref": "#/$defs/Job"
+    },
+    "LiteralEncryption": {
+      "$ref": "#/$defs/LiteralEncryption"
+    },
+    "Observation": {
+      "$ref": "#/$defs/Observation"
+    },
+    "Organization": {
+      "$ref": "#/$defs/Organization"
+    },
+    "PlatformStatus": {
+      "$ref": "#/$defs/PlatformStatus"
+    },
+    "Problem": {
+      "$ref": "#/$defs/Problem"
+    },
+    "Provenance": {
+      "$ref": "#/$defs/Provenance"
+    },
+    "Report": {
+      "$ref": "#/$defs/Report"
+    },
+    "Script": {
+      "$ref": "#/$defs/Script"
+    },
+    "ScriptVersion": {
+      "$ref": "#/$defs/ScriptVersion"
+    },
+    "Signature": {
+      "$ref": "#/$defs/Signature"
+    },
+    "SignedJob": {
+      "$ref": "#/$defs/SignedJob"
+    },
+    "Target": {
+      "$ref": "#/$defs/Target"
+    },
+    "TimelineEvent": {
+      "$ref": "#/$defs/TimelineEvent"
+    },
+    "Timestamped": {
+      "$ref": "#/$defs/Timestamped"
+    },
+    "User": {
+      "$ref": "#/$defs/User"
+    },
+    "VariantManifest": {
+      "$ref": "#/$defs/VariantManifest"
+    }
+  },
+  "title": "JockyContracts",
+  "type": "object"
+}

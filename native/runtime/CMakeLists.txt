@@ -1,0 +1,8 @@
+add_library(jocky_runtime STATIC src/abi.cpp)
+target_include_directories(jocky_runtime PUBLIC include)
+set_target_properties(jocky_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
+if(BUILD_TESTING)
+  add_executable(runtime_tests tests/abi_test.cpp)
+  target_link_libraries(runtime_tests PRIVATE jocky_runtime GTest::gtest_main)
+  gtest_discover_tests(runtime_tests)
+endif()

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "simulation": true,
+  "simulation_label": "SIMULATED: fictional driver-risk teaching fixture",
+  "driver_name": "jocky_lab_fictional_driver.sys",
+  "vendor": "JOCKY synthetic laboratory",
+  "version": "0.0.0-fixture",
+  "risk": "HIGH",
+  "risk_reason": "Fictional vulnerable-driver match for simulator acceptance only",
+  "cve": null,
+  "microsoft_blocklist_match": null,
+  "signature_status": "UNAVAILABLE",
+  "executable_included": false
+}
