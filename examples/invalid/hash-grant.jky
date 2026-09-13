@@ -1,0 +1,3 @@
+hunt "invalid-hash-grant" {
+    capabilities { process.read } collect processes { fields [pid, sha256] } as proc
+}

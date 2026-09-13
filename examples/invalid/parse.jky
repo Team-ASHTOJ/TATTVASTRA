@@ -1,0 +1,3 @@
+hunt "invalid-parse" {
+    let x = (1 + 2
+}

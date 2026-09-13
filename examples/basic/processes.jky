@@ -1,0 +1,15 @@
+// Static frontend example; execution requires later LLVM/runtime phases.
+hunt "process-inventory" {
+    targets { os windows | linux }
+    capabilities { process.read }
+    budget { cpu <= 10% memory <= 64MiB io <= 0B duration <= 15s }
+    collect processes { fields [pid, name, signed] } as proc
+    let unsigned = proc | where signed == false | select [pid, name] | sort name asc | limit 100
+    let total = count(unsigned)
+    finding "Unsigned processes" {
+        when total > 0
+        severity medium
+        evidence unsigned
+    }
+    report { format json include evidence integrity true }
+}

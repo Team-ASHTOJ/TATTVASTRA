@@ -15,3 +15,4 @@ docs/REQUIREMENT_TRACEABILITY.md
 test-results
 playwright-report
 fixtures/evidence/*.canonical.json
+fixtures/compiler/*.canonical.json

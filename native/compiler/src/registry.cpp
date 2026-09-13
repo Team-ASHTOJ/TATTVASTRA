@@ -1,0 +1,357 @@
+#include "jocky/types.h"
+
+namespace jocky {
+Type dataset(const std::string &domain) {
+  Type type{TypeKind::Dataset, false, domain, {}};
+  if (domain == "Endpoint")
+    type.fields = {{"endpoint_id", scalar(TypeKind::String, false)},
+                   {"hostname", scalar(TypeKind::String, false)},
+                   {"os", scalar(TypeKind::String, false)},
+                   {"arch", scalar(TypeKind::String, false)}};
+  if (domain == "SystemInfo")
+    type.fields = {{"hostname", scalar(TypeKind::String, false)},
+                   {"os", scalar(TypeKind::String, false)},
+                   {"arch", scalar(TypeKind::String, false)},
+                   {"kernel", scalar(TypeKind::String, true)},
+                   {"boot_time", scalar(TypeKind::Time, true)},
+                   {"uptime", scalar(TypeKind::Duration, true)},
+                   {"memory_total", scalar(TypeKind::Bytes, true)},
+                   {"cpu_count", scalar(TypeKind::Int, true)},
+                   {"ip", scalar(TypeKind::IP, true)}};
+  if (domain == "Process")
+    type.fields = {{"pid", scalar(TypeKind::Pid, false)},
+                   {"parent_pid", scalar(TypeKind::Pid, true)},
+                   {"name", scalar(TypeKind::String, false)},
+                   {"path", scalar(TypeKind::Path, true)},
+                   {"user", scalar(TypeKind::String, true)},
+                   {"start_time", scalar(TypeKind::Time, true)},
+                   {"signed", scalar(TypeKind::Bool, true)},
+                   {"sha256", scalar(TypeKind::Hash, true)},
+                   {"cpu_percent", scalar(TypeKind::Float, true)},
+                   {"memory_bytes", scalar(TypeKind::Bytes, true)}};
+  if (domain == "Connection")
+    type.fields = {{"pid", scalar(TypeKind::Pid, true)},
+                   {"process_start_time", scalar(TypeKind::Time, true)},
+                   {"protocol", scalar(TypeKind::String, false)},
+                   {"local", scalar(TypeKind::IP, false)},
+                   {"local_port", scalar(TypeKind::Int, false)},
+                   {"remote", scalar(TypeKind::IP, true)},
+                   {"remote_port", scalar(TypeKind::Int, true)},
+                   {"state", scalar(TypeKind::String, true)}};
+  if (domain == "Interface")
+    type.fields = {{"name", scalar(TypeKind::String, false)},
+                   {"address", scalar(TypeKind::IP, true)},
+                   {"mac", scalar(TypeKind::String, true)},
+                   {"mtu", scalar(TypeKind::Int, true)},
+                   {"up", scalar(TypeKind::Bool, true)}};
+  if (domain == "Route")
+    type.fields = {{"destination", scalar(TypeKind::IP, false)},
+                   {"prefix_length", scalar(TypeKind::Int, false)},
+                   {"gateway", scalar(TypeKind::IP, true)},
+                   {"interface", scalar(TypeKind::String, false)},
+                   {"metric", scalar(TypeKind::Int, true)}};
+  if (domain == "File")
+    type.fields = {{"path", scalar(TypeKind::Path, false)},
+                   {"name", scalar(TypeKind::String, false)},
+                   {"size", scalar(TypeKind::Bytes, true)},
+                   {"modified_at", scalar(TypeKind::Time, true)},
+                   {"created_at", scalar(TypeKind::Time, true)},
+                   {"is_directory", scalar(TypeKind::Bool, true)},
+                   {"sha256", scalar(TypeKind::Hash, true)}};
+  if (domain == "Event")
+    type.fields = {
+        {"event_id", scalar(TypeKind::String, false)}, {"timestamp", scalar(TypeKind::Time, true)},
+        {"source", scalar(TypeKind::String, false)},   {"channel", scalar(TypeKind::String, true)},
+        {"message", scalar(TypeKind::String, false)},  {"severity", scalar(TypeKind::String, true)},
+        {"pid", scalar(TypeKind::Pid, true)}};
+  if (domain == "User")
+    type.fields = {{"name", scalar(TypeKind::String, false)},
+                   {"uid", scalar(TypeKind::String, false)},
+                   {"home", scalar(TypeKind::Path, true)},
+                   {"active", scalar(TypeKind::Bool, true)}};
+  if (domain == "Service")
+    type.fields = {{"name", scalar(TypeKind::String, false)},
+                   {"state", scalar(TypeKind::String, false)},
+                   {"path", scalar(TypeKind::Path, true)},
+                   {"pid", scalar(TypeKind::Pid, true)},
+                   {"start_type", scalar(TypeKind::String, true)}};
+  if (domain == "Driver")
+    type.fields = {{"name", scalar(TypeKind::String, false)},
+                   {"vendor", scalar(TypeKind::String, true)},
+                   {"version", scalar(TypeKind::String, true)},
+                   {"path", scalar(TypeKind::Path, true)},
+                   {"signed", scalar(TypeKind::Bool, true)},
+                   {"signature_status", scalar(TypeKind::String, true)},
+                   {"sha256", scalar(TypeKind::Hash, true)}};
+  if (domain == "Module")
+    type.fields = {{"name", scalar(TypeKind::String, false)},
+                   {"version", scalar(TypeKind::String, true)},
+                   {"path", scalar(TypeKind::Path, true)},
+                   {"size", scalar(TypeKind::Bytes, true)},
+                   {"sha256", scalar(TypeKind::Hash, true)}};
+  if (domain == "Artifact")
+    type.fields = {{"artifact_id", scalar(TypeKind::String, false)},
+                   {"content_hash", scalar(TypeKind::Hash, true)},
+                   {"size", scalar(TypeKind::Bytes, true)},
+                   {"path", scalar(TypeKind::Path, true)}};
+  if (domain == "Observation")
+    type.fields = {{"observation_id", scalar(TypeKind::String, false)},
+                   {"timestamp", scalar(TypeKind::Time, false)},
+                   {"source_time", scalar(TypeKind::Time, true)},
+                   {"type", scalar(TypeKind::String, false)},
+                   {"integrity_hash", scalar(TypeKind::Hash, false)}};
+  if (domain == "Finding")
+    type.fields = {{"finding_id", scalar(TypeKind::String, false)},
+                   {"title", scalar(TypeKind::String, false)},
+                   {"severity", scalar(TypeKind::String, false)},
+                   {"timestamp", scalar(TypeKind::Time, true)}};
+  if (domain == "TimelineEvent")
+    type.fields = {{"event_id", scalar(TypeKind::String, false)},
+                   {"timestamp", scalar(TypeKind::Time, true)},
+                   {"source", scalar(TypeKind::String, false)},
+                   {"severity", scalar(TypeKind::String, true)}};
+  if (domain == "Session")
+    type.fields = {{"id", scalar(TypeKind::String, false)},
+                   {"user", scalar(TypeKind::String, false)},
+                   {"started_at", scalar(TypeKind::Time, true)},
+                   {"remote", scalar(TypeKind::IP, true)}};
+  if (domain == "Environment")
+    type.fields = {{"name", scalar(TypeKind::String, false)},
+                   {"value", scalar(TypeKind::String, true)}};
+  if (domain == "DNS")
+    type.fields = {{"name", scalar(TypeKind::String, false)},
+                   {"address", scalar(TypeKind::IP, true)},
+                   {"ttl", scalar(TypeKind::Duration, true)}};
+  if (domain == "Startup")
+    type.fields = {{"name", scalar(TypeKind::String, false)},
+                   {"path", scalar(TypeKind::Path, true)},
+                   {"user", scalar(TypeKind::String, true)},
+                   {"source", scalar(TypeKind::String, false)}};
+  if (domain == "ScheduledTask")
+    type.fields = {{"name", scalar(TypeKind::String, false)},
+                   {"command", scalar(TypeKind::String, true)},
+                   {"user", scalar(TypeKind::String, true)},
+                   {"enabled", scalar(TypeKind::Bool, true)}};
+  if (domain == "Package")
+    type.fields = {{"name", scalar(TypeKind::String, false)},
+                   {"version", scalar(TypeKind::String, false)},
+                   {"vendor", scalar(TypeKind::String, true)}};
+  if (type.fields.empty())
+    fail("E250", "Unknown domain type `" + domain + "`.", {});
+  return type;
+}
+const std::map<std::string, CollectorSpec> &collectors() {
+  static const std::map<std::string, CollectorSpec> specs = {
+      {"system",
+       {"SYSTEM_INFO", "SystemInfo", "system.read", {"fields", "where", "limit"}, {}, false}},
+      {"endpoints",
+       {"SYSTEM_INFO", "Endpoint", "system.read", {"fields", "where", "limit"}, {}, false}},
+      {"hostname",
+       {"HOSTNAME_READ", "SystemInfo", "system.read", {"fields", "where", "limit"}, {}, false}},
+      {"sessions",
+       {"SESSION_ENUMERATE", "Session", "users.read", {"fields", "where", "limit"}, {}, false}},
+      {"users", {"USER_ENUMERATE", "User", "users.read", {"fields", "where", "limit"}, {}, false}},
+      {"environment",
+       {"ENVIRONMENT_READ",
+        "Environment",
+        "system.read",
+        {"fields", "where", "limit", "pattern"},
+        {},
+        false}},
+      {"processes",
+       {"PROCESS_ENUMERATE",
+        "Process",
+        "process.read",
+        {"fields", "where", "limit", "pid"},
+        {"sha256"},
+        false}},
+      {"process_metadata",
+       {"PROCESS_METADATA",
+        "Process",
+        "process.read",
+        {"fields", "where", "limit", "pid"},
+        {"sha256"},
+        false}},
+      {"process_hash",
+       {"PROCESS_HASH", "Process", "process.read", {"fields", "where", "limit", "pid"}, {}, false}},
+      {"process_signatures",
+       {"PROCESS_SIGNATURE_STATUS",
+        "Process",
+        "process.read",
+        {"fields", "where", "limit", "pid"},
+        {"sha256"},
+        false}},
+      {"connections",
+       {"NETWORK_CONNECTION_ENUMERATE",
+        "Connection",
+        "network.read",
+        {"fields", "where", "limit", "protocol", "pid"},
+        {},
+        false}},
+      {"interfaces",
+       {"NETWORK_INTERFACE_ENUMERATE",
+        "Interface",
+        "network.read",
+        {"fields", "where", "limit"},
+        {},
+        false}},
+      {"ports",
+       {"LISTENING_PORT_ENUMERATE",
+        "Connection",
+        "network.read",
+        {"fields", "where", "limit", "protocol"},
+        {},
+        false}},
+      {"routes",
+       {"ROUTE_ENUMERATE", "Route", "network.read", {"fields", "where", "limit"}, {}, false}},
+      {"dns", {"DNS_STATE_READ", "DNS", "network.read", {"fields", "where", "limit"}, {}, false}},
+      {"files",
+       {"FILE_METADATA",
+        "File",
+        "filesystem.metadata",
+        {"fields", "where", "limit", "path", "recursive", "pattern"},
+        {"sha256"},
+        true}},
+      {"file_metadata",
+       {"FILE_METADATA",
+        "File",
+        "filesystem.metadata",
+        {"fields", "where", "limit", "path"},
+        {"sha256"},
+        true}},
+      {"hash",
+       {"FILE_HASH", "File", "filesystem.content", {"fields", "where", "limit", "path"}, {}, true}},
+      {"file_hash",
+       {"FILE_HASH", "File", "filesystem.content", {"fields", "where", "limit", "path"}, {}, true}},
+      {"file_content",
+       {"FILE_COLLECT",
+        "File",
+        "filesystem.content",
+        {"fields", "where", "limit", "path"},
+        {},
+        true}},
+      {"directories",
+       {"DIRECTORY_ENUMERATE",
+        "File",
+        "filesystem.metadata",
+        {"fields", "where", "limit", "path", "recursive"},
+        {"sha256"},
+        true}},
+      {"events",
+       {"EVENT_QUERY",
+        "Event",
+        "logs.read",
+        {"fields", "where", "limit", "since", "until", "channel"},
+        {},
+        false}},
+      {"logs",
+       {"EVENT_QUERY",
+        "Event",
+        "logs.read",
+        {"fields", "where", "limit", "since", "until", "channel"},
+        {},
+        false}},
+      {"services",
+       {"SERVICE_ENUMERATE",
+        "Service",
+        "persistence.read",
+        {"fields", "where", "limit"},
+        {},
+        false}},
+      {"startup",
+       {"STARTUP_ENUMERATE",
+        "Startup",
+        "persistence.read",
+        {"fields", "where", "limit"},
+        {},
+        false}},
+      {"scheduled_tasks",
+       {"SCHEDULED_TASK_ENUMERATE",
+        "ScheduledTask",
+        "persistence.read",
+        {"fields", "where", "limit"},
+        {},
+        false}},
+      {"packages",
+       {"PACKAGE_ENUMERATE", "Package", "system.read", {"fields", "where", "limit"}, {}, false}},
+      {"drivers",
+       {"DRIVER_ENUMERATE",
+        "Driver",
+        "drivers.read",
+        {"fields", "where", "limit"},
+        {"sha256"},
+        false}},
+      {"driver_hash",
+       {"DRIVER_HASH", "Driver", "drivers.read", {"fields", "where", "limit"}, {}, false}},
+      {"driver_signatures",
+       {"DRIVER_SIGNATURE_STATUS",
+        "Driver",
+        "drivers.read",
+        {"fields", "where", "limit"},
+        {"sha256"},
+        false}},
+      {"modules",
+       {"MODULE_ENUMERATE",
+        "Module",
+        "drivers.read",
+        {"fields", "where", "limit"},
+        {"sha256"},
+        false}}};
+  return specs;
+}
+const std::map<std::string, OpcodeSpec> &opcodes() {
+  static const std::map<std::string, OpcodeSpec> specs = {
+      {"SYSTEM_INFO", {"SYSTEM", "read", "bounded_inventory", 0, 0}},
+      {"HOSTNAME_READ", {"SYSTEM", "read", "bounded_inventory", 0, 0}},
+      {"SESSION_ENUMERATE", {"SYSTEM", "read", "bounded_inventory", 0, 0}},
+      {"USER_ENUMERATE", {"SYSTEM", "read", "bounded_inventory", 0, 0}},
+      {"ENVIRONMENT_READ", {"SYSTEM", "read", "bounded_inventory", 0, 0}},
+      {"PACKAGE_ENUMERATE", {"SYSTEM", "read", "bounded_inventory", 0, 0}},
+      {"PROCESS_ENUMERATE", {"PROCESS", "read", "bounded_inventory", 0, 0}},
+      {"PROCESS_METADATA", {"PROCESS", "read", "bounded_inventory", 0, 0}},
+      {"PROCESS_HASH", {"PROCESS", "read", "bounded_content_io", 0, 0}},
+      {"PROCESS_SIGNATURE_STATUS", {"PROCESS", "read", "bounded_inventory", 0, 0}},
+      {"NETWORK_INTERFACE_ENUMERATE", {"NETWORK", "read", "bounded_inventory", 0, 0}},
+      {"NETWORK_CONNECTION_ENUMERATE", {"NETWORK", "read", "bounded_inventory", 0, 0}},
+      {"LISTENING_PORT_ENUMERATE", {"NETWORK", "read", "bounded_inventory", 0, 0}},
+      {"ROUTE_ENUMERATE", {"NETWORK", "read", "bounded_inventory", 0, 0}},
+      {"DNS_STATE_READ", {"NETWORK", "read", "bounded_inventory", 0, 0}},
+      {"FILE_METADATA", {"FILESYSTEM", "read", "bounded_inventory", 0, 0}},
+      {"FILE_HASH", {"FILESYSTEM", "read", "bounded_content_io", 0, 0}},
+      {"FILE_COLLECT", {"FILESYSTEM", "read", "bounded_content_io", 0, 0}},
+      {"DIRECTORY_ENUMERATE", {"FILESYSTEM", "read", "bounded_inventory", 0, 0}},
+      {"EVENT_QUERY", {"LOGS", "read", "bounded_inventory", 0, 0}},
+      {"EVENT_FILTER", {"LOGS", "pure", "linear_transform", 1, 32768}},
+      {"EVENT_NORMALIZE", {"LOGS", "pure", "linear_transform", 1, 1}},
+      {"SERVICE_ENUMERATE", {"PERSISTENCE", "read", "bounded_inventory", 0, 0}},
+      {"STARTUP_ENUMERATE", {"PERSISTENCE", "read", "bounded_inventory", 0, 0}},
+      {"SCHEDULED_TASK_ENUMERATE", {"PERSISTENCE", "read", "bounded_inventory", 0, 0}},
+      {"DRIVER_ENUMERATE", {"DRIVER", "read", "bounded_inventory", 0, 0}},
+      {"DRIVER_SIGNATURE_STATUS", {"DRIVER", "read", "bounded_inventory", 0, 0}},
+      {"DRIVER_HASH", {"DRIVER", "read", "bounded_content_io", 0, 0}},
+      {"DRIVER_RISK_LOOKUP", {"DRIVER", "pure", "linear_transform", 1, 1}},
+      {"MODULE_ENUMERATE", {"DRIVER", "read", "bounded_inventory", 0, 0}},
+      {"FILTER", {"ANALYSIS", "pure", "linear_transform", 1, 32768}},
+      {"LIMIT", {"ANALYSIS", "pure", "linear_transform", 1, 1}},
+      {"PROJECT", {"ANALYSIS", "pure", "linear_transform", 1, 1}},
+      {"SORT", {"ANALYSIS", "pure", "bounded_materialization", 1, 1}},
+      {"GROUP", {"ANALYSIS", "pure", "bounded_materialization", 1, 1}},
+      {"JOIN", {"ANALYSIS", "pure", "bounded_materialization", 2, 2}},
+      {"CORRELATE", {"ANALYSIS", "pure", "bounded_materialization", 2, 2}},
+      {"TIMELINE", {"ANALYSIS", "emit", "bounded_output", 0, 32768}},
+      {"FINDING_CREATE", {"ANALYSIS", "emit", "bounded_output", 0, 32768}},
+      {"BIND", {"ANALYSIS", "pure", "linear_transform", 0, 32768}},
+      {"ARTIFACT_STORE", {"EVIDENCE", "emit", "bounded_output", 0, 32768}},
+      {"ARTIFACT_HASH", {"EVIDENCE", "emit", "bounded_content_io", 0, 32768}},
+      {"MANIFEST_CREATE", {"EVIDENCE", "emit", "bounded_output", 0, 32768}},
+      {"REPORT_GENERATE", {"EVIDENCE", "emit", "bounded_output", 0, 32768}}};
+  return specs;
+}
+const std::set<std::string> &capability_names() {
+  static const std::set<std::string> names = {
+      "system.read",         "users.read",         "process.read",    "network.read",
+      "filesystem.metadata", "filesystem.content", "filesystem.read", "logs.read",
+      "persistence.read",    "services.read",      "drivers.read"};
+  return names;
+}
+} // namespace jocky

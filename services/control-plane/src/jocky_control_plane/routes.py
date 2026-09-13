@@ -67,7 +67,11 @@ def create_router(settings: Settings) -> APIRouter:
             simulation=payload.simulation,
             simulation_label=payload.simulation_label,
             code="JOCKY_E_COMPILER_UNAVAILABLE",
-            detail="JOCKY frontend and LLVM source lowering are not implemented. See phases P1–P3.",
+            detail=(
+                "The C++ frontend is available through jockyc. "
+                "API compilation and LLVM source lowering remain unavailable; "
+                "see phases P2–P3."
+            ),
             status=501,
             request_id=request.state.request_id,
         )

@@ -1,0 +1,3 @@
+hunt "invalid-correlation" {
+    capabilities { process.read network.read } collect processes as proc collect connections as net correlate proc.name with net.pid as bad
+}

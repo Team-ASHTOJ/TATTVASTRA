@@ -1,0 +1,16 @@
+hunt "driver-audit" {
+    target { host "lab-windows" os windows }
+    runtime { backend llvm execution native }
+    capabilities { drivers.read filesystem.content }
+    collect drivers { fields [name, vendor, version, signed, sha256] } as drivers
+    analyze drivers {
+        let vulnerable = drivers | where known_vulnerable == true
+        finding "Driver matches supplied risk metadata" {
+            when count(vulnerable) > 0
+            severity high
+            evidence vulnerable
+        }
+    }
+    timeline { source drivers }
+    report { format pdf include evidence include timeline include audit integrity true }
+}

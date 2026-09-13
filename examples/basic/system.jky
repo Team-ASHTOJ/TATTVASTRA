@@ -1,4 +1,4 @@
-// SPECIFICATION INPUT: JOCKY frontend and source execution are not implemented in P0.
+// FRONTEND INPUT: static validation is available; source execution requires P2-P7.
 hunt "system-baseline" {
     targets {
         group "SIH-LAB"

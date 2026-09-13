@@ -207,8 +207,69 @@ export type Simulation12 = boolean;
 export type SimulationLabel12 = string | null;
 export type Timestamp2 = string;
 export type Title2 = string;
-export type Reason1 = string | null;
+export type Executable = false;
+export type Hunt = string;
+export type InstructionCount = number;
+export type JirHash2 = string;
+export type Kind = "FrontendCheck";
 export type SchemaVersion20 = "1.0.0";
+export type SourceHash3 = string;
+export type Valid = true;
+export type Code1 = string;
+export type Help = string;
+export type Message1 = string;
+export type Severity2 = "error" | "warning";
+export type SourceLine = string | null;
+export type Column1 = number;
+export type Line1 = number;
+export type Offset = number;
+export type Warnings = FrontendDiagnostic[];
+export type AdmissionStatus = "REQUIRES_ENDPOINT_POLICY_AND_LLVM_LOWERING";
+export type Dispatchable = false;
+export type InstructionId = number;
+export type Domain = string;
+export type Name = string;
+export type Nullable = boolean;
+export type ExpectedResultSchemas = ResultSchema[];
+export type JirHash3 = string;
+export type Kind1 = "FrontendExecutionPlan";
+export type Fields1 = string[];
+export type InstructionId1 = number;
+export type ProjectedFields = ProjectedFields1[];
+export type Applied = false;
+export type BranchInstructionId = number;
+export type CollectorInstructionId = number;
+export type Condition = "REQUIRES_ADAPTER_SUPPORT_AND_BRANCH_DEPENDENCY_PRESERVATION";
+export type Kind2 = "filter" | "project";
+export type Scope = "BRANCH_LOCAL";
+export type Pushdown = PushdownCandidate[];
+export type RequiredCapabilities1 = string[];
+export type RequiredCollectors = string[];
+export type Backend = "llvm";
+export type Execution = "native" | "memory";
+export type Enabled = boolean;
+export type Profile1 = "minimal" | "balanced";
+export type Seed = string;
+export type SeedResolution = "EXPLICIT" | "DEFERRED_TO_BUILD_FORGE";
+export type SchemaVersion21 = "1.0.0";
+export type SourceHash4 = string;
+/**
+ * @minItems 1
+ */
+export type TargetOs = ["windows" | "linux", ...("windows" | "linux")[]];
+export type Kind3 = "target" | "host" | "group";
+export type Value = string;
+export type Targets = FrontendTarget[];
+export type Warnings1 = FrontendDiagnostic[];
+/**
+ * @minItems 1
+ */
+export type Diagnostics = [FrontendDiagnostic, ...FrontendDiagnostic[]];
+export type Kind4 = "FrontendFailure";
+export type SchemaVersion22 = "1.0.0";
+export type Valid1 = false;
+export type Reason1 = string | null;
+export type SchemaVersion23 = "1.0.0";
 export type Service = string;
 export type Simulation13 = boolean;
 export type SimulationLabel13 = string | null;
@@ -218,18 +279,46 @@ export type ComputedHash = string;
 export type ExpectedHash = string;
 export type IntegrityValid1 = boolean;
 export type ObservationId = string;
-export type SchemaVersion21 = "1.0.0";
+export type SchemaVersion24 = "1.0.0";
 export type SignatureStatus = "NOT_CHECKED";
 export type Simulation14 = boolean;
 export type SimulationLabel14 = string | null;
 export type VerificationScope = "SUBMITTED_OBSERVATION_ONLY";
+export type Case1 = string;
+export type CompilerVersion = "0.2.0";
+export type Executable1 = false;
+export type Hunt1 = string;
+export type Effect = "pure" | "read" | "emit";
+export type EffectPredecessor = number | null;
+export type Family =
+  "SYSTEM" | "PROCESS" | "NETWORK" | "FILESYSTEM" | "LOGS" | "PERSISTENCE" | "DRIVER" | "ANALYSIS" | "EVIDENCE";
+export type Id1 = number;
+export type Inputs = number[];
+export type Opcode = string;
+export type RequiredCapabilities2 = string[];
+export type ResourceClass =
+  "bounded_inventory" | "bounded_content_io" | "bounded_materialization" | "bounded_output" | "linear_transform";
+export type TargetOs1 = ("windows" | "linux")[];
+/**
+ * @maxItems 65536
+ */
+export type Instructions = JirInstruction[];
+export type Kind5 = "JIRModule";
+export type RequiredCapabilities3 = string[];
+export type SchemaVersion25 = "1.0.0";
+export type SourceHash5 = string;
+/**
+ * @minItems 1
+ */
+export type TargetOs2 = ["windows" | "linux", ...("windows" | "linux")[]];
+export type Targets1 = FrontendTarget[];
 export type Attempt = number;
 export type CaseId5 = string;
 export type EndpointId3 = string;
 export type JobId2 = string;
 export type PlanId1 = string;
 export type RetryOf = string | null;
-export type SchemaVersion22 = "1.0.0";
+export type SchemaVersion26 = "1.0.0";
 export type Simulation15 = boolean;
 export type SimulationLabel15 = string | null;
 /**
@@ -249,29 +338,29 @@ export type JobState =
   | "VERIFIED"
   | "ARCHIVED";
 export type Algorithm1 = ("AES-256-GCM" | "ChaCha20-Poly1305") | null;
-export type Enabled = boolean;
+export type Enabled1 = boolean;
 export type KeyId1 = string | null;
 export type NoncePolicy = "unique-per-key-and-build" | null;
 export type PoolHash = string | null;
-export type SchemaVersion23 = "1.0.0";
+export type SchemaVersion27 = "1.0.0";
 export type CaseId6 = string;
 export type CollectorId1 = string;
 export type EndpointId4 = string;
 export type IntegrityHash1 = string;
-export type JirHash2 = string;
+export type JirHash4 = string;
 export type JobId3 = string;
 export type ObservationId1 = string;
-export type SchemaVersion24 = "1.0.0";
+export type SchemaVersion28 = "1.0.0";
 export type Simulation16 = boolean;
 export type SimulationLabel16 = string | null;
-export type SourceHash3 = string;
+export type SourceHash6 = string;
 export type SourceTime = string | null;
 export type Timestamp3 = string;
 export type Type = string;
 export type VariantId4 = string;
-export type Name = string;
+export type Name1 = string;
 export type OrganizationId3 = string;
-export type SchemaVersion25 = "1.0.0";
+export type SchemaVersion29 = "1.0.0";
 export type Simulation17 = boolean;
 export type SimulationLabel17 = string | null;
 export type Capabilities1 = CapabilityStatus[];
@@ -280,24 +369,24 @@ export type Capabilities1 = CapabilityStatus[];
  * via the `definition` "Mode".
  */
 export type Mode = "REAL" | "DEMO";
-export type Name1 = "JOCKY";
+export type Name2 = "JOCKY";
 export type ObservedAt = string;
 export type Operational = boolean;
 export type Phase1 = string;
-export type SchemaVersion26 = "1.0.0";
+export type SchemaVersion30 = "1.0.0";
 export type Simulation18 = boolean;
 export type SimulationLabel18 = string | null;
 export type Tagline = "One Language. Every Endpoint. No Noise.";
 export type Version1 = string;
-export type Code1 = string;
+export type Code2 = string;
 export type Detail = string;
 export type RequestId = string | null;
 export type Retryable = boolean;
-export type SchemaVersion27 = "1.0.0";
+export type SchemaVersion31 = "1.0.0";
 export type Simulation19 = boolean;
 export type SimulationLabel19 = string | null;
 export type Status2 = number;
-export type SchemaVersion28 = "1.0.0";
+export type SchemaVersion32 = "1.0.0";
 export type Simulation20 = boolean;
 export type SimulationLabel20 = string | null;
 export type ArtifactId1 = string;
@@ -305,75 +394,75 @@ export type CaseId7 = string;
 export type Format = "json" | "pdf";
 export type GeneratedAt = string;
 export type ReportId = string;
-export type SchemaVersion29 = "1.0.0";
+export type SchemaVersion33 = "1.0.0";
 export type Simulation21 = boolean;
 export type SimulationLabel21 = string | null;
-export type Name2 = string;
+export type Name3 = string;
 export type OrganizationId4 = string;
-export type SchemaVersion30 = "1.0.0";
+export type SchemaVersion34 = "1.0.0";
 export type ScriptId = string;
 export type Simulation22 = boolean;
 export type SimulationLabel22 = string | null;
 export type CreatedAt1 = string;
-export type SchemaVersion31 = "1.0.0";
+export type SchemaVersion35 = "1.0.0";
 export type ScriptId1 = string;
 export type ScriptVersionId1 = string;
 export type Simulation23 = boolean;
 export type SimulationLabel23 = string | null;
 export type Source1 = string;
-export type SourceHash4 = string;
+export type SourceHash7 = string;
 export type Version2 = number;
 export type ArtifactHash1 = string;
 export type CaseId8 = string;
 export type EndpointId5 = string;
 export type ExpiresAt1 = string;
 export type IssuedAt = string;
-export type JirHash3 = string;
+export type JirHash5 = string;
 export type JobId4 = string;
 export type Nonce = string;
 export type OrganizationId5 = string;
 export type PlanId2 = string;
-export type RequiredCapabilities1 = string[];
-export type SchemaVersion32 = "1.0.0";
+export type RequiredCapabilities4 = string[];
+export type SchemaVersion36 = "1.0.0";
 export type Simulation24 = boolean;
 export type SimulationLabel24 = string | null;
-export type SourceHash5 = string;
+export type SourceHash8 = string;
 export type VariantId5 = string;
 export type CaseId9 = string;
 export type EndpointId6 = string;
 export type EventId = string;
 export type ObservationId2 = string;
-export type SchemaVersion33 = "1.0.0";
+export type SchemaVersion37 = "1.0.0";
 export type Simulation25 = boolean;
 export type SimulationLabel25 = string | null;
 export type Summary = string;
 export type TimeBasis = "source" | "collection";
 export type Timestamp4 = string;
-export type SchemaVersion34 = "1.0.0";
+export type SchemaVersion38 = "1.0.0";
 export type Simulation26 = boolean;
 export type SimulationLabel26 = string | null;
 export type Timestamp5 = string;
 export type OrganizationId6 = string;
 export type Role = "viewer" | "analyst" | "operator" | "administrator";
-export type SchemaVersion35 = "1.0.0";
+export type SchemaVersion39 = "1.0.0";
 export type Simulation27 = boolean;
 export type SimulationLabel27 = string | null;
 export type Subject = string;
 export type UserId = string;
 export type ArtifactHash2 = string;
-export type CompilerVersion = string;
+export type CompilerVersion1 = string;
 export type CreatedAt2 = string;
-export type JirHash4 = string;
+export type JirHash6 = string;
 export type LlvmIrHash1 = string;
 export type LlvmVersion = string;
-export type SchemaVersion36 = "1.0.0";
+export type SchemaVersion40 = "1.0.0";
 export type SemanticTestHash = string | null;
 export type SemanticTestStatus = "NOT_RUN" | "PASS" | "FAIL";
 export type Simulation28 = boolean;
 export type SimulationLabel28 = string | null;
-export type SourceHash6 = string;
+export type SourceHash9 = string;
 export type TargetArch = "x86_64" | "aarch64";
-export type TargetOs = "windows" | "linux";
+export type TargetOs3 = "windows" | "linux";
 export type VariantId6 = string;
 export type VariantSeed2 = string;
 
@@ -399,8 +488,12 @@ export interface JockyContracts {
   EvidenceManifest?: EvidenceManifest;
   ExecutionPlan?: ExecutionPlan;
   Finding?: Finding;
+  FrontendCheck?: FrontendCheck;
+  FrontendExecutionPlan?: FrontendExecutionPlan;
+  FrontendFailure?: FrontendFailure;
   Health?: Health;
   IntegrityResult?: IntegrityResult;
+  JirModule?: JirModule;
   Job?: Job;
   LiteralEncryption?: LiteralEncryption;
   Observation?: Observation;
@@ -730,11 +823,159 @@ export interface Finding {
 }
 /**
  * This interface was referenced by `JockyContracts`'s JSON-Schema
+ * via the `definition` "FrontendCheck".
+ */
+export interface FrontendCheck {
+  executable: Executable;
+  hunt: Hunt;
+  instruction_count: InstructionCount;
+  jir_hash: JirHash2;
+  kind: Kind;
+  schema_version?: SchemaVersion20;
+  source_hash: SourceHash3;
+  valid: Valid;
+  warnings: Warnings;
+}
+/**
+ * This interface was referenced by `JockyContracts`'s JSON-Schema
+ * via the `definition` "FrontendDiagnostic".
+ */
+export interface FrontendDiagnostic {
+  code: Code1;
+  help: Help;
+  message: Message1;
+  severity: Severity2;
+  source_line?: SourceLine;
+  span: SourceSpan;
+}
+/**
+ * This interface was referenced by `JockyContracts`'s JSON-Schema
+ * via the `definition` "SourceSpan".
+ */
+export interface SourceSpan {
+  end: SourcePosition;
+  start: SourcePosition;
+}
+/**
+ * This interface was referenced by `JockyContracts`'s JSON-Schema
+ * via the `definition` "SourcePosition".
+ */
+export interface SourcePosition {
+  column: Column1;
+  line: Line1;
+  offset: Offset;
+}
+/**
+ * This interface was referenced by `JockyContracts`'s JSON-Schema
+ * via the `definition` "FrontendExecutionPlan".
+ */
+export interface FrontendExecutionPlan {
+  admission_status: AdmissionStatus;
+  budget: Budget;
+  dispatchable: Dispatchable;
+  expected_result_schemas: ExpectedResultSchemas;
+  jir_hash: JirHash3;
+  kind: Kind1;
+  projected_fields: ProjectedFields;
+  pushdown: Pushdown;
+  required_capabilities: RequiredCapabilities1;
+  required_collectors: RequiredCollectors;
+  runtime: FrontendRuntime;
+  schema_version?: SchemaVersion21;
+  source_hash: SourceHash4;
+  target_os: TargetOs;
+  targets: Targets;
+  warnings: Warnings1;
+}
+/**
+ * This interface was referenced by `JockyContracts`'s JSON-Schema
+ * via the `definition` "ResultSchema".
+ */
+export interface ResultSchema {
+  instruction_id: InstructionId;
+  result_type: JirType;
+}
+/**
+ * This interface was referenced by `JockyContracts`'s JSON-Schema
+ * via the `definition` "JirType".
+ */
+export interface JirType {
+  domain: Domain;
+  fields: Fields;
+  name: Name;
+  nullable: Nullable;
+}
+export interface Fields {
+  [k: string]: JirType;
+}
+/**
+ * This interface was referenced by `JockyContracts`'s JSON-Schema
+ * via the `definition` "ProjectedFields".
+ */
+export interface ProjectedFields1 {
+  fields: Fields1;
+  instruction_id: InstructionId1;
+}
+/**
+ * This interface was referenced by `JockyContracts`'s JSON-Schema
+ * via the `definition` "PushdownCandidate".
+ */
+export interface PushdownCandidate {
+  applied: Applied;
+  attributes: Attributes;
+  branch_instruction_id: BranchInstructionId;
+  collector_instruction_id: CollectorInstructionId;
+  condition: Condition;
+  kind: Kind2;
+  scope: Scope;
+}
+export interface Attributes {
+  [k: string]: JsonValue;
+}
+/**
+ * This interface was referenced by `JockyContracts`'s JSON-Schema
+ * via the `definition` "FrontendRuntime".
+ */
+export interface FrontendRuntime {
+  backend: Backend;
+  execution: Execution;
+  variant: FrontendVariant;
+}
+/**
+ * This interface was referenced by `JockyContracts`'s JSON-Schema
+ * via the `definition` "FrontendVariant".
+ */
+export interface FrontendVariant {
+  enabled: Enabled;
+  profile: Profile1;
+  seed: Seed;
+  seed_resolution: SeedResolution;
+}
+/**
+ * This interface was referenced by `JockyContracts`'s JSON-Schema
+ * via the `definition` "FrontendTarget".
+ */
+export interface FrontendTarget {
+  kind: Kind3;
+  value: Value;
+}
+/**
+ * This interface was referenced by `JockyContracts`'s JSON-Schema
+ * via the `definition` "FrontendFailure".
+ */
+export interface FrontendFailure {
+  diagnostics: Diagnostics;
+  kind: Kind4;
+  schema_version?: SchemaVersion22;
+  valid: Valid1;
+}
+/**
+ * This interface was referenced by `JockyContracts`'s JSON-Schema
  * via the `definition` "Health".
  */
 export interface Health {
   reason?: Reason1;
-  schema_version?: SchemaVersion20;
+  schema_version?: SchemaVersion23;
   service: Service;
   simulation: Simulation13;
   simulation_label?: SimulationLabel13;
@@ -750,11 +991,51 @@ export interface IntegrityResult {
   expected_hash: ExpectedHash;
   integrity_valid: IntegrityValid1;
   observation_id: ObservationId;
-  schema_version?: SchemaVersion21;
+  schema_version?: SchemaVersion24;
   signature_status?: SignatureStatus;
   simulation: Simulation14;
   simulation_label?: SimulationLabel14;
   verification_scope?: VerificationScope;
+}
+/**
+ * This interface was referenced by `JockyContracts`'s JSON-Schema
+ * via the `definition` "JirModule".
+ */
+export interface JirModule {
+  budget: Budget;
+  case: Case1;
+  compiler_version: CompilerVersion;
+  executable: Executable1;
+  hunt: Hunt1;
+  instructions: Instructions;
+  kind: Kind5;
+  required_capabilities: RequiredCapabilities3;
+  runtime: FrontendRuntime;
+  schema_version?: SchemaVersion25;
+  source_hash: SourceHash5;
+  target_os: TargetOs2;
+  targets: Targets1;
+}
+/**
+ * This interface was referenced by `JockyContracts`'s JSON-Schema
+ * via the `definition` "JirInstruction".
+ */
+export interface JirInstruction {
+  attributes: Attributes1;
+  effect: Effect;
+  effect_predecessor: EffectPredecessor;
+  family: Family;
+  id: Id1;
+  inputs: Inputs;
+  opcode: Opcode;
+  required_capabilities: RequiredCapabilities2;
+  resource_class: ResourceClass;
+  result_type: JirType;
+  span: SourceSpan;
+  target_os: TargetOs1;
+}
+export interface Attributes1 {
+  [k: string]: JsonValue;
 }
 /**
  * This interface was referenced by `JockyContracts`'s JSON-Schema
@@ -767,7 +1048,7 @@ export interface Job {
   job_id: JobId2;
   plan_id: PlanId1;
   retry_of?: RetryOf;
-  schema_version?: SchemaVersion22;
+  schema_version?: SchemaVersion26;
   simulation: Simulation15;
   simulation_label?: SimulationLabel15;
   state: JobState;
@@ -778,11 +1059,11 @@ export interface Job {
  */
 export interface LiteralEncryption {
   algorithm?: Algorithm1;
-  enabled: Enabled;
+  enabled: Enabled1;
   key_id?: KeyId1;
   nonce_policy?: NoncePolicy;
   pool_hash?: PoolHash;
-  schema_version?: SchemaVersion23;
+  schema_version?: SchemaVersion27;
 }
 /**
  * This interface was referenced by `JockyContracts`'s JSON-Schema
@@ -794,13 +1075,13 @@ export interface Observation {
   data: Data1;
   endpoint_id: EndpointId4;
   integrity_hash: IntegrityHash1;
-  jir_hash: JirHash2;
+  jir_hash: JirHash4;
   job_id: JobId3;
   observation_id: ObservationId1;
-  schema_version?: SchemaVersion24;
+  schema_version?: SchemaVersion28;
   simulation: Simulation16;
   simulation_label?: SimulationLabel16;
-  source_hash: SourceHash3;
+  source_hash: SourceHash6;
   source_time: SourceTime;
   timestamp: Timestamp3;
   type: Type;
@@ -814,9 +1095,9 @@ export interface Data1 {
  * via the `definition` "Organization".
  */
 export interface Organization {
-  name: Name;
+  name: Name1;
   organization_id: OrganizationId3;
-  schema_version?: SchemaVersion25;
+  schema_version?: SchemaVersion29;
   simulation: Simulation17;
   simulation_label?: SimulationLabel17;
 }
@@ -827,11 +1108,11 @@ export interface Organization {
 export interface PlatformStatus {
   capabilities: Capabilities1;
   mode: Mode;
-  name?: Name1;
+  name?: Name2;
   observed_at: ObservedAt;
   operational: Operational;
   phase: Phase1;
-  schema_version?: SchemaVersion26;
+  schema_version?: SchemaVersion30;
   simulation: Simulation18;
   simulation_label?: SimulationLabel18;
   tagline: Tagline;
@@ -842,11 +1123,11 @@ export interface PlatformStatus {
  * via the `definition` "Problem".
  */
 export interface Problem {
-  code: Code1;
+  code: Code2;
   detail: Detail;
   request_id?: RequestId;
   retryable?: Retryable;
-  schema_version?: SchemaVersion27;
+  schema_version?: SchemaVersion31;
   simulation: Simulation19;
   simulation_label?: SimulationLabel19;
   status: Status2;
@@ -856,7 +1137,7 @@ export interface Problem {
  * via the `definition` "Provenance".
  */
 export interface Provenance {
-  schema_version?: SchemaVersion28;
+  schema_version?: SchemaVersion32;
   simulation: Simulation20;
   simulation_label?: SimulationLabel20;
 }
@@ -870,7 +1151,7 @@ export interface Report {
   format: Format;
   generated_at: GeneratedAt;
   report_id: ReportId;
-  schema_version?: SchemaVersion29;
+  schema_version?: SchemaVersion33;
   simulation: Simulation21;
   simulation_label?: SimulationLabel21;
 }
@@ -879,9 +1160,9 @@ export interface Report {
  * via the `definition` "Script".
  */
 export interface Script {
-  name: Name2;
+  name: Name3;
   organization_id: OrganizationId4;
-  schema_version?: SchemaVersion30;
+  schema_version?: SchemaVersion34;
   script_id: ScriptId;
   simulation: Simulation22;
   simulation_label?: SimulationLabel22;
@@ -892,13 +1173,13 @@ export interface Script {
  */
 export interface ScriptVersion {
   created_at: CreatedAt1;
-  schema_version?: SchemaVersion31;
+  schema_version?: SchemaVersion35;
   script_id: ScriptId1;
   script_version_id: ScriptVersionId1;
   simulation: Simulation23;
   simulation_label?: SimulationLabel23;
   source: Source1;
-  source_hash: SourceHash4;
+  source_hash: SourceHash7;
   version: Version2;
 }
 /**
@@ -913,17 +1194,17 @@ export interface SignedJob {
   execution_mode: ExecutionMode;
   expires_at: ExpiresAt1;
   issued_at: IssuedAt;
-  jir_hash: JirHash3;
+  jir_hash: JirHash5;
   job_id: JobId4;
   nonce: Nonce;
   organization_id: OrganizationId5;
   plan_id: PlanId2;
-  required_capabilities: RequiredCapabilities1;
-  schema_version?: SchemaVersion32;
+  required_capabilities: RequiredCapabilities4;
+  schema_version?: SchemaVersion36;
   signature: Signature;
   simulation: Simulation24;
   simulation_label?: SimulationLabel24;
-  source_hash: SourceHash5;
+  source_hash: SourceHash8;
   variant_id: VariantId5;
 }
 /**
@@ -935,7 +1216,7 @@ export interface TimelineEvent {
   endpoint_id: EndpointId6;
   event_id: EventId;
   observation_id: ObservationId2;
-  schema_version?: SchemaVersion33;
+  schema_version?: SchemaVersion37;
   severity: Severity1;
   simulation: Simulation25;
   simulation_label?: SimulationLabel25;
@@ -948,7 +1229,7 @@ export interface TimelineEvent {
  * via the `definition` "Timestamped".
  */
 export interface Timestamped {
-  schema_version?: SchemaVersion34;
+  schema_version?: SchemaVersion38;
   simulation: Simulation26;
   simulation_label?: SimulationLabel26;
   timestamp: Timestamp5;
@@ -960,7 +1241,7 @@ export interface Timestamped {
 export interface User {
   organization_id: OrganizationId6;
   role: Role;
-  schema_version?: SchemaVersion35;
+  schema_version?: SchemaVersion39;
   simulation: Simulation27;
   simulation_label?: SimulationLabel27;
   subject: Subject;
@@ -972,22 +1253,22 @@ export interface User {
  */
 export interface VariantManifest {
   artifact_hash: ArtifactHash2;
-  compiler_version: CompilerVersion;
+  compiler_version: CompilerVersion1;
   created_at: CreatedAt2;
   execution_mode: ExecutionMode;
-  jir_hash: JirHash4;
+  jir_hash: JirHash6;
   literal_encryption: LiteralEncryption;
   llvm_ir_hash: LlvmIrHash1;
   llvm_version: LlvmVersion;
-  schema_version?: SchemaVersion36;
+  schema_version?: SchemaVersion40;
   semantic_test_hash: SemanticTestHash;
   semantic_test_status: SemanticTestStatus;
   signature: Signature;
   simulation: Simulation28;
   simulation_label?: SimulationLabel28;
-  source_hash: SourceHash6;
+  source_hash: SourceHash9;
   target_arch: TargetArch;
-  target_os: TargetOs;
+  target_os: TargetOs3;
   variant_id: VariantId6;
   variant_seed: VariantSeed2;
 }

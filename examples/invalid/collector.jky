@@ -1,0 +1,3 @@
+hunt "invalid-collector" {
+    collect mystery as items
+}

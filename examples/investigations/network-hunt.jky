@@ -1,0 +1,19 @@
+case "Network triage"
+hunt "network-hunt" {
+    group "SIH-LAB"
+    os windows | linux
+    runtime { backend llvm execution memory variant { enabled true seed 0x2a profile minimal } }
+    capabilities { process.read network.read }
+    collect processes { fields [pid, name, start_time] } as proc
+    collect connections { protocol "tcp" } as net
+    let external = net | where remote.is_public == true | select [pid, remote, remote_port]
+    correlate proc.pid with external.pid as related
+    let selected = related | select [left.name, right.remote]
+    finding "External communication" {
+        when count(selected) > 0
+        severity info
+        evidence selected
+    }
+    timeline { source proc source net }
+    export report { format json include evidence include timeline include audit }
+}

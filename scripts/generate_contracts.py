@@ -9,7 +9,7 @@ from pathlib import Path
 from jocky_contracts.common import Contract
 
 ROOT = Path(__file__).resolve().parents[1]
-MODULES = ("common", "compiler", "agent", "evidence", "domain", "status")
+MODULES = ("common", "compiler", "agent", "evidence", "domain", "status", "frontend")
 
 
 def schema_text() -> str:

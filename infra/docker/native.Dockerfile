@@ -7,6 +7,9 @@ ENV CC=clang-18 CXX=clang++-18
 WORKDIR /src
 COPY CMakeLists.txt .clang-format ./
 COPY native/ native/
+COPY examples/ examples/
+COPY fixtures/compiler/ fixtures/compiler/
+COPY scripts/test_frontend.py scripts/test_frontend.py
 COPY scripts/format_native.py scripts/format_native.py
 RUN python3 scripts/format_native.py --check \
     && cmake -S . -B build/native -G Ninja -DLLVM_DIR=/usr/lib/llvm-18/lib/cmake/llvm \

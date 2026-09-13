@@ -1,4 +1,4 @@
-// SPECIFICATION INPUT; no timings have been measured for this JOCKY workload yet.
+// FRONTEND INPUT; no timings have been measured for this JOCKY workload yet.
 hunt "process-projection" {
     targets { group "BENCH-LAB" os windows | linux }
     runtime { backend llvm execution native }

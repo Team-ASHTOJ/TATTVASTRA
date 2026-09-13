@@ -1,0 +1,3 @@
+hunt "invalid-duplicate" {
+    let item = 1 let item = 2
+}

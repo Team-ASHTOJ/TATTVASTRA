@@ -85,10 +85,10 @@
     "title": "Independent proprietary forensic language",
     "implementation": "Handwritten lexer/parser and explicit DSL grammar",
     "subsystem": "Compiler",
-    "demo_evidence": "Parse .jky without shell translation",
-    "status": "PLANNED",
+    "demo_evidence": "LLVM 18 native frontend tests; seven valid examples, 19 invalid examples and 21 AST/JIR/plan goldens; see docs/BUILD_STATUS.md",
+    "status": "VERIFIED",
     "phase": "P1",
-    "safety_environment_note": "C++20 is the sole frontend. No Python interpretation or fake compiler output."
+    "safety_environment_note": "Static C++20 frontend verified on Ubuntu arm64 for Windows/Linux target semantics. No source execution or endpoint collection is claimed."
   },
   {
     "schema_version": "1.0.0",
@@ -98,10 +98,10 @@
     "title": "Custom frontend and diagnostics",
     "implementation": "Source spans, AST, types, semantic and capability checks",
     "subsystem": "Compiler",
-    "demo_evidence": "Positive and negative language corpus",
-    "status": "PLANNED",
+    "demo_evidence": "LLVM 18 native frontend tests; seven valid examples, 19 invalid examples and 21 AST/JIR/plan goldens; see docs/BUILD_STATUS.md",
+    "status": "VERIFIED",
     "phase": "P1",
-    "safety_environment_note": "C++20 is the sole frontend. No Python interpretation or fake compiler output."
+    "safety_environment_note": "Static C++20 frontend verified on Ubuntu arm64 for Windows/Linux target semantics. No source execution or endpoint collection is claimed."
   },
   {
     "schema_version": "1.0.0",
@@ -111,10 +111,10 @@
     "title": "Full language primitive vocabulary",
     "implementation": "case/hunt/target/targets/runtime/variant/capabilities/budget/collect/analyze/let/where/select/sort/limit/correlate/finding/timeline/report/export",
     "subsystem": "Compiler",
-    "demo_evidence": "Golden AST and diagnostics for each primitive",
-    "status": "PLANNED",
+    "demo_evidence": "LLVM 18 native frontend tests; seven valid examples, 19 invalid examples and 21 AST/JIR/plan goldens; see docs/BUILD_STATUS.md",
+    "status": "VERIFIED",
     "phase": "P1",
-    "safety_environment_note": "C++20 is the sole frontend. No Python interpretation or fake compiler output."
+    "safety_environment_note": "Static C++20 frontend verified on Ubuntu arm64 for Windows/Linux target semantics. No source execution or endpoint collection is claimed."
   },
   {
     "schema_version": "1.0.0",
@@ -124,10 +124,10 @@
     "title": "Primitive and forensic types",
     "implementation": "Typed scalars and Dataset<T> with nullable collector fields",
     "subsystem": "Compiler",
-    "demo_evidence": "Reject wrong fields, incompatible joins and illegal operators",
-    "status": "PLANNED",
+    "demo_evidence": "LLVM 18 native frontend tests; seven valid examples, 19 invalid examples and 21 AST/JIR/plan goldens; see docs/BUILD_STATUS.md",
+    "status": "VERIFIED",
     "phase": "P1",
-    "safety_environment_note": "C++20 is the sole frontend. No Python interpretation or fake compiler output."
+    "safety_environment_note": "Static C++20 frontend verified on Ubuntu arm64 for Windows/Linux target semantics. No source execution or endpoint collection is claimed."
   },
   {
     "schema_version": "1.0.0",
@@ -138,9 +138,9 @@
     "implementation": "Versioned SSA-style dataset handles and effect/capability metadata",
     "subsystem": "Compiler",
     "demo_evidence": "Same semantic JIR on Windows and Ubuntu",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P1",
-    "safety_environment_note": "C++20 is the sole frontend. No Python interpretation or fake compiler output."
+    "safety_environment_note": "Typed JIR, schema and deterministic byte tests pass on Ubuntu arm64 for both OS target constraints. A native Windows compiler run remains unexecuted; no endpoint execution."
   },
   {
     "schema_version": "1.0.0",
@@ -151,9 +151,9 @@
     "implementation": "System/process/network/filesystem/logs/persistence inspection/driver/analysis/evidence op registry",
     "subsystem": "Compiler",
     "demo_evidence": "Every instruction has type, capability, cost and lowering coverage",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P1",
-    "safety_environment_note": "C++20 is the sole frontend. No Python interpretation or fake compiler output."
+    "safety_environment_note": "All instruction families have a static registry and typed frontend emission. Source LLVM lowering, runtime cost accounting and conformance remain P2-P6 work; JOIN is registry-only."
   },
   {
     "schema_version": "1.0.0",
@@ -164,9 +164,9 @@
     "implementation": "check/ast/jir/llvm/plan/compile/variants/run/benchmark",
     "subsystem": "Compiler",
     "demo_evidence": "Executable command acceptance with machine-readable errors",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P1",
-    "safety_environment_note": "C++20 is the sole frontend. No Python interpretation or fake compiler output."
+    "safety_environment_note": "check/tokens/ast/jir/plan are verified C++ commands. llvm/compile/variants/run/benchmark still fail explicitly; the complete CLI requirement remains open."
   },
   {
     "schema_version": "1.0.0",
@@ -191,7 +191,7 @@
     "subsystem": "LLVM / Runtime",
     "demo_evidence": "Dump real IR and reject invalid module/type signatures",
     "status": "PLANNED",
-    "phase": "P2\u2013P3",
+    "phase": "P2–P3",
     "safety_environment_note": "LLVM remains a P0 product priority; phase numbers represent implementation order."
   },
   {
@@ -204,7 +204,7 @@
     "subsystem": "LLVM / Runtime",
     "demo_evidence": "C++/Rust ABI tests and per-operation permission errors",
     "status": "PLANNED",
-    "phase": "P2\u2013P3",
+    "phase": "P2–P3",
     "safety_environment_note": "LLVM remains a P0 product priority; phase numbers represent implementation order."
   },
   {
@@ -217,7 +217,7 @@
     "subsystem": "LLVM / Runtime",
     "demo_evidence": "Signed generated program executes on each target OS",
     "status": "PLANNED",
-    "phase": "P2\u2013P3",
+    "phase": "P2–P3",
     "safety_environment_note": "LLVM remains a P0 product priority; phase numbers represent implementation order."
   },
   {
@@ -230,7 +230,7 @@
     "subsystem": "LLVM / Runtime",
     "demo_evidence": "Actual JIT result with no unrelated-process access",
     "status": "PLANNED",
-    "phase": "P2\u2013P3",
+    "phase": "P2–P3",
     "safety_environment_note": "LLVM remains a P0 product priority; phase numbers represent implementation order."
   },
   {
@@ -243,7 +243,7 @@
     "subsystem": "LLVM / Runtime",
     "demo_evidence": "Equivalent results across native/memory; VM explicitly unavailable until built",
     "status": "PLANNED",
-    "phase": "P2\u2013P3",
+    "phase": "P2–P3",
     "safety_environment_note": "LLVM remains a P0 product priority; phase numbers represent implementation order."
   },
   {
@@ -256,7 +256,7 @@
     "subsystem": "LLVM / Runtime",
     "demo_evidence": "Over-budget and cancellation tests with measured overshoot",
     "status": "PLANNED",
-    "phase": "P2\u2013P3",
+    "phase": "P2–P3",
     "safety_environment_note": "LLVM remains a P0 product priority; phase numbers represent implementation order."
   },
   {
@@ -1335,7 +1335,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "No disconnected or null metric displayed as a measured zero",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1348,7 +1348,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "Open case and trace associated scripts/jobs/evidence",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1361,7 +1361,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "Real tokens/AST/JIR/LLVM/plan/metrics/variant outputs",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1374,7 +1374,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "Animated transitions reflect actual compiler events",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1387,7 +1387,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "Distinct actual artifacts and pairwise semantic PASS/FAIL",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1400,7 +1400,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "Inspect fixture execution, manifest and signing status",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1413,7 +1413,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "Actual Windows/Ubuntu endpoint observations",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1426,7 +1426,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "Independent child job states and authorized controls",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1439,7 +1439,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "Stream real work and recover from disconnect",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1452,7 +1452,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "Open generated finding and inspect originating observations",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1465,7 +1465,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "Click node to inspect scoped evidence",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1478,7 +1478,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "Filter real normalized events and open evidence",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1491,7 +1491,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "Backend re-reads stored bytes on VERIFY INTEGRITY",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1504,7 +1504,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "No simulated kernel-risk datum resembles real driver inventory",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1517,7 +1517,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "No fake undetected or universal bypass claims",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1530,7 +1530,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "Raw samples explain plotted values",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1543,7 +1543,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "Download traceable signed/status-labeled report",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1556,7 +1556,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "Catalog matches generated traceability documentation",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1565,11 +1565,11 @@
     "simulation_label": null,
     "id": "UI-19",
     "title": "Judge Mode",
-    "implementation": "Guided actual application states for 3\u20135 minute sequence",
+    "implementation": "Guided actual application states for 3–5 minute sequence",
     "subsystem": "Dashboard",
     "demo_evidence": "Compile, inspect, diversify, JIT, distribute, find, verify, profile and show coverage",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   },
   {
@@ -1582,7 +1582,7 @@
     "subsystem": "Dashboard",
     "demo_evidence": "Keyboard, mobile, contrast and disconnect browser checks",
     "status": "PLANNED",
-    "phase": "P7\u2013P9",
+    "phase": "P7–P9",
     "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
   }
 ]

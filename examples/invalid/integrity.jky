@@ -1,0 +1,3 @@
+hunt "invalid-integrity" {
+    report { integrity false }
+}

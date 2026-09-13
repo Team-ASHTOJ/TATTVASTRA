@@ -1,0 +1,21 @@
+{
+  "budget.jky": "E232",
+  "capability.jky": "E241",
+  "collector.jky": "E210",
+  "comparison.jky": "E221",
+  "correlation.jky": "E228",
+  "duplicate.jky": "E212",
+  "field.jky": "E213",
+  "finding.jky": "E229",
+  "hash-grant.jky": "E241",
+  "integrity.jky": "E239",
+  "legacy-scope.jky": "E241",
+  "limit-barrier-field.jky": "E213",
+  "mode.jky": "E234",
+  "option.jky": "E230",
+  "os.jky": "E231",
+  "parse.jky": "E120",
+  "profile.jky": "E235",
+  "undefined.jky": "E211",
+  "wrong-domain.jky": "E213"
+}

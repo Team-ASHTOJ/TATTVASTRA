@@ -1,0 +1,3 @@
+hunt "invalid-undefined" {
+    let result = absent
+}

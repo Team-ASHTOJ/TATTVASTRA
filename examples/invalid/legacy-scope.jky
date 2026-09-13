@@ -1,0 +1,3 @@
+hunt "invalid-legacy-scope" {
+    capabilities { services.read } collect startup as items
+}

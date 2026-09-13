@@ -1,0 +1,3 @@
+hunt "invalid-finding" {
+    capabilities { system.read } collect system as sys finding "bad" { when count(sys) severity high evidence sys }
+}

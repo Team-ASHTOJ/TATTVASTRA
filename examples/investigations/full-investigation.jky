@@ -1,0 +1,37 @@
+case "SIH defensive investigation" {
+    hunt "full-investigation" {
+        targets { group "SIH-LAB" os windows | linux }
+        runtime { backend llvm execution memory variant { enabled true seed auto profile balanced } }
+        capabilities {
+            system.read users.read process.read network.read filesystem.metadata
+            filesystem.content logs.read persistence.read drivers.read
+        }
+        budget { cpu <= 20% memory <= 256MB io <= 150MB duration <= 120s }
+        collect system as sys
+        collect users as accounts
+        collect processes { fields [pid, name, signed, sha256] } as proc
+        collect connections as net
+        collect interfaces as ifaces
+        collect routes as routes
+        collect files { path path("/approved/evidence") fields [path, name, size] limit 100 } as files
+        collect hash { path path("/approved/evidence/sample.bin") } as hashes
+        collect logs { since time("2026-09-01T00:00:00Z") where severity == "error" limit 100 } as events
+        collect services as services
+        collect startup as startup_items
+        collect scheduled tasks as tasks
+        collect drivers as drivers
+        collect modules as modules
+        analyze drivers as risk
+        let external = net | where remote.is_public == true
+        let unsigned = proc | where signed == false
+        correlate unsigned.pid with external.pid as suspicious
+        finding "Unsigned process communicating externally" {
+            when count(suspicious) > 0
+            severity high
+            evidence suspicious
+        }
+        let counts = net | group by [protocol] | sort count desc | limit 10
+        timeline { source sys source proc source net source events source risk }
+        export report { format pdf include timeline include evidence include audit integrity true }
+    }
+}

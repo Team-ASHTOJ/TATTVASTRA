@@ -1,0 +1,3 @@
+hunt "invalid-field" {
+    capabilities { process.read } collect processes as proc let x = proc | where nonexistent == 1
+}

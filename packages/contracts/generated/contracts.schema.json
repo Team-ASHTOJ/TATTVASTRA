@@ -1522,6 +1522,370 @@
       "title": "Finding",
       "type": "object"
     },
+    "FrontendCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "executable": {
+          "const": false,
+          "title": "Executable",
+          "type": "boolean"
+        },
+        "hunt": {
+          "title": "Hunt",
+          "type": "string"
+        },
+        "instruction_count": {
+          "maximum": 65536,
+          "minimum": 0,
+          "title": "Instruction Count",
+          "type": "integer"
+        },
+        "jir_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Jir Hash",
+          "type": "string"
+        },
+        "kind": {
+          "const": "FrontendCheck",
+          "title": "Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Hash",
+          "type": "string"
+        },
+        "valid": {
+          "const": true,
+          "title": "Valid",
+          "type": "boolean"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/FrontendDiagnostic"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "valid",
+        "hunt",
+        "source_hash",
+        "jir_hash",
+        "instruction_count",
+        "warnings",
+        "executable"
+      ],
+      "title": "FrontendCheck",
+      "type": "object"
+    },
+    "FrontendDiagnostic": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "pattern": "^[EW][0-9]{3}$",
+          "title": "Code",
+          "type": "string"
+        },
+        "help": {
+          "title": "Help",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "error",
+            "warning"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "source_line": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Line"
+        },
+        "span": {
+          "$ref": "#/$defs/SourceSpan"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "severity",
+        "span",
+        "help"
+      ],
+      "title": "FrontendDiagnostic",
+      "type": "object"
+    },
+    "FrontendExecutionPlan": {
+      "additionalProperties": false,
+      "properties": {
+        "admission_status": {
+          "const": "REQUIRES_ENDPOINT_POLICY_AND_LLVM_LOWERING",
+          "title": "Admission Status",
+          "type": "string"
+        },
+        "budget": {
+          "$ref": "#/$defs/Budget"
+        },
+        "dispatchable": {
+          "const": false,
+          "title": "Dispatchable",
+          "type": "boolean"
+        },
+        "expected_result_schemas": {
+          "items": {
+            "$ref": "#/$defs/ResultSchema"
+          },
+          "title": "Expected Result Schemas",
+          "type": "array"
+        },
+        "jir_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Jir Hash",
+          "type": "string"
+        },
+        "kind": {
+          "const": "FrontendExecutionPlan",
+          "title": "Kind",
+          "type": "string"
+        },
+        "projected_fields": {
+          "items": {
+            "$ref": "#/$defs/ProjectedFields"
+          },
+          "title": "Projected Fields",
+          "type": "array"
+        },
+        "pushdown": {
+          "items": {
+            "$ref": "#/$defs/PushdownCandidate"
+          },
+          "title": "Pushdown",
+          "type": "array"
+        },
+        "required_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Capabilities",
+          "type": "array"
+        },
+        "required_collectors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Collectors",
+          "type": "array"
+        },
+        "runtime": {
+          "$ref": "#/$defs/FrontendRuntime"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Hash",
+          "type": "string"
+        },
+        "target_os": {
+          "items": {
+            "enum": [
+              "windows",
+              "linux"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Target Os",
+          "type": "array"
+        },
+        "targets": {
+          "items": {
+            "$ref": "#/$defs/FrontendTarget"
+          },
+          "title": "Targets",
+          "type": "array"
+        },
+        "warnings": {
+          "items": {
+            "$ref": "#/$defs/FrontendDiagnostic"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "source_hash",
+        "jir_hash",
+        "targets",
+        "target_os",
+        "required_collectors",
+        "required_capabilities",
+        "pushdown",
+        "projected_fields",
+        "expected_result_schemas",
+        "budget",
+        "runtime",
+        "warnings",
+        "dispatchable",
+        "admission_status"
+      ],
+      "title": "FrontendExecutionPlan",
+      "type": "object"
+    },
+    "FrontendFailure": {
+      "additionalProperties": false,
+      "properties": {
+        "diagnostics": {
+          "items": {
+            "$ref": "#/$defs/FrontendDiagnostic"
+          },
+          "minItems": 1,
+          "title": "Diagnostics",
+          "type": "array"
+        },
+        "kind": {
+          "const": "FrontendFailure",
+          "title": "Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "valid": {
+          "const": false,
+          "title": "Valid",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "valid",
+        "diagnostics"
+      ],
+      "title": "FrontendFailure",
+      "type": "object"
+    },
+    "FrontendRuntime": {
+      "additionalProperties": false,
+      "properties": {
+        "backend": {
+          "const": "llvm",
+          "title": "Backend",
+          "type": "string"
+        },
+        "execution": {
+          "enum": [
+            "native",
+            "memory"
+          ],
+          "title": "Execution",
+          "type": "string"
+        },
+        "variant": {
+          "$ref": "#/$defs/FrontendVariant"
+        }
+      },
+      "required": [
+        "backend",
+        "execution",
+        "variant"
+      ],
+      "title": "FrontendRuntime",
+      "type": "object"
+    },
+    "FrontendTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "target",
+            "host",
+            "group"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "title": "FrontendTarget",
+      "type": "object"
+    },
+    "FrontendVariant": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "profile": {
+          "enum": [
+            "minimal",
+            "balanced"
+          ],
+          "title": "Profile",
+          "type": "string"
+        },
+        "seed": {
+          "pattern": "^(auto|[0-9a-f]{16})$",
+          "title": "Seed",
+          "type": "string"
+        },
+        "seed_resolution": {
+          "enum": [
+            "EXPLICIT",
+            "DEFERRED_TO_BUILD_FORGE"
+          ],
+          "title": "Seed Resolution",
+          "type": "string"
+        }
+      },
+      "required": [
+        "enabled",
+        "seed",
+        "profile",
+        "seed_resolution"
+      ],
+      "title": "FrontendVariant",
+      "type": "object"
+    },
     "Health": {
       "additionalProperties": false,
       "properties": {
@@ -1663,6 +2027,247 @@
         "integrity_valid"
       ],
       "title": "IntegrityResult",
+      "type": "object"
+    },
+    "JirInstruction": {
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Attributes",
+          "type": "object"
+        },
+        "effect": {
+          "enum": [
+            "pure",
+            "read",
+            "emit"
+          ],
+          "title": "Effect",
+          "type": "string"
+        },
+        "effect_predecessor": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Effect Predecessor"
+        },
+        "family": {
+          "enum": [
+            "SYSTEM",
+            "PROCESS",
+            "NETWORK",
+            "FILESYSTEM",
+            "LOGS",
+            "PERSISTENCE",
+            "DRIVER",
+            "ANALYSIS",
+            "EVIDENCE"
+          ],
+          "title": "Family",
+          "type": "string"
+        },
+        "id": {
+          "minimum": 0,
+          "title": "Id",
+          "type": "integer"
+        },
+        "inputs": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Inputs",
+          "type": "array"
+        },
+        "opcode": {
+          "title": "Opcode",
+          "type": "string"
+        },
+        "required_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Capabilities",
+          "type": "array"
+        },
+        "resource_class": {
+          "enum": [
+            "bounded_inventory",
+            "bounded_content_io",
+            "bounded_materialization",
+            "bounded_output",
+            "linear_transform"
+          ],
+          "title": "Resource Class",
+          "type": "string"
+        },
+        "result_type": {
+          "$ref": "#/$defs/JirType"
+        },
+        "span": {
+          "$ref": "#/$defs/SourceSpan"
+        },
+        "target_os": {
+          "items": {
+            "enum": [
+              "windows",
+              "linux"
+            ],
+            "type": "string"
+          },
+          "title": "Target Os",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "opcode",
+        "family",
+        "inputs",
+        "result_type",
+        "attributes",
+        "span",
+        "required_capabilities",
+        "resource_class",
+        "effect",
+        "effect_predecessor",
+        "target_os"
+      ],
+      "title": "JirInstruction",
+      "type": "object"
+    },
+    "JirModule": {
+      "additionalProperties": false,
+      "properties": {
+        "budget": {
+          "$ref": "#/$defs/Budget"
+        },
+        "case": {
+          "title": "Case",
+          "type": "string"
+        },
+        "compiler_version": {
+          "const": "0.2.0",
+          "title": "Compiler Version",
+          "type": "string"
+        },
+        "executable": {
+          "const": false,
+          "title": "Executable",
+          "type": "boolean"
+        },
+        "hunt": {
+          "title": "Hunt",
+          "type": "string"
+        },
+        "instructions": {
+          "items": {
+            "$ref": "#/$defs/JirInstruction"
+          },
+          "maxItems": 65536,
+          "title": "Instructions",
+          "type": "array"
+        },
+        "kind": {
+          "const": "JIRModule",
+          "title": "Kind",
+          "type": "string"
+        },
+        "required_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Capabilities",
+          "type": "array"
+        },
+        "runtime": {
+          "$ref": "#/$defs/FrontendRuntime"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Hash",
+          "type": "string"
+        },
+        "target_os": {
+          "items": {
+            "enum": [
+              "windows",
+              "linux"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Target Os",
+          "type": "array"
+        },
+        "targets": {
+          "items": {
+            "$ref": "#/$defs/FrontendTarget"
+          },
+          "title": "Targets",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "compiler_version",
+        "source_hash",
+        "hunt",
+        "case",
+        "targets",
+        "target_os",
+        "required_capabilities",
+        "budget",
+        "runtime",
+        "instructions",
+        "executable"
+      ],
+      "title": "JirModule",
+      "type": "object"
+    },
+    "JirType": {
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "title": "Domain",
+          "type": "string"
+        },
+        "fields": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JirType"
+          },
+          "title": "Fields",
+          "type": "object"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "nullable": {
+          "title": "Nullable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "nullable",
+        "domain",
+        "fields"
+      ],
+      "title": "JirType",
       "type": "object"
     },
     "Job": {
@@ -2176,6 +2781,29 @@
       "title": "Problem",
       "type": "object"
     },
+    "ProjectedFields": {
+      "additionalProperties": false,
+      "properties": {
+        "fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fields",
+          "type": "array"
+        },
+        "instruction_id": {
+          "minimum": 0,
+          "title": "Instruction Id",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "instruction_id",
+        "fields"
+      ],
+      "title": "ProjectedFields",
+      "type": "object"
+    },
     "Provenance": {
       "additionalProperties": false,
       "properties": {
@@ -2206,6 +2834,62 @@
         "simulation"
       ],
       "title": "Provenance",
+      "type": "object"
+    },
+    "PushdownCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "applied": {
+          "const": false,
+          "title": "Applied",
+          "type": "boolean"
+        },
+        "attributes": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Attributes",
+          "type": "object"
+        },
+        "branch_instruction_id": {
+          "minimum": 0,
+          "title": "Branch Instruction Id",
+          "type": "integer"
+        },
+        "collector_instruction_id": {
+          "minimum": 0,
+          "title": "Collector Instruction Id",
+          "type": "integer"
+        },
+        "condition": {
+          "const": "REQUIRES_ADAPTER_SUPPORT_AND_BRANCH_DEPENDENCY_PRESERVATION",
+          "title": "Condition",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "filter",
+            "project"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "scope": {
+          "const": "BRANCH_LOCAL",
+          "title": "Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "collector_instruction_id",
+        "branch_instruction_id",
+        "kind",
+        "scope",
+        "applied",
+        "attributes",
+        "condition"
+      ],
+      "title": "PushdownCandidate",
       "type": "object"
     },
     "Report": {
@@ -2277,6 +2961,25 @@
         "generated_at"
       ],
       "title": "Report",
+      "type": "object"
+    },
+    "ResultSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "instruction_id": {
+          "minimum": 0,
+          "title": "Instruction Id",
+          "type": "integer"
+        },
+        "result_type": {
+          "$ref": "#/$defs/JirType"
+        }
+      },
+      "required": [
+        "instruction_id",
+        "result_type"
+      ],
+      "title": "ResultSchema",
       "type": "object"
     },
     "Script": {
@@ -2615,6 +3318,51 @@
         "signature"
       ],
       "title": "SignedJob",
+      "type": "object"
+    },
+    "SourcePosition": {
+      "additionalProperties": false,
+      "properties": {
+        "column": {
+          "minimum": 1,
+          "title": "Column",
+          "type": "integer"
+        },
+        "line": {
+          "minimum": 1,
+          "title": "Line",
+          "type": "integer"
+        },
+        "offset": {
+          "maximum": 262144,
+          "minimum": 0,
+          "title": "Offset",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "offset",
+        "line",
+        "column"
+      ],
+      "title": "SourcePosition",
+      "type": "object"
+    },
+    "SourceSpan": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "$ref": "#/$defs/SourcePosition"
+        },
+        "start": {
+          "$ref": "#/$defs/SourcePosition"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "SourceSpan",
       "type": "object"
     },
     "Target": {
@@ -3039,11 +3787,23 @@
     "Finding": {
       "$ref": "#/$defs/Finding"
     },
+    "FrontendCheck": {
+      "$ref": "#/$defs/FrontendCheck"
+    },
+    "FrontendExecutionPlan": {
+      "$ref": "#/$defs/FrontendExecutionPlan"
+    },
+    "FrontendFailure": {
+      "$ref": "#/$defs/FrontendFailure"
+    },
     "Health": {
       "$ref": "#/$defs/Health"
     },
     "IntegrityResult": {
       "$ref": "#/$defs/IntegrityResult"
+    },
+    "JirModule": {
+      "$ref": "#/$defs/JirModule"
     },
     "Job": {
       "$ref": "#/$defs/Job"

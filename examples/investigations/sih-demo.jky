@@ -1,4 +1,4 @@
-// SPECIFICATION INPUT. Execute only on authorized SIH-LAB endpoints after P1-P7 acceptance.
+// FRONTEND INPUT; static validation only. Execute only on authorized SIH-LAB endpoints after P2-P7 acceptance.
 // Executable hashing additionally requires filesystem.read and an approved agent path scope.
 hunt "sih-demo" {
     targets {

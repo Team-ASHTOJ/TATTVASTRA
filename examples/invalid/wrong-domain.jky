@@ -1,0 +1,3 @@
+hunt "invalid-wrong-domain" {
+    capabilities { network.read } collect connections as net let x = net | select [sha256]
+}

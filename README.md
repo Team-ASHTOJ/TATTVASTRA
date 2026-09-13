@@ -4,7 +4,7 @@
 
 JOCKY is an independent forensic DSL, typed JIR, mandatory LLVM compiler, build-diversity system, and distributed evidence platform for Windows and Ubuntu.
 
-This repository is the **P0 engineering foundation**. The API and dashboard build, contracts validate, submitted observation hashes can be recomputed, and the native toolchain probe executes real LLVM ORC machine code. The JOCKY frontend, source-to-LLVM compilation, collectors, secure distributed execution, persistent evidence vault, and full Judge Mode are not implemented yet. An available route or contract does not imply the corresponding subsystem works.
+This repository is the **P0 engineering foundation with the P1/P0-priority language frontend**. The API and dashboard build, contracts validate, submitted observation hashes can be recomputed, and the native toolchain probe executes real LLVM ORC machine code. The C++ frontend now validates source and emits typed JIR/static plans. Source-to-LLVM compilation, collectors, secure distributed execution, persistent evidence vault, and full Judge Mode are not implemented yet. An available route or contract does not imply the corresponding subsystem works.
 
 ## Start locally
 
@@ -38,7 +38,7 @@ make infra-check
 
 | Path                                         | Responsibility                                                                 |
 | -------------------------------------------- | ------------------------------------------------------------------------------ |
-| `native/compiler`                            | C++20 frontend/JIR/LLVM; real ORC toolchain probe today                        |
+| `native/compiler`                            | C++20 frontend, typed JIR/static plans; real ORC toolchain probe               |
 | `native/runtime`                             | Versioned C ABI; collector calls explicitly unavailable                        |
 | `services/agent`                             | Rust/Tokio/tonic scaffold, host diagnostic, wire tests                         |
 | `services/control-plane`                     | FastAPI status, error boundaries, stateless verification, persistence baseline |

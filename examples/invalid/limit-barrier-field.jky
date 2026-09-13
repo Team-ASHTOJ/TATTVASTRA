@@ -1,0 +1,3 @@
+hunt "invalid-limit-barrier-field" {
+    capabilities { process.read } collect processes as proc let x = proc | select [name] | where pid == pid(1)
+}
