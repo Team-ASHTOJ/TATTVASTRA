@@ -1,4 +1,16 @@
+use std::path::Path;
+
 use serde::Serialize;
+
+pub mod collectors;
+pub mod error;
+pub mod evidence;
+pub mod identity;
+pub mod model;
+pub mod policy;
+pub mod risk;
+pub mod runner;
+pub mod spool;
 
 pub mod wire {
     tonic::include_proto!("jocky.v1");
@@ -12,24 +24,56 @@ pub struct AgentStatus {
     pub host_os: &'static str,
     pub host_arch: &'static str,
     pub supported_endpoint_platform: bool,
-    pub operational: bool,
-    pub collectors_available: Vec<&'static str>,
-    pub execution_available: bool,
-    pub reason: &'static str,
+    pub initialized: bool,
+    pub endpoint_id: Option<String>,
+    pub organization_id: Option<String>,
+    pub local_standalone_operational: bool,
+    pub remote_transport_configured: bool,
+    pub remote_transport_available: bool,
+    pub collectors: Vec<model::CollectorDescriptor>,
+    pub execution_worker_available: bool,
+    pub llvm_real_host_integration: &'static str,
+    pub enforcement: model::EnforcementReport,
+    pub key_storage: String,
+    pub reason: String,
 }
 
-pub fn doctor() -> AgentStatus {
+pub fn doctor(state_dir: &Path) -> AgentStatus {
+    let supported = cfg!(any(target_os = "linux", windows));
+    let loaded = identity::AgentState::load(state_dir).ok();
+    let initialized = loaded.is_some();
     AgentStatus {
-        schema_version: "1.0.0",
+        schema_version: model::SCHEMA_VERSION,
         simulation: false,
         version: env!("CARGO_PKG_VERSION"),
         host_os: std::env::consts::OS,
         host_arch: std::env::consts::ARCH,
-        supported_endpoint_platform: cfg!(any(target_os = "linux", target_os = "windows")),
-        operational: false,
-        collectors_available: Vec::new(),
-        execution_available: false,
-        reason: "Agent scaffold. Enrollment, policy, collectors and execution are unavailable.",
+        supported_endpoint_platform: supported,
+        initialized,
+        endpoint_id: loaded.as_ref().map(|state| state.config.endpoint_id.clone()),
+        organization_id: loaded
+            .as_ref()
+            .map(|state| state.config.organization_id.clone()),
+        local_standalone_operational: supported && initialized,
+        remote_transport_configured: loaded
+            .as_ref()
+            .is_some_and(|state| state.config.remote_transport_configured),
+        remote_transport_available: false,
+        collectors: collectors::catalog(),
+        execution_worker_available: supported && initialized,
+        llvm_real_host_integration: "UNAVAILABLE: current ORC path binds a simulated C++ fixture; REAL jobs use the isolated Rust collector worker",
+        enforcement: model::EnforcementReport::current(),
+        key_storage: loaded
+            .as_ref()
+            .map_or_else(|| "UNINITIALIZED".to_owned(), |state| state.config.key_storage.clone()),
+        reason: if !supported {
+            "This host is not a supported endpoint platform.".to_owned()
+        } else if !initialized {
+            "Initialize local state before collection or job execution.".to_owned()
+        } else {
+            "Local standalone REAL collection is available; no server connectivity is configured or claimed."
+                .to_owned()
+        },
     }
 }
 
@@ -39,11 +83,12 @@ mod tests {
     use prost::Message;
 
     #[test]
-    fn scaffold_never_claims_endpoint_execution() {
-        let status = doctor();
-        assert!(!status.operational);
-        assert!(!status.execution_available);
-        assert!(status.collectors_available.is_empty());
+    fn uninitialized_doctor_does_not_claim_remote_connectivity() {
+        let temp = tempfile::tempdir().unwrap();
+        let status = doctor(temp.path());
+        assert!(!status.remote_transport_available);
+        assert!(!status.remote_transport_configured);
+        assert!(!status.local_standalone_operational);
     }
 
     #[test]

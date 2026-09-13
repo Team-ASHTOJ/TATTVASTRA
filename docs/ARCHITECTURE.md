@@ -2,7 +2,7 @@
 
 ## Current versus target
 
-The repository contains the typed C++ frontend plus an initial real LLVM backend: fixed runtime-ABI lowering, verified modules, host TargetMachine objects, own-process ORC execution against a deterministic SIMULATED fixture, seeded compiler structural diversity, manifests and AES-256-GCM literal pools. The Rust Agent still does not host execution or real collectors, enroll agents, ingest evidence or persist domain objects. The following diagram remains the target production architecture.
+The repository contains the typed C++ frontend and LLVM backend plus a local standalone Rust endpoint runtime. The compiler has fixed runtime-ABI lowering, verified modules, host TargetMachine objects, own-process ORC execution against a deterministic SIMULATED fixture, seeded compiler structural diversity, manifests and AES-256-GCM literal pools. The Agent has stable local identity, signed collector-job admission, durable replay protection, an isolated child worker, real Windows/Linux collector adapters, normalized signed observations and an encrypted SQLite spool. The Agent does **not** yet load compiler AOT/ORC artifacts, enroll over mTLS, or deliver evidence to the control plane; those arrows in the diagram remain target architecture.
 
 ```mermaid
 flowchart LR
@@ -61,3 +61,11 @@ Build reproducibility pins source bytes, JIR schema, target triple, compiler/LLV
 ## Environments and trust
 
 Ubuntu 24.04 and supported Windows versions are endpoint targets; the precise Windows release matrix must be measured in P6/P10. macOS arm64 is only a development host today. Linux arm64 container tests do not prove Windows or x86_64 support. Production enablement requires mTLS, RBAC, signature verification, nonce durability, encrypted spool, tenant isolation, governor tests and independent Windows acceptance.
+
+## Implemented endpoint runtime boundary
+
+Local standalone mode deliberately has no fake network peer. `jocky-agent init` creates an endpoint Ed25519 identity, a separate local-development signing authority, a bounded policy file and an AES-256-GCM spool key. Signed jobs are canonicalized with RFC 8785 rules, domain-separated, audience/expiry/capability/budget checked, and transactionally recorded in the nonce ledger before a child worker starts. Duplicate delivery returns its durable receipt without running again.
+
+The supervisor owns concurrency locking, monotonic timeout/cancellation, bounded stdout/stderr, result-size enforcement and child termination. The child receives only a versioned fixed-registry collector request; it cannot select a command, library or ABI symbol. File count/bytes and approved roots are enforced in collector wrappers. Linux child CPU time and peak RSS are sampled but not hard-limited; Windows CPU/memory controls and network-byte accounting are unsupported. Strict jobs requiring those hard controls fail admission. See `docs/AGENT_RUNTIME.md` for the CLI and exact limitations.
+
+This Rust collector worker is not the final JOCKY native worker. The existing LLVM ORC runtime still uses a SIMULATED C++ fixture host and no REAL job may consume that output. Closing the AOT/ORC-to-Agent ABI boundary requires compiler artifact identity in the signed job, signature/provenance verification, and collector callbacks backed by the Agent policy context.

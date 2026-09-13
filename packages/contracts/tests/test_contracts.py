@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
 import pytest
-from jocky_contracts.agent import JobState, validate_transition
+from jocky_contracts.agent import AgentObservation, AgentSignedJob, JobState, validate_transition
 from jocky_contracts.common import Provenance, Signature
 from jocky_contracts.compiler import Budget, CompilerMetrics, LiteralEncryption
 from jocky_contracts.evidence import AuditEvent, integrity_hash, verify_audit_chain
@@ -129,3 +129,61 @@ def test_cross_organization_audit_link_rejected_even_with_valid_hash():
     second = audit(1, first.integrity_hash).model_copy(update={"organization_id": "other-org"})
     second = second.model_copy(update={"integrity_hash": integrity_hash(second)})
     assert not verify_audit_chain([first, second]).integrity_valid
+
+
+def test_real_agent_observation_rejects_simulation_and_unknown_fields():
+    payload = {
+        "simulation": False,
+        "simulation_label": None,
+        "observation_id": "observation-1",
+        "endpoint_id": "endpoint-1",
+        "job_id": "job-1",
+        "case_id": "case-1",
+        "collector": "system",
+        "observed_at": datetime(2026, 9, 13, tzinfo=UTC),
+        "source_time": None,
+        "platform": {"os": "linux", "arch": "x86_64"},
+        "data": {"hostname": "host-one", "cpu_count": 8},
+        "integrity_hash": "a" * 64,
+    }
+    observation = AgentObservation.model_validate(payload)
+    assert observation.simulation is False
+    with pytest.raises(ValidationError):
+        AgentObservation.model_validate(payload | {"simulation": True, "simulation_label": "test"})
+    with pytest.raises(ValidationError):
+        AgentObservation.model_validate(payload | {"unexpected": "field"})
+
+
+def test_agent_job_requires_real_signed_expiring_envelope():
+    payload = {
+        "simulation": False,
+        "simulation_label": None,
+        "job_id": "job-1",
+        "case_id": "case-1",
+        "organization_id": "org-1",
+        "endpoint_id": "endpoint-1",
+        "required_capabilities": ["system.read"],
+        "collectors": [{"collector": "system"}],
+        "budget": {
+            "cpu_percent": 20,
+            "memory_bytes": 256_000_000,
+            "io_bytes": 150_000_000,
+            "duration_ms": 120_000,
+            "max_result_bytes": 32_000_000,
+            "max_file_count": 10_000,
+            "max_file_bytes": 150_000_000,
+        },
+        "enforcement_policy": "MONITORED",
+        "nonce": "b" * 64,
+        "issued_at": datetime(2026, 9, 13, tzinfo=UTC),
+        "expires_at": datetime(2026, 9, 13, 0, 5, tzinfo=UTC),
+        "signature": {
+            "status": "SIGNED",
+            "algorithm": "Ed25519",
+            "key_id": "local-dev-authority",
+            "value_base64": "fixture-signature",
+        },
+    }
+    assert AgentSignedJob.model_validate(payload).collectors[0].collector == "system"
+    with pytest.raises(ValidationError):
+        AgentSignedJob.model_validate(payload | {"expires_at": payload["issued_at"]})

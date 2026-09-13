@@ -1,5 +1,475 @@
 {
   "$defs": {
+    "AgentCollectorRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "collector": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Collector",
+          "type": "string"
+        },
+        "hash": {
+          "default": false,
+          "title": "Hash",
+          "type": "boolean"
+        },
+        "limit": {
+          "default": 1000,
+          "maximum": 100000,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "recursive": {
+          "default": false,
+          "title": "Recursive",
+          "type": "boolean"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "collector"
+      ],
+      "title": "AgentCollectorRequest",
+      "type": "object"
+    },
+    "AgentEnforcement": {
+      "additionalProperties": false,
+      "properties": {
+        "concurrency": {
+          "enum": [
+            "ENFORCED",
+            "OBSERVED_ONLY",
+            "UNSUPPORTED"
+          ],
+          "title": "Concurrency",
+          "type": "string"
+        },
+        "cpu": {
+          "enum": [
+            "ENFORCED",
+            "OBSERVED_ONLY",
+            "UNSUPPORTED"
+          ],
+          "title": "Cpu",
+          "type": "string"
+        },
+        "file_bytes": {
+          "enum": [
+            "ENFORCED",
+            "OBSERVED_ONLY",
+            "UNSUPPORTED"
+          ],
+          "title": "File Bytes",
+          "type": "string"
+        },
+        "file_count": {
+          "enum": [
+            "ENFORCED",
+            "OBSERVED_ONLY",
+            "UNSUPPORTED"
+          ],
+          "title": "File Count",
+          "type": "string"
+        },
+        "memory": {
+          "enum": [
+            "ENFORCED",
+            "OBSERVED_ONLY",
+            "UNSUPPORTED"
+          ],
+          "title": "Memory",
+          "type": "string"
+        },
+        "network_bytes": {
+          "enum": [
+            "ENFORCED",
+            "OBSERVED_ONLY",
+            "UNSUPPORTED"
+          ],
+          "title": "Network Bytes",
+          "type": "string"
+        },
+        "result_size": {
+          "enum": [
+            "ENFORCED",
+            "OBSERVED_ONLY",
+            "UNSUPPORTED"
+          ],
+          "title": "Result Size",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "timeout": {
+          "enum": [
+            "ENFORCED",
+            "OBSERVED_ONLY",
+            "UNSUPPORTED"
+          ],
+          "title": "Timeout",
+          "type": "string"
+        }
+      },
+      "required": [
+        "timeout",
+        "result_size",
+        "file_count",
+        "file_bytes",
+        "concurrency",
+        "cpu",
+        "memory",
+        "network_bytes"
+      ],
+      "title": "AgentEnforcement",
+      "type": "object"
+    },
+    "AgentObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "collector": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Collector",
+          "type": "string"
+        },
+        "data": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Data",
+          "type": "object"
+        },
+        "endpoint_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Endpoint Id",
+          "type": "string"
+        },
+        "integrity_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Integrity Hash",
+          "type": "string"
+        },
+        "job_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "observation_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "observed_at": {
+          "format": "date-time",
+          "title": "Observed At",
+          "type": "string"
+        },
+        "platform": {
+          "$ref": "#/$defs/AgentPlatform"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "source_time": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Time"
+        }
+      },
+      "required": [
+        "simulation",
+        "observation_id",
+        "endpoint_id",
+        "job_id",
+        "case_id",
+        "collector",
+        "observed_at",
+        "source_time",
+        "platform",
+        "data",
+        "integrity_hash"
+      ],
+      "title": "AgentObservation",
+      "type": "object"
+    },
+    "AgentPlatform": {
+      "additionalProperties": false,
+      "properties": {
+        "arch": {
+          "enum": [
+            "x86_64",
+            "aarch64"
+          ],
+          "title": "Arch",
+          "type": "string"
+        },
+        "os": {
+          "enum": [
+            "windows",
+            "linux"
+          ],
+          "title": "Os",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "os",
+        "arch"
+      ],
+      "title": "AgentPlatform",
+      "type": "object"
+    },
+    "AgentResourceBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "cpu_percent": {
+          "exclusiveMinimum": 0,
+          "maximum": 100,
+          "title": "Cpu Percent",
+          "type": "integer"
+        },
+        "duration_ms": {
+          "exclusiveMinimum": 0,
+          "maximum": 86400000,
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "io_bytes": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Io Bytes",
+          "type": "integer"
+        },
+        "max_file_bytes": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Max File Bytes",
+          "type": "integer"
+        },
+        "max_file_count": {
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991,
+          "title": "Max File Count",
+          "type": "integer"
+        },
+        "max_result_bytes": {
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991,
+          "title": "Max Result Bytes",
+          "type": "integer"
+        },
+        "memory_bytes": {
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991,
+          "title": "Memory Bytes",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cpu_percent",
+        "memory_bytes",
+        "io_bytes",
+        "duration_ms",
+        "max_result_bytes",
+        "max_file_count",
+        "max_file_bytes"
+      ],
+      "title": "AgentResourceBudget",
+      "type": "object"
+    },
+    "AgentSignedJob": {
+      "additionalProperties": false,
+      "properties": {
+        "budget": {
+          "$ref": "#/$defs/AgentResourceBudget"
+        },
+        "case_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "collectors": {
+          "items": {
+            "$ref": "#/$defs/AgentCollectorRequest"
+          },
+          "maxItems": 1000,
+          "minItems": 1,
+          "title": "Collectors",
+          "type": "array"
+        },
+        "endpoint_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Endpoint Id",
+          "type": "string"
+        },
+        "enforcement_policy": {
+          "enum": [
+            "STRICT",
+            "MONITORED"
+          ],
+          "title": "Enforcement Policy",
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "issued_at": {
+          "format": "date-time",
+          "title": "Issued At",
+          "type": "string"
+        },
+        "job_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "nonce": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Nonce",
+          "type": "string"
+        },
+        "organization_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_.:-]+$",
+          "title": "Organization Id",
+          "type": "string"
+        },
+        "required_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Capabilities",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "signature": {
+          "$ref": "#/$defs/Signature"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        }
+      },
+      "required": [
+        "simulation",
+        "job_id",
+        "case_id",
+        "organization_id",
+        "endpoint_id",
+        "required_capabilities",
+        "collectors",
+        "budget",
+        "enforcement_policy",
+        "nonce",
+        "issued_at",
+        "expires_at",
+        "signature"
+      ],
+      "title": "AgentSignedJob",
+      "type": "object"
+    },
     "Artifact": {
       "additionalProperties": false,
       "properties": {
@@ -3785,6 +4255,24 @@
   "additionalProperties": false,
   "description": "Generated from Pydantic; do not edit. Refinement rules also apply in Python.",
   "properties": {
+    "AgentCollectorRequest": {
+      "$ref": "#/$defs/AgentCollectorRequest"
+    },
+    "AgentEnforcement": {
+      "$ref": "#/$defs/AgentEnforcement"
+    },
+    "AgentObservation": {
+      "$ref": "#/$defs/AgentObservation"
+    },
+    "AgentPlatform": {
+      "$ref": "#/$defs/AgentPlatform"
+    },
+    "AgentResourceBudget": {
+      "$ref": "#/$defs/AgentResourceBudget"
+    },
+    "AgentSignedJob": {
+      "$ref": "#/$defs/AgentSignedJob"
+    },
     "Artifact": {
       "$ref": "#/$defs/Artifact"
     },

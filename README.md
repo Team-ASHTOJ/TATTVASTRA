@@ -4,7 +4,7 @@
 
 JOCKY is an independent forensic DSL, typed JIR, mandatory LLVM compiler, build-diversity system, and distributed evidence platform for Windows and Ubuntu.
 
-This repository is the **P0 engineering foundation with the P1/P0-priority language frontend**. The API and dashboard build, contracts validate, submitted observation hashes can be recomputed, and the native toolchain probe executes real LLVM ORC machine code. The C++ frontend now validates source and emits typed JIR/static plans. Source-to-LLVM compilation, collectors, secure distributed execution, persistent evidence vault, and full Judge Mode are not implemented yet. An available route or contract does not imply the corresponding subsystem works.
+This repository includes the engineering foundation, C++20 JOCKY frontend/JIR/LLVM AOT+ORC compiler, and a local standalone Rust endpoint runtime. On supported hosts the Agent performs real read-only collection, signed-job admission, normalized signed evidence, resource supervision and encrypted offline spooling. Remote enrollment/transport, control-plane ingestion, compiler-artifact execution inside the Agent, persistent evidence vault, and full Judge Mode remain incomplete. An available route or contract does not imply the corresponding subsystem works.
 
 ## Start locally
 
@@ -34,18 +34,20 @@ make infra-check
 
 `make verify` requires all host toolchains and fails when they are missing. `make verify-containers` uses Docker for native/Rust and local tooling for web/Python. See [BUILD_STATUS](docs/BUILD_STATUS.md) for the exact checks run and what remains unverified. `make help` lists operational commands. `make infra-up` starts only local backing services; `make stack-up` adds the scaffold API and dashboard. Neither starts an operational forensic fleet.
 
+For an honest local endpoint run, see [Agent runtime](docs/AGENT_RUNTIME.md). The shortest flow is `jocky-agent init`, `jocky-agent doctor`, then `jocky-agent collect system` (or `processes` / `connections`).
+
 ## Repository
 
 | Path                                         | Responsibility                                                                 |
 | -------------------------------------------- | ------------------------------------------------------------------------------ |
 | `native/compiler`                            | C++20 frontend, typed JIR/static plans; real ORC toolchain probe               |
 | `native/runtime`                             | Versioned C ABI; collector calls explicitly unavailable                        |
-| `services/agent`                             | Rust/Tokio/tonic scaffold, host diagnostic, wire tests                         |
+| `services/agent`                             | Rust identity/policy, real collectors, worker governor, signed evidence/spool  |
 | `services/control-plane`                     | FastAPI status, error boundaries, stateless verification, persistence baseline |
 | `apps/dashboard`                             | Next.js console shell, coverage browser, observation verifier                  |
 | `packages/contracts`                         | Pydantic source of truth; generated JSON Schema and TypeScript                 |
 | `packages/jocky-language`, `packages/ui`     | Editor vocabulary and shared UI primitives                                     |
-| `proto`                                      | Agent transport schema; no active gRPC server yet                              |
+| `proto`                                      | Agent transport schema; no active remote gRPC client/server yet                |
 | `infra`                                      | Local Compose, reverse-proxy template, monitoring, native/Rust builds          |
 | `examples`, `fixtures`, `benchmark`, `tests` | Language acceptance inputs, labeled fixture data, validation                   |
 

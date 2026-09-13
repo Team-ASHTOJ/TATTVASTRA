@@ -16,6 +16,20 @@ serde_json = "1"
 rusqlite = { version = "0.37", features = ["bundled"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+aes-gcm = "0.10"
+base64 = "0.22"
+chrono = { version = "0.4", features = ["serde"] }
+ctrlc = "3"
+ed25519-dalek = { version = "2.2", features = ["rand_core"] }
+fs2 = "0.4"
+hex = "0.4"
+rand_core = { version = "0.6", features = ["getrandom"] }
+serde_jcs = "0.1"
+sha2 = "0.10"
+tempfile = "3"
+thiserror = "2"
+uuid = { version = "1", features = ["v4", "serde"] }
+zeroize = "1"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_System_ProcessStatus", "Win32_NetworkManagement_IpHelper", "Win32_System_SystemInformation"] }

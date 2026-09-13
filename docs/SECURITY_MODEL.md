@@ -2,7 +2,9 @@
 
 ## Present security boundary
 
-P0 is a local development scaffold. It has no authenticated remote enrollment, dispatch, tenant persistence, signing service, encrypted spool or production relay. Settings reject production and TRUSTED_RELAY, the API/dashboard bind to loopback by default, and readiness remains 503. A valid schema, signature-shaped field, or matching hash is **not** evidence of a trusted endpoint. The stateless verifier checks only a submitted observation's content hash.
+The Agent has an implemented local standalone trust boundary: separate Ed25519 endpoint and local-development authority keys, actual signature verification, audience/expiry/capability/budget admission, a durable SQLite replay ledger, AES-256-GCM encrypted spool records, and an isolated collector child process. Local authority and spool keys use mode `0600` files on Linux. Windows OS credential storage is not implemented and is reported as unsupported local-file-only storage; local standalone mode is not production enrollment.
+
+There is still no authenticated remote enrollment/dispatch, tenant persistence, signing service, production relay, or control-plane evidence ingestion. Settings reject production and TRUSTED_RELAY, the API/dashboard bind to loopback by default, and readiness remains 503. A valid schema, signature-shaped field, or matching hash is **not** evidence of a trusted remote endpoint. The control-plane stateless verifier checks only a submitted observation's content hash.
 
 ## Target trust and authorization
 
@@ -36,7 +38,7 @@ Each encryption under a given key uses a unique nonce. Never derive an AEAD nonc
 
 Decrypt only approved forensic constants in worker memory; minimize lifetime, redact logs/errors, and zeroize owned secret buffers where libraries permit. Scan stored artifacts for known sensitive test literals when enabled; wrong key, nonce/AAD alteration and tag tampering must fail closed. This feature protects forensic configuration; it is not payload concealment. The native compiler/runtime now implement an AES-256-GCM pool with external key IDs, random 96-bit nonces, authenticated associated data, transient per-instruction plaintext and cleansing. Agent credential-store provisioning and immutable pool reuse remain integration work.
 
-SQLite spools encrypted record payloads and minimal non-sensitive routing metadata, with per-agent quotas and durable upload receipts. Keys live in OS credential storage or operator-provisioned files with restricted ACLs, outside SQLite. Offline expiry/cancellation is checked before reconnect execution. Evidence retention/erasure policies account for backups and spool copies.
+The local Agent SQLite spool encrypts each record payload with AES-256-GCM, a random 96-bit nonce and record-bound associated data; only minimal routing metadata remains clear. Its key is outside SQLite. Local durable export writes or verifies bytes before acknowledgement and survives process restart. Remote upload receipts, spool quotas, OS credential-store integration, and production retention/erasure remain open.
 
 ## Transport, fixtures and compatibility
 

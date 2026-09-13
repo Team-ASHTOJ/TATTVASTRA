@@ -372,9 +372,9 @@
     "implementation": "Rust windows-rs documented APIs and Windows worker lifecycle",
     "subsystem": "Agent / Control plane",
     "demo_evidence": "Windows CI plus authorized Windows lab endpoint",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "Windows adapter and worker code cross-compile successfully; live Windows execution and remote mTLS acceptance remain open."
   },
   {
     "schema_version": "1.0.0",
@@ -385,9 +385,9 @@
     "implementation": "Rust Linux procfs/sysfs/native APIs and cgroup worker limits",
     "subsystem": "Agent / Control plane",
     "demo_evidence": "Ubuntu CI plus authorized Ubuntu lab endpoint",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "Local standalone Ubuntu/WSL collection is tested; cgroup hard limits and remote transport remain open."
   },
   {
     "schema_version": "1.0.0",
@@ -398,9 +398,9 @@
     "implementation": "One-time enrollment, CSR, short-lived certificates and inventory",
     "subsystem": "Agent / Control plane",
     "demo_evidence": "Expired/duplicate/untrusted enrollments rejected",
-    "status": "PLANNED",
+    "status": "SCAFFOLDED",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "Stable local Ed25519 identity exists; one-time token, CSR, certificate rotation/revocation and OS credential storage remain open."
   },
   {
     "schema_version": "1.0.0",
@@ -411,9 +411,9 @@
     "implementation": "ONLINE/IDLE/BUSY/OFFLINE/DEGRADED/QUARANTINED/UNTRUSTED/VERSION_MISMATCH",
     "subsystem": "Agent / Control plane",
     "demo_evidence": "Real heartbeat aging and state transitions",
-    "status": "PLANNED",
+    "status": "SCAFFOLDED",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "Local heartbeat is real and explicitly undelivered; remote aging and fleet state transitions remain open."
   },
   {
     "schema_version": "1.0.0",
@@ -424,9 +424,9 @@
     "implementation": "Ed25519 signatures bound to endpoint/case/organization/artifact/policy/budget",
     "subsystem": "Agent / Control plane",
     "demo_evidence": "Altered audience, artifacts, signature or mode rejected",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "Local collector jobs are cryptographically verified; compiler artifact/plan/variant identity and remote trust remain open."
   },
   {
     "schema_version": "1.0.0",
@@ -437,9 +437,9 @@
     "implementation": "Durable nonce ledger and expiry/skew validation before execution",
     "subsystem": "Agent / Control plane",
     "demo_evidence": "Replay rejected across restart; stale work cannot resume",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "Expiry/skew and durable nonce receipts are tested across restart; production retention cleanup remains open."
   },
   {
     "schema_version": "1.0.0",
@@ -450,9 +450,9 @@
     "implementation": "Endpoint-local policy intersection and enforceability admission",
     "subsystem": "Agent / Control plane",
     "demo_evidence": "Unsupported capability or unenforceable strict budget denied",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "Exact capability and maximum-budget checks exist; strict admission rejects observed-only CPU/memory enforcement."
   },
   {
     "schema_version": "1.0.0",
@@ -463,9 +463,9 @@
     "implementation": "Trusted worker with narrowly bound runtime ABI",
     "subsystem": "Agent / Control plane",
     "demo_evidence": "Signed compiler artifact executes; arbitrary native bytes rejected",
-    "status": "PLANNED",
+    "status": "SCAFFOLDED",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "A dedicated fixed-registry collector worker exists, but it does not load compiler AOT/ORC artifacts."
   },
   {
     "schema_version": "1.0.0",
@@ -476,9 +476,9 @@
     "implementation": "AEAD-encrypted records, quotas and durable acknowledgement",
     "subsystem": "Agent / Control plane",
     "demo_evidence": "Offline spool survives restart and removes only acknowledged records",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "AES-256-GCM payloads survive restart and local durable acknowledgment; quotas and remote receipts remain open."
   },
   {
     "schema_version": "1.0.0",
@@ -489,9 +489,9 @@
     "implementation": "Signed cancellation, cooperative runtime checks, worker kill and idempotent replay",
     "subsystem": "Agent / Control plane",
     "demo_evidence": "Reconnect, cancel during collection and partial evidence retention",
-    "status": "PLANNED",
+    "status": "SCAFFOLDED",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "Local supervisor kill and spool reconnect are tested; signed remote cancellation and partial-result retention remain open."
   },
   {
     "schema_version": "1.0.0",
@@ -502,9 +502,9 @@
     "implementation": "Structured diagnostics and measured lifecycle spans",
     "subsystem": "Agent / Control plane",
     "demo_evidence": "Collector-to-job trace without sensitive payload logging",
-    "status": "PLANNED",
+    "status": "SCAFFOLDED",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "Structured JSON diagnostics exist; OpenTelemetry lifecycle spans and payload-redaction acceptance remain open."
   },
   {
     "schema_version": "1.0.0",
@@ -606,7 +606,7 @@
     "implementation": "Linux uname/procfs and documented Windows system APIs",
     "subsystem": "Collectors",
     "demo_evidence": "Host-specific OS, boot and hardware data with provenance",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P6",
     "safety_environment_note": "Real observations only on supported endpoints. Permission failures are explicit PARTIAL/DENIED, not empty success."
   },
@@ -619,7 +619,7 @@
     "implementation": "Native account/session enumeration",
     "subsystem": "Collectors",
     "demo_evidence": "Scoped local inventory with field availability",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P6",
     "safety_environment_note": "Real observations only on supported endpoints. Permission failures are explicit PARTIAL/DENIED, not empty success."
   },
@@ -632,7 +632,7 @@
     "implementation": "PID/start-time identity, parent, executable, owner, hash/signature when permitted",
     "subsystem": "Collectors",
     "demo_evidence": "Observe benign helper process and distinguish PID reuse",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P6",
     "safety_environment_note": "Real observations only on supported endpoints. Permission failures are explicit PARTIAL/DENIED, not empty success."
   },
@@ -645,7 +645,7 @@
     "implementation": "Native interface enumeration and address normalization",
     "subsystem": "Collectors",
     "demo_evidence": "Actual interface/address observations",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P6",
     "safety_environment_note": "Real observations only on supported endpoints. Permission failures are explicit PARTIAL/DENIED, not empty success."
   },
@@ -658,7 +658,7 @@
     "implementation": "Address/port/protocol/state/PID ownership when available",
     "subsystem": "Collectors",
     "demo_evidence": "Local test socket produces correct endpoint/process relation",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P6",
     "safety_environment_note": "Real observations only on supported endpoints. Permission failures are explicit PARTIAL/DENIED, not empty success."
   },
@@ -671,7 +671,7 @@
     "implementation": "Filter socket inventory with correct listener semantics",
     "subsystem": "Collectors",
     "demo_evidence": "Discover harmless localhost listener",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P6",
     "safety_environment_note": "Real observations only on supported endpoints. Permission failures are explicit PARTIAL/DENIED, not empty success."
   },
@@ -684,7 +684,7 @@
     "implementation": "Linux route sources and documented Windows IP Helper APIs",
     "subsystem": "Collectors",
     "demo_evidence": "Normalized route prefix, gateway, metric and interface",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P6",
     "safety_environment_note": "Real observations only on supported endpoints. Permission failures are explicit PARTIAL/DENIED, not empty success."
   },
@@ -697,7 +697,7 @@
     "implementation": "systemd metadata on Ubuntu; Service Control Manager on Windows",
     "subsystem": "Collectors",
     "demo_evidence": "Actual service inventory without service changes",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P6",
     "safety_environment_note": "Real observations only on supported endpoints. Permission failures are explicit PARTIAL/DENIED, not empty success."
   },
@@ -710,7 +710,7 @@
     "implementation": "Approved-path metadata with symlink and TOCTOU policy",
     "subsystem": "Collectors",
     "demo_evidence": "Temp-file metadata plus explicit denied path result",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P6",
     "safety_environment_note": "Real observations only on supported endpoints. Permission failures are explicit PARTIAL/DENIED, not empty success."
   },
@@ -723,7 +723,7 @@
     "implementation": "Streaming permitted file bytes through bounded hashing",
     "subsystem": "Collectors",
     "demo_evidence": "Known fixture digest and changed-during-read detection",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P6",
     "safety_environment_note": "Real observations only on supported endpoints. Permission failures are explicit PARTIAL/DENIED, not empty success."
   },
@@ -736,7 +736,7 @@
     "implementation": "Read-only startup keys/locations, cron and scheduled tasks",
     "subsystem": "Collectors",
     "demo_evidence": "Inventory only; never installs persistence",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P6",
     "safety_environment_note": "Real observations only on supported endpoints. Permission failures are explicit PARTIAL/DENIED, not empty success."
   },
@@ -749,7 +749,7 @@
     "implementation": "Journal/syslog and Windows Event Log API, normalized source times",
     "subsystem": "Collectors",
     "demo_evidence": "Read harmless test event and preserve source metadata",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P6",
     "safety_environment_note": "Real observations only on supported endpoints. Permission failures are explicit PARTIAL/DENIED, not empty success."
   },
@@ -762,7 +762,7 @@
     "implementation": "dpkg metadata and documented Windows installation inventory",
     "subsystem": "Collectors",
     "demo_evidence": "Actual packages with normalized versions",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P6",
     "safety_environment_note": "Real observations only on supported endpoints. Permission failures are explicit PARTIAL/DENIED, not empty success."
   },
@@ -775,7 +775,7 @@
     "implementation": "Linux modules/sysfs and documented Windows driver enumeration",
     "subsystem": "Collectors",
     "demo_evidence": "Real driver inventory with unavailable signature metadata labeled",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P6",
     "safety_environment_note": "Real observations only on supported endpoints. Permission failures are explicit PARTIAL/DENIED, not empty success."
   },
@@ -801,7 +801,7 @@
     "implementation": "Availability checks and supplied-input integrations",
     "subsystem": "Collectors",
     "demo_evidence": "Absent dependencies do not fail the platform",
-    "status": "PLANNED",
+    "status": "SCAFFOLDED",
     "phase": "P6",
     "safety_environment_note": "Real observations only on supported endpoints. Permission failures are explicit PARTIAL/DENIED, not empty success."
   },
@@ -1295,9 +1295,9 @@
     "implementation": "Idle/active CPU/RAM, bytes read/transmitted, collector time and job latency",
     "subsystem": "Performance",
     "demo_evidence": "Measured host and worker traces with units",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P9",
-    "safety_environment_note": "No fabricated benchmark values. DEMO DATA carries simulation=true; unavailable metrics remain null."
+    "safety_environment_note": "Job duration, result/read/file bytes and Linux child CPU/peak RSS are sampled; Windows CPU/memory and network remain null/unavailable."
   },
   {
     "schema_version": "1.0.0",
