@@ -8,6 +8,11 @@ from jocky_contracts.evidence import IntegrityResult, Observation, verify_observ
 from jocky_contracts.status import EndpointList, Health, PlatformStatus
 
 from jocky_control_plane import __version__
+from jocky_control_plane.compiler import (
+    CompilerInvocationError,
+    CompilerUnavailableError,
+    invoke_compiler,
+)
 from jocky_control_plane.config import Settings
 from jocky_control_plane.coverage import load_coverage
 
@@ -29,7 +34,8 @@ def create_router(settings: Settings) -> APIRouter:
             service="control-plane",
             version=__version__,
             reason=(
-                "Foundation API only. Compiler, authenticated dispatch and storage are unavailable."
+                "Authenticated dispatch and storage are unavailable. "
+                "Compiler requests require JOCKY_COMPILER_PATH."
             ),
         )
         return JSONResponse(status_code=503, content=health.model_dump(mode="json"))
@@ -40,7 +46,7 @@ def create_router(settings: Settings) -> APIRouter:
             simulation=False,
             version=__version__,
             tagline="One Language. Every Endpoint. No Noise.",
-            phase="P0 — repository foundation",
+            phase="P1–P6 implemented slices",
             mode=settings.mode,
             operational=False,
             observed_at=datetime.now(UTC),
@@ -58,24 +64,40 @@ def create_router(settings: Settings) -> APIRouter:
 
     @router.post(
         "/api/v1/compilations",
-        response_model=Problem,
-        responses={501: {"model": Problem}},
+        responses={422: {"model": Problem}, 501: {"model": Problem}},
         tags=["build-forge"],
     )
     def compile_source(payload: CompileRequest, request: Request) -> JSONResponse:
-        problem = Problem(
-            simulation=payload.simulation,
-            simulation_label=payload.simulation_label,
-            code="JOCKY_E_COMPILER_UNAVAILABLE",
-            detail=(
-                "The C++ frontend is available through jockyc. "
-                "API compilation and LLVM source lowering remain unavailable; "
-                "see phases P2–P3."
-            ),
-            status=501,
-            request_id=request.state.request_id,
-        )
-        return JSONResponse(status_code=501, content=problem.model_dump(mode="json"))
+        try:
+            output = invoke_compiler(
+                settings.compiler_path, payload, settings.compiler_timeout_seconds
+            )
+            return JSONResponse(content=output)
+        except CompilerUnavailableError:
+            problem = Problem(
+                simulation=payload.simulation,
+                simulation_label=payload.simulation_label,
+                code="JOCKY_E_COMPILER_UNAVAILABLE",
+                detail=(
+                    "Compiler service is not configured. Set JOCKY_COMPILER_PATH to the "
+                    "jockyc executable, restart the API, and retry."
+                ),
+                status=501,
+                request_id=request.state.request_id,
+            )
+            return JSONResponse(status_code=501, content=problem.model_dump(mode="json"))
+        except CompilerInvocationError as error:
+            if error.output is not None:
+                return JSONResponse(status_code=422, content=error.output)
+            problem = Problem(
+                simulation=payload.simulation,
+                simulation_label=payload.simulation_label,
+                code="JOCKY_E_COMPILER_INVOCATION",
+                detail=str(error),
+                status=422,
+                request_id=request.state.request_id,
+            )
+            return JSONResponse(status_code=422, content=problem.model_dump(mode="json"))
 
     @router.post(
         "/api/v1/evidence/verify-observation",

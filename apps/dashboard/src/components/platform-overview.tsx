@@ -53,8 +53,9 @@ export function PlatformOverview({
                   : "REAL mode — endpoint execution is not available yet"}
               </strong>
               <p>
-                The API is connected. Compiler, agent enrollment, and forensic
-                execution are still being implemented.
+                The native compiler and local Agent slices are implemented.
+                Remote enrollment and distributed forensic execution are not
+                available yet.
               </p>
             </div>
             <StatusBadge>API CONNECTED</StatusBadge>
@@ -104,6 +105,19 @@ export function PlatformOverview({
                         <p>
                           Source, JIR, variants, jobs, and evidence provenance.
                         </p>
+                      </div>
+                    </li>
+                    <li>
+                      <span>04</span>
+                      <div>
+                        <strong>Native compiler workbench</strong>
+                        <p>
+                          Validate source and inspect tokens, AST, typed JIR,
+                          plans, LLVM IR, and deterministic fixture execution.
+                        </p>
+                        <Link href="/workbench" className="text-link">
+                          Open Workbench →
+                        </Link>
                       </div>
                     </li>
                     <li>

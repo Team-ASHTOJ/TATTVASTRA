@@ -172,6 +172,7 @@ export type SimulationLabel8 = string | null;
 export type SourceHash = string;
 export type State1 = "REQUESTED" | "RUNNING" | "SUCCESS" | "FAILED" | "CANCELLED";
 export type VariantIds = string[];
+export type Command = "check" | "tokens" | "ast" | "jir" | "plan" | "llvm" | "run";
 export type Profile = "minimal" | "balanced";
 export type SchemaVersion17 = "1.0.0";
 export type Simulation9 = boolean;
@@ -852,6 +853,7 @@ export interface Compilation {
  * via the `definition` "CompileRequest".
  */
 export interface CompileRequest {
+  command?: Command;
   execution_mode: ExecutionMode;
   profile?: Profile;
   schema_version?: SchemaVersion17;

@@ -507,6 +507,117 @@ dd {
   margin: 16px 0;
   color: var(--cyan);
 }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.compiler-grid {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(420px, 1.1fr);
+  gap: 20px;
+}
+.source-panel,
+.output-panel {
+  min-height: 650px;
+  display: flex;
+  flex-direction: column;
+}
+.code-editor {
+  flex: 1;
+  min-height: 490px;
+  margin: 18px 0 14px;
+  tab-size: 4;
+  color: #cce8df;
+  line-height: 1.55;
+}
+.compiler-options {
+  display: flex;
+  gap: 20px;
+  align-items: end;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 10px;
+}
+.compiler-options label {
+  color: #b5c7d3;
+  font-size: 10px;
+}
+.compiler-options input {
+  margin-top: 5px;
+  width: 180px;
+  min-width: 0;
+  font-family: ui-monospace, monospace;
+}
+.compiler-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 18px 0;
+}
+.compiler-actions button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
+}
+.compiler-actions small {
+  color: #6f929e;
+  font:
+    9px ui-monospace,
+    monospace;
+}
+.compiler-actions .stage-complete {
+  background: #173a31;
+  border-color: #39705d;
+  color: #a8f0ca;
+}
+.compiler-empty,
+.compiler-error {
+  display: grid;
+  place-content: center;
+  flex: 1;
+  min-height: 300px;
+  border: 1px dashed #2c414e;
+  border-radius: 6px;
+  padding: 30px;
+  color: var(--muted);
+  text-align: center;
+  font-size: 12px;
+}
+.compiler-error {
+  border-color: #754b4b;
+  background: #21191d;
+}
+.compiler-error strong {
+  color: #ffbaba;
+}
+.compiler-error p {
+  margin: 8px 0 0;
+}
+.compiler-output {
+  flex: 1;
+  max-height: 500px;
+  overflow: auto;
+  margin: 0;
+  padding: 18px;
+  border: 1px solid #293e4a;
+  border-radius: 6px;
+  background: #0a1117;
+  color: #bde8dd;
+  font:
+    11px/1.55 ui-monospace,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .skip-link {
   position: fixed;
   top: -100px;
@@ -537,6 +648,9 @@ dd {
     grid-template-columns: repeat(2, 1fr);
   }
   .split-grid {
+    grid-template-columns: 1fr;
+  }
+  .compiler-grid {
     grid-template-columns: 1fr;
   }
   .pipeline {
@@ -604,5 +718,16 @@ dd {
   input {
     width: 100%;
     min-width: 0;
+  }
+  .compiler-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .source-panel,
+  .output-panel {
+    min-height: 0;
+  }
+  .compiler-options {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

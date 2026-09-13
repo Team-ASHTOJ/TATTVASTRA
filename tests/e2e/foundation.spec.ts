@@ -81,3 +81,61 @@ test("unavailable API is an error with retry", async ({ page }) => {
     page.getByRole("button", { name: "Retry connection" }),
   ).toBeVisible();
 });
+
+test("workbench exposes the real compiler workflow instead of a phase placeholder", async ({
+  page,
+}) => {
+  await page.route("**/api/control/compilations", async (route) => {
+    const request = route.request().postDataJSON();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        schema_version: "1.0.0",
+        kind: "FrontendCheck",
+        valid: true,
+        hunt: "system-baseline",
+        source_hash: "a".repeat(64),
+        jir_hash: "b".repeat(64),
+        instruction_count: 2,
+        warnings: [],
+        executable: false,
+        requested_command: request.command,
+      }),
+    });
+  });
+  await page.goto("/workbench");
+  await expect(
+    page.getByRole("heading", { name: "JOCKY Workbench" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("JOCKY source")).toContainText(
+    'hunt "system-baseline"',
+  );
+  await expect(page.getByText("Acceptance is tracked")).toHaveCount(0);
+  await page.getByRole("button", { name: /Check/ }).click();
+  await expect(page.getByLabel("Compiler output")).toContainText(
+    '"kind": "FrontendCheck"',
+  );
+});
+
+test("compiler explorer exposes each native pipeline stage", async ({
+  page,
+}) => {
+  await page.goto("/compiler");
+  await expect(
+    page.getByRole("heading", { name: "Compiler Explorer" }),
+  ).toBeVisible();
+  for (const stage of [
+    "Check",
+    "Tokens",
+    "AST",
+    "Typed JIR",
+    "Plan",
+    "LLVM IR",
+    "Run fixture",
+  ]) {
+    await expect(
+      page.getByRole("button", { name: new RegExp(stage) }),
+    ).toBeVisible();
+  }
+});

@@ -4,17 +4,19 @@
 
 Run `make dev-api`; OpenAPI is generated at `/openapi.json`, interactive documentation at `/docs`. API version prefix is `/api/v1`, schema version is `1.0.0`. Routes are local development utilities; remote authentication and production operation are not implemented. Responses use `Cache-Control: no-store` and an `X-Request-ID`. Logs contain measured request duration/status, not source/evidence content.
 
-| Method / path                              | Behavior now                                                    | Response                                            |
-| ------------------------------------------ | --------------------------------------------------------------- | --------------------------------------------------- |
-| GET `/health/live`                         | Process is alive                                                | 200 Health                                          |
-| GET `/health/ready`                        | Execution/persistence/authentication unavailable                | 503 Health with reason                              |
-| GET `/api/v1/status`                       | Actual phase/mode/availability and complete requirement catalog | 200 PlatformStatus; operational=false               |
-| GET `/api/v1/endpoints`                    | Inventory is unavailable, not an observed empty fleet           | 200 EndpointList; available=false, items=[], reason |
-| POST `/api/v1/compilations`                | Validates request then refuses missing compiler                 | 501 Problem; no artifact/AST/JIR/IR invented        |
-| POST `/api/v1/evidence/verify-observation` | Recomputes submitted observation SHA-256                        | 200 IntegrityResult; signature NOT_CHECKED          |
-| GET `/metrics`                             | Actual HTTP response counter                                    | Prometheus text                                     |
+| Method / path                              | Behavior now                                                    | Response                                             |
+| ------------------------------------------ | --------------------------------------------------------------- | ---------------------------------------------------- |
+| GET `/health/live`                         | Process is alive                                                | 200 Health                                           |
+| GET `/health/ready`                        | Execution/persistence/authentication unavailable                | 503 Health with reason                               |
+| GET `/api/v1/status`                       | Actual phase/mode/availability and complete requirement catalog | 200 PlatformStatus; operational=false                |
+| GET `/api/v1/endpoints`                    | Inventory is unavailable, not an observed empty fleet           | 200 EndpointList; available=false, items=[], reason  |
+| POST `/api/v1/compilations`                | Runs an allowlisted `jockyc` stage when configured              | 200 native JSON; 422 diagnostic; 501 if unconfigured |
+| POST `/api/v1/evidence/verify-observation` | Recomputes submitted observation SHA-256                        | 200 IntegrityResult; signature NOT_CHECKED           |
+| GET `/metrics`                             | Actual HTTP response counter                                    | Prometheus text                                      |
 
-Request bodies above 1 MiB return 413 before JSON parsing. Invalid request contracts return 422 `JOCKY_E_SCHEMA` without reflecting sensitive input. Unrepresentable RFC 8785 numbers return 422 `JOCKY_E_CANONICAL_JSON`. Unknown routes return a Problem response. Compiler failure is non-retryable until implementation changes. Dashboard uses a small allowlisted server proxy under `/api/control/*`; connection failure returns 503 with retry guidance.
+Request bodies above 1 MiB return 413 before JSON parsing. Invalid request contracts return 422 `JOCKY_E_SCHEMA` without reflecting sensitive input. Unrepresentable RFC 8785 numbers return 422 `JOCKY_E_CANONICAL_JSON`. Unknown routes return a Problem response. Dashboard uses a small allowlisted server proxy under `/api/control/*`; connection failure returns 503 with retry guidance.
+
+Set `JOCKY_COMPILER_PATH` to an executable built from `native/compiler/jockyc` before starting the API to enable Workbench and Compiler Explorer requests. The API writes source into a private temporary directory and invokes the compiler without a shell, with a fixed command allowlist and a 15-second timeout. Supported request commands are `check`, `tokens`, `ast`, `jir`, `plan`, `llvm`, and `run`; `run` is the compiler's explicitly labeled deterministic fixture, not endpoint execution. If the compiler is not configured, the endpoint returns 501 without invented output.
 
 ```sh
 curl --fail http://127.0.0.1:8000/api/v1/status

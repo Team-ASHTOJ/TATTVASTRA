@@ -5,11 +5,13 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) {
-    const problem: { detail?: string } = await response
+    const problem: { detail?: string; message?: string } = await response
       .json()
       .catch(() => ({}));
     throw new Error(
-      problem.detail ?? `Control plane returned HTTP ${response.status}`,
+      problem.detail ??
+        problem.message ??
+        `Control plane returned HTTP ${response.status}`,
     );
   }
   return response.json() as Promise<T>;

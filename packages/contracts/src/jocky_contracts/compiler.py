@@ -93,6 +93,7 @@ class Diagnostic(Contract):
 
 
 class CompileRequest(Provenance):
+    command: Literal["check", "tokens", "ast", "jir", "plan", "llvm", "run"] = "check"
     source: str = Field(min_length=1, max_length=262144)
     target: Target
     execution_mode: ExecutionMode

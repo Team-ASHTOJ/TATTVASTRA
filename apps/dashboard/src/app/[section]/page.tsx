@@ -4,6 +4,7 @@ import { EmptyState, StatusBadge } from "@jocky/ui";
 import { sections } from "../../lib/sections";
 import { PlatformOverview } from "../../components/platform-overview";
 import { EvidenceVerifier } from "../../components/evidence-verifier";
+import { CompilerWorkbench } from "../../components/compiler-workbench";
 
 export function generateStaticParams() {
   return [
@@ -19,6 +20,26 @@ export default async function SectionPage({
 }) {
   const { section } = await params;
   if (section === "architecture") return <PlatformOverview coverageOnly />;
+  if (section === "workbench" || section === "compiler") {
+    const explorer = section === "compiler";
+    return (
+      <>
+        <div className="eyebrow">BUILD / NATIVE COMPILER</div>
+        <div className="page-heading">
+          <div>
+            <h1>{explorer ? "Compiler Explorer" : "JOCKY Workbench"}</h1>
+            <p>
+              {explorer
+                ? "Inspect each real frontend, JIR, LLVM, and fixture-execution stage."
+                : "Edit a hunt, validate it, inspect its representations, and run the deterministic compiler fixture."}
+            </p>
+          </div>
+          <StatusBadge tone="good">IMPLEMENTED</StatusBadge>
+        </div>
+        <CompilerWorkbench explorer={explorer} />
+      </>
+    );
+  }
   if (section === "judge")
     return (
       <>
@@ -27,13 +48,22 @@ export default async function SectionPage({
         <div className="notice">
           <StatusBadge tone="warning">NOT READY</StatusBadge>
           <p>
-            The end-to-end demonstration requires phases P1–P9. No hunt or build
-            is simulated here.
+            The compiler and local Agent slices are available. The end-to-end
+            distributed demonstration still requires control-plane enrollment,
+            dispatch, and durable evidence.
           </p>
         </div>
         <section className="panel">
           <h2>Available foundation walkthrough</h2>
           <ol className="judge-steps">
+            <li>
+              <Link href="/workbench">
+                Validate a hunt and inspect native compiler output
+              </Link>
+            </li>
+            <li>
+              <Link href="/compiler">Walk through each compiler stage</Link>
+            </li>
             <li>
               <Link href="/architecture">
                 Inspect architecture and requirement coverage

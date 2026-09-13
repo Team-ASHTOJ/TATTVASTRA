@@ -1213,6 +1213,20 @@
     "CompileRequest": {
       "additionalProperties": false,
       "properties": {
+        "command": {
+          "default": "check",
+          "enum": [
+            "check",
+            "tokens",
+            "ast",
+            "jir",
+            "plan",
+            "llvm",
+            "run"
+          ],
+          "title": "Command",
+          "type": "string"
+        },
         "execution_mode": {
           "$ref": "#/$defs/ExecutionMode"
         },
