@@ -153,7 +153,7 @@
     "demo_evidence": "Every instruction has type, capability, cost and lowering coverage",
     "status": "IMPLEMENTED",
     "phase": "P1",
-    "safety_environment_note": "All instruction families have a static registry and typed frontend emission. Source LLVM lowering, runtime cost accounting and conformance remain P2-P6 work; JOIN is registry-only."
+    "safety_environment_note": "Typed instructions lower through fixed collector ABI calls or a closed analysis dispatcher; unsupported read opcodes fail closed and JOIN remains registry-only. Real adapters, runtime cost accounting and native Windows conformance remain open."
   },
   {
     "schema_version": "1.0.0",
@@ -166,7 +166,7 @@
     "demo_evidence": "Executable command acceptance with machine-readable errors",
     "status": "IMPLEMENTED",
     "phase": "P1",
-    "safety_environment_note": "check/tokens/ast/jir/plan are verified C++ commands. llvm/compile/variants/run/benchmark still fail explicitly; the complete CLI requirement remains open."
+    "safety_environment_note": "check/tokens/ast/jir/plan/llvm/compile/run/variants/variant-info/benchmark are implemented for host AOT and compiler-owned simulated ORC fixtures. Cross-compilation and endpoint dispatch remain unavailable."
   },
   {
     "schema_version": "1.0.0",
@@ -190,7 +190,7 @@
     "implementation": "Typed JIR lowering to verified LLVM IR and optimization pipeline",
     "subsystem": "LLVM / Runtime",
     "demo_evidence": "Dump real IR and reject invalid module/type signatures",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P2–P3",
     "safety_environment_note": "LLVM remains a P0 product priority; phase numbers represent implementation order."
   },
@@ -203,7 +203,7 @@
     "implementation": "Versioned C ABI with opaque context and dataset handles",
     "subsystem": "LLVM / Runtime",
     "demo_evidence": "C++/Rust ABI tests and per-operation permission errors",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P2–P3",
     "safety_environment_note": "LLVM remains a P0 product priority; phase numbers represent implementation order."
   },
@@ -216,7 +216,7 @@
     "implementation": "TargetMachine AOT artifacts, detached signatures and trusted Agent worker",
     "subsystem": "LLVM / Runtime",
     "demo_evidence": "Signed generated program executes on each target OS",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P2–P3",
     "safety_environment_note": "LLVM remains a P0 product priority; phase numbers represent implementation order."
   },
@@ -229,7 +229,7 @@
     "implementation": "ORC LLJIT in JOCKY Agent-owned isolated execution worker",
     "subsystem": "LLVM / Runtime",
     "demo_evidence": "Actual JIT result with no unrelated-process access",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P2–P3",
     "safety_environment_note": "LLVM remains a P0 product priority; phase numbers represent implementation order."
   },
@@ -242,7 +242,7 @@
     "implementation": "Native and ORC required; VM optional debugging only",
     "subsystem": "LLVM / Runtime",
     "demo_evidence": "Equivalent results across native/memory; VM explicitly unavailable until built",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P2–P3",
     "safety_environment_note": "LLVM remains a P0 product priority; phase numbers represent implementation order."
   },
@@ -268,7 +268,7 @@
     "implementation": "Deterministic lowering template selection and generated helper layout",
     "subsystem": "Build Diversity / Forge",
     "demo_evidence": "Same source/seed/toolchain produces same bytes",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P4",
     "safety_environment_note": "Only JOCKY-generated benign wrappers. Never arbitrary payloads or AV-directed optimization."
   },
@@ -281,7 +281,7 @@
     "implementation": "Equivalent compiler-generated wrapper branches, internal symbols and ordering",
     "subsystem": "Build Diversity / Forge",
     "demo_evidence": "Compare disassembly/CFG and explain transformations",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P4",
     "safety_environment_note": "Only JOCKY-generated benign wrappers. Never arbitrary payloads or AV-directed optimization."
   },
@@ -294,7 +294,7 @@
     "implementation": "Stable fixture collector execution with normalized result comparison",
     "subsystem": "Build Diversity / Forge",
     "demo_evidence": "Three variants have equal semantic test hashes",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P4",
     "safety_environment_note": "Only JOCKY-generated benign wrappers. Never arbitrary payloads or AV-directed optimization."
   },
@@ -307,7 +307,7 @@
     "implementation": "SHA-256 of actual object/shared-module bytes",
     "subsystem": "Build Diversity / Forge",
     "demo_evidence": "Three different seeds yield distinct artifacts, not manifest-only fake hashes",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P4",
     "safety_environment_note": "Only JOCKY-generated benign wrappers. Never arbitrary payloads or AV-directed optimization."
   },
@@ -320,7 +320,7 @@
     "implementation": "Source/JIR/LLVM hashes, seed, versions, target, mode, actual artifact, semantic result, timestamps and signature",
     "subsystem": "Build Diversity / Forge",
     "demo_evidence": "Trace each executed variant to exact source and artifact",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P4",
     "safety_environment_note": "Only JOCKY-generated benign wrappers. Never arbitrary payloads or AV-directed optimization."
   },
@@ -333,7 +333,7 @@
     "implementation": "AEAD encrypted literal pool, external key IDs, runtime-only tokens",
     "subsystem": "Build Diversity / Forge",
     "demo_evidence": "Artifact plaintext scan; wrong key/tampering rejected",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P4",
     "safety_environment_note": "Only JOCKY-generated benign wrappers. Never arbitrary payloads or AV-directed optimization."
   },
@@ -1269,7 +1269,7 @@
     "implementation": "Monotonic lex/parse/semantic/JIR/LLVM/optimize/AOT/JIT timings and peak memory",
     "subsystem": "Performance",
     "demo_evidence": "Raw measured stage samples attached to exact build",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P9",
     "safety_environment_note": "No fabricated benchmark values. DEMO DATA carries simulation=true; unavailable metrics remain null."
   },
@@ -1282,7 +1282,7 @@
     "implementation": "Actual uniqueness, sizes, semantic equality, overhead and structural metrics",
     "subsystem": "Performance",
     "demo_evidence": "Reproducible variant matrix and baseline comparison",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P9",
     "safety_environment_note": "No fabricated benchmark values. DEMO DATA carries simulation=true; unavailable metrics remain null."
   },

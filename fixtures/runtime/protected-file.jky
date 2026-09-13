@@ -1,0 +1,5 @@
+hunt "protected-file-fixture" {
+    runtime { backend llvm execution memory protect_literals true }
+    capabilities { filesystem.metadata }
+    collect files { path path("jocky-sensitive-fixture-marker") } as files
+}

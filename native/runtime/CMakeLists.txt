@@ -1,5 +1,7 @@
 add_library(jocky_runtime STATIC src/abi.cpp)
 target_include_directories(jocky_runtime PUBLIC include)
+target_compile_definitions(jocky_runtime PRIVATE JOCKY_RUNTIME_BUILD=1)
+target_link_libraries(jocky_runtime PUBLIC OpenSSL::Crypto)
 set_target_properties(jocky_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
 if(BUILD_TESTING)
   add_executable(runtime_tests tests/abi_test.cpp)

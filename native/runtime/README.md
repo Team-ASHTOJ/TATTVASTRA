@@ -1,5 +1,15 @@
-# Runtime ABI foundation
+# JOCKY runtime ABI v2
 
-`include/jocky/runtime.h` declares ABI version 1, opaque context and dataset handles, status codes and required collector boundaries. ABI version reporting is implemented. Collector functions are explicit unavailable boundaries; null contexts/outputs are invalid and no evidence handles are produced.
+`include/jocky/runtime.h` is a versioned C ABI: opaque context, fixed-width dataset handles,
+status/error views, and explicit retain/release ownership. The host supplies a v1 callback table;
+no STL, exception, arbitrary symbol, OS handle, or native payload crosses the boundary.
 
-The next phase supplies the Rust-owned context/collector table, cancellation/resource ledger and observation sink. Memory ownership, schema IDs, per-call policy and cross-language layout tests must be fixed before lowering collector instructions. Do not confuse an exported symbol with an implemented collector.
+The fixed collector surface covers system information, users, processes, interfaces,
+connections, routes, file metadata/hash, services, events, and drivers. Analysis/evidence work
+uses one closed opcode allowlist. The runtime copies encrypted-pool/key inputs, cleanses owned key
+and decrypted buffers, and authenticates AES-256-GCM before exposing one instruction's canonical
+configuration to the host callback.
+
+The built-in fixture host is deterministic and always reports `simulation=true` through its
+fixture API. It exists for compiler equivalence tests and local `jockyc run`; it is not a REAL
+endpoint collector. Production collectors remain Rust-hosted behind the same callback contract.

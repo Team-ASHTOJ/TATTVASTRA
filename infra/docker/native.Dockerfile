@@ -2,7 +2,7 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates cmake ninja-build clang-18 clang-format-18 llvm-18-dev \
-    libgtest-dev libzstd-dev libedit-dev zlib1g-dev && rm -rf /var/lib/apt/lists/*
+    libgtest-dev libssl-dev libzstd-dev libedit-dev zlib1g-dev && rm -rf /var/lib/apt/lists/*
 ENV CC=clang-18 CXX=clang++-18
 WORKDIR /src
 COPY CMakeLists.txt .clang-format ./

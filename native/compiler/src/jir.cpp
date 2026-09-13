@@ -98,7 +98,7 @@ llvm::json::Object jir_json(const FrontendModule &m) {
   }
   return llvm::json::Object{{"schema_version", "1.0.0"},
                             {"kind", "JIRModule"},
-                            {"compiler_version", "0.2.0"},
+                            {"compiler_version", "0.3.0"},
                             {"source_hash", m.source_hash},
                             {"hunt", m.hunt_name},
                             {"case", m.case_name},

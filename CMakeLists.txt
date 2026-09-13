@@ -8,6 +8,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # LLVM is mandatory. Never add a mock/no-LLVM compiler configuration.
 find_package(LLVM REQUIRED CONFIG)
+find_package(OpenSSL REQUIRED COMPONENTS Crypto)
 if(LLVM_PACKAGE_VERSION VERSION_LESS 18)
   message(FATAL_ERROR "JOCKY requires LLVM >= 18; reference CI uses LLVM 18")
 endif()

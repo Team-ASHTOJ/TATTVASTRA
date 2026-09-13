@@ -55,4 +55,6 @@ def test_documented_coverage_matches_backend_catalog():
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    assert (ROOT / "docs/REQUIREMENT_TRACEABILITY.md").read_text() == module.render()
+    assert (ROOT / "docs/REQUIREMENT_TRACEABILITY.md").read_text(
+        encoding="utf-8"
+    ) == module.render()

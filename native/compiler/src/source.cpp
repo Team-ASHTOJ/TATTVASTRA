@@ -82,14 +82,15 @@ std::string sha256(const std::string &bytes) {
 }
 bool is_keyword(const std::string &text) {
   static const std::set<std::string> words = {
-      "case",         "hunt",    "target",    "targets", "group",    "host",      "os",
-      "runtime",      "backend", "execution", "variant", "enabled",  "seed",      "profile",
-      "capabilities", "budget",  "cpu",       "memory",  "io",       "duration",  "collect",
-      "as",           "let",     "where",     "select",  "sort",     "limit",     "count",
-      "correlate",    "with",    "finding",   "when",    "severity", "evidence",  "timeline",
-      "source",       "report",  "export",    "include", "format",   "integrity", "analyze",
-      "fields",       "true",    "false",     "and",     "or",       "not",       "asc",
-      "desc",         "by",      "join",      "on"};
+      "case",    "hunt",     "target",       "targets",   "group",     "host",
+      "os",      "runtime",  "backend",      "execution", "variant",   "enabled",
+      "seed",    "profile",  "capabilities", "budget",    "cpu",       "memory",
+      "io",      "duration", "collect",      "as",        "let",       "where",
+      "select",  "sort",     "limit",        "count",     "correlate", "with",
+      "finding", "when",     "severity",     "evidence",  "timeline",  "source",
+      "report",  "export",   "include",      "format",    "integrity", "analyze",
+      "fields",  "true",     "false",        "and",       "or",        "not",
+      "asc",     "desc",     "by",           "join",      "on",        "protect_literals"};
   return words.contains(text);
 }
 std::string token_kind_name(TokenKind kind) {

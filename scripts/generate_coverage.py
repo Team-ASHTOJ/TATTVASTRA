@@ -51,8 +51,8 @@ if __name__ == "__main__":
     path = ROOT / "docs/REQUIREMENT_TRACEABILITY.md"
     content = render()
     if args.check:
-        if not path.exists() or path.read_text() != content:
+        if not path.exists() or path.read_text(encoding="utf-8") != content:
             raise SystemExit("Traceability drift. Run make coverage.")
     else:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content)
+        path.write_text(content, encoding="utf-8", newline="\n")

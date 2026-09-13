@@ -1,27 +1,30 @@
-# JOCKY compiler frontend
+# JOCKY native compiler
 
-C++20 owns source lexing, parsing, AST, type/capability checks, typed JIR and static plans. LLVM >=18 is mandatory; the reference toolchain is LLVM 18.1.3. The existing ORC self-test executes real machine code through the runtime ABI. Source-to-LLVM lowering and hunt execution remain unavailable.
-
-```sh
-make native-build LLVM_DIR=/path/to/llvm/lib/cmake/llvm
-build/native/native/compiler/jockyc check examples/basic/system.jky
-build/native/native/compiler/jockyc tokens examples/basic/processes.jky --json
-build/native/native/compiler/jockyc ast examples/investigations/network-hunt.jky --json
-build/native/native/compiler/jockyc jir examples/investigations/full-investigation.jky --json
-build/native/native/compiler/jockyc plan examples/investigations/driver-audit.jky --json
-ctest --test-dir build/native --output-on-failure
-```
-
-On a development host without LLVM headers/GoogleTest/clang-format, use the repository's Ubuntu toolchain:
+The C++20 frontend lowers typed JIR to verified LLVM IR. LLVM 18+ is mandatory. Generated code
+calls only the JOCKY runtime ABI: eleven fixed collector functions and a closed analysis/evidence
+dispatcher. There is no native payload loader or fallback interpreter.
 
 ```sh
-make verify-native-container
-docker run --rm --entrypoint /src/build/native/native/compiler/jockyc jocky-native:foundation check examples/basic/system.jky
-docker run --rm --entrypoint /src/build/native/native/compiler/jockyc jocky-native:foundation plan examples/investigations/full-investigation.jky --json
+jockyc check examples/basic/system.jky
+jockyc llvm examples/basic/system.jky
+jockyc compile examples/basic/system.jky --target host --execution native --output system.o
+jockyc run examples/basic/system.jky --execution memory --json
+jockyc variants examples/basic/system.jky --count 3 --json
+jockyc variant-info system.o
+jockyc benchmark examples/basic/system.jky --count 3 --json
 ```
 
-`check`/`jir`/`plan` validate the full source pipeline. `tokens`/`ast` stop at their debugging stage. JSON is deterministic; plans have dispatchable=false and no fabricated runtime results. Unknown/unavailable commands and invalid source exit 1, internal failures exit 70. `--help`, `--version`, `--self-test` remain available. Python can package validated JIR in the existing protobuf document with `scripts/pack_jir.py`; it never interprets the DSL.
+`compile` emits a host TargetMachine object plus `<output>.manifest.json`; unsupported targets are
+rejected. `run` uses LLVM ORC in the current JOCKY process and requires no temporary executable.
+Until an authorized Agent host is integrated, CLI execution uses the explicitly labeled
+deterministic SIMULATED fixture collector. `variants` emits actual objects, verifies each through
+ORC against the same fixture, and fails if normalized semantic hashes differ.
 
-`frontend_test.cpp` covers lexer/parser/AST, types, capabilities, both endpoint OS semantics, JIR invariants, pushdown barriers, diagnostics and bounded malformed input. `scripts/test_frontend.py` invokes the actual CLI for every example and compares exact-byte snapshots in `fixtures/compiler`. To intentionally refresh snapshots after reviewing a semantic change, run it with `--compiler <jockyc-path> --update-goldens`; normal tests never rewrite them.
+`runtime { protect_literals true }` encrypts compiler configuration with AES-256-GCM. Provide
+`JOCKY_LITERAL_KEY_HEX` (64 hex digits) and `JOCKY_LITERAL_KEY_ID`; key bytes never enter the IR,
+object, manifest, or logs. Fresh encryption uses a random 96-bit nonce, so reproducibility requires
+reusing the immutable encrypted pool input as described in the security model.
 
-See [LANGUAGE_SPEC](../../docs/LANGUAGE_SPEC.md), [JIR_SPEC](../../docs/JIR_SPEC.md) and [BUILD_STATUS](../../docs/BUILD_STATUS.md) for supported syntax and recorded limits. No native payload loader or fallback interpreter exists.
+Run `ctest --test-dir build/native --output-on-failure`. The backend suite covers fixed ABI calls,
+same-seed reproduction, distinct variants/objects, real ORC execution, fixture equivalence,
+authenticated literal decryption, and tag tampering.

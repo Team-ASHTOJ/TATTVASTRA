@@ -38,10 +38,12 @@ def main() -> None:
             if command in {"ast", "jir", "plan"}:
                 golden = ROOT / "fixtures/compiler" / f"{path.stem}.{command}.canonical.json"
                 if args.update_goldens:
-                    golden.write_text(result.stdout)
-                assert golden.read_text() == result.stdout, f"Golden drift: {golden}"
+                    golden.write_text(result.stdout, encoding="utf-8", newline="\n")
+                assert golden.read_text(encoding="utf-8") == result.stdout, (
+                    f"Golden drift: {golden}"
+                )
     invalid = ROOT / "examples/invalid"
-    expected = json.loads((invalid / "expected.json").read_text())
+    expected = json.loads((invalid / "expected.json").read_text(encoding="utf-8"))
     assert set(expected) == {p.name for p in invalid.glob("*.jky")}
     for name, code in expected.items():
         for command in ("check", "jir", "plan"):

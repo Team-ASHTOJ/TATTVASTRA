@@ -123,9 +123,10 @@ TEST(Semantics, BudgetRuntimeAndVariant) {
   rejects("runtime { execution vm }", "E234");
   rejects("runtime { variant { profile stealth } }", "E235");
   auto m = compile("runtime { execution native variant { seed 0x2a enabled true profile minimal } "
-                   "} budget { memory <= 1MiB }");
+                   "protect_literals true } budget { memory <= 1MiB }");
   EXPECT_EQ(m.budget.getInteger("memory_bytes"), 1048576);
   EXPECT_EQ(m.runtime.getObject("variant")->getString("seed"), "000000000000002a");
+  EXPECT_TRUE(m.runtime.getBoolean("protect_literals").value_or(false));
 }
 TEST(Capabilities, EveryCollectorRequiresGrant) {
   for (const auto &[name, spec] : collectors()) {

@@ -818,6 +818,32 @@
           "default": null,
           "title": "Aot Compile Ms"
         },
+        "aot_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Aot Ms"
+        },
+        "execution_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Execution Ms"
+        },
         "jir_ms": {
           "anyOf": [
             {
@@ -869,6 +895,19 @@
           ],
           "default": null,
           "title": "Llvm Generation Ms"
+        },
+        "optimization_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Optimization Ms"
         },
         "optimize_ms": {
           "anyOf": [
@@ -927,6 +966,19 @@
           ],
           "default": null,
           "title": "Semantic Ms"
+        },
+        "variant_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Variant Ms"
         }
       },
       "title": "CompilerMetrics",
@@ -2154,7 +2206,7 @@
           "type": "string"
         },
         "compiler_version": {
-          "const": "0.2.0",
+          "const": "0.3.0",
           "title": "Compiler Version",
           "type": "string"
         },

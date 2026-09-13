@@ -1,6 +1,6 @@
-# JOCKY language specification — frontend 0.2.0
+# JOCKY language specification — compiler 0.3.0
 
-The C++20 frontend implements this language through typed JIR and a static execution plan. It does not execute hunts. LLVM remains mandatory at build time; source lowering and endpoint collectors are P2–P6 work. The parser lives in `native/compiler/src/parser.cpp`; editor metadata is not a compiler.
+The C++20 compiler implements this language through typed JIR, a static execution plan, LLVM lowering, host AOT objects and compiler-owned ORC fixture execution. Fixture execution is explicitly SIMULATED and is not an endpoint hunt. LLVM remains mandatory at build time; real endpoint collectors and Agent admission are P2–P6 work. The parser lives in `native/compiler/src/parser.cpp`; editor metadata is not a compiler.
 
 ## Lexical and source rules
 
@@ -21,7 +21,7 @@ declaration   = selectors | selector | runtime | capabilities | budget ;
 selectors     = ("target" | "targets"), "{", {selector}, "}" ;
 selector      = ("group" | "host" | "target"), string
               | "os", os_name, {"|", os_name} ;
-runtime       = "runtime", "{", {"backend", "llvm" | "execution", mode | variant}, "}" ;
+runtime       = "runtime", "{", {"backend", "llvm" | "execution", mode | "protect_literals", bool | variant}, "}" ;
 variant       = "variant", "{", {"enabled", bool | "seed", seed | "profile", profile}, "}" ;
 capabilities  = "capabilities", "{", {qualified_name}, "}" ;
 budget        = "budget", "{", {resource, "<=", quantity}, "}" ;
@@ -128,7 +128,7 @@ Report is optional and must be the final statement. Format defaults to json and 
 
 Budget defaults are cpu 20%, memory 256000000 bytes, I/O 150000000 bytes, duration 120000 ms. Missing settings warn W232. CPU is an integer 1–100; memory is positive; I/O permits zero; duration is 1–86400000 ms. Quantities are integers with explicit units: `%`, `B`, `KB`, `MB`, `GB`, `KiB`, `MiB`, `GiB`, `ms`, `s`, `m`, `h`. Decimal/binary sizes never alias. Converted quantities must fit 9007199254740991. CPU means a fraction of one logical core, duration a monotonic wall deadline, and I/O accounts collector reads; evidence transmission is separately measured later. Budgets are validated and carried, not enforced by this phase.
 
-Runtime defaults to backend llvm, execution memory, variant disabled, seed auto, profile balanced. Only native/memory and minimal/balanced are accepted; VM and other backends/profiles are errors. Seeds accept auto, unsigned-64-bit decimal, 0x hexadecimal, or a quoted hexadecimal string; explicit seeds normalize to 16 lowercase hex digits. Auto remains unresolved until Build Forge, so repeated frontend calls are deterministic. No variant artifact is generated here.
+Runtime defaults to backend llvm, execution memory, variant disabled, seed auto, profile balanced, and literal protection disabled. Only native/memory and minimal/balanced are accepted; VM and other backends/profiles are errors. Seeds accept auto, unsigned-64-bit decimal, 0x hexadecimal, or a quoted hexadecimal string; explicit seeds normalize to 16 lowercase hex digits. Auto is resolved deterministically by the backend from the source hash. `protect_literals true` requires an external AES-256 key and key ID at build/execution; keys never enter JIR, LLVM IR, objects, manifests, or logs. Fresh encryption uses a random unique nonce and therefore becomes an additional immutable reproducibility input.
 
 ## Diagnostics, CLI and acceptance
 

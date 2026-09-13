@@ -2,7 +2,7 @@
 
 ## Current versus target
 
-P0 contains buildable boundaries, shared contracts, explicit capability status, a real LLVM ORC toolchain diagnostic, a Rust diagnostic CLI, and stateless observation/audit hash verification primitives. It does not yet parse JOCKY, execute hunts, enroll agents, ingest evidence or persist domain objects. The following diagram is the target architecture.
+The repository contains the typed C++ frontend plus an initial real LLVM backend: fixed runtime-ABI lowering, verified modules, host TargetMachine objects, own-process ORC execution against a deterministic SIMULATED fixture, seeded compiler structural diversity, manifests and AES-256-GCM literal pools. The Rust Agent still does not host execution or real collectors, enroll agents, ingest evidence or persist domain objects. The following diagram remains the target production architecture.
 
 ```mermaid
 flowchart LR

@@ -96,7 +96,7 @@ class JirInstruction(FrontendNode):
 
 class JirModule(Contract):
     kind: Literal["JIRModule"]
-    compiler_version: Literal["0.2.0"]
+    compiler_version: Literal["0.3.0"]
     source_hash: Hash
     hunt: str
     case: str

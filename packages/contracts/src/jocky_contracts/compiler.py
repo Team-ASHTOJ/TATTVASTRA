@@ -29,10 +29,14 @@ class CompilerMetrics(Contract):
     parse_ms: float | None = Field(default=None, ge=0)
     semantic_ms: float | None = Field(default=None, ge=0)
     jir_ms: float | None = Field(default=None, ge=0)
+    variant_ms: float | None = Field(default=None, ge=0)
     llvm_generation_ms: float | None = Field(default=None, ge=0)
     optimize_ms: float | None = Field(default=None, ge=0)
+    optimization_ms: float | None = Field(default=None, ge=0)
     aot_compile_ms: float | None = Field(default=None, ge=0)
+    aot_ms: float | None = Field(default=None, ge=0)
     jit_compile_ms: float | None = Field(default=None, ge=0)
+    execution_ms: float | None = Field(default=None, ge=0)
     peak_memory_bytes: int | None = Field(default=None, ge=0)
 
 

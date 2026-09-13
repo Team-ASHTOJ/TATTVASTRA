@@ -46,8 +46,8 @@ if __name__ == "__main__":
     path = ROOT / "packages/contracts/generated/contracts.schema.json"
     content = schema_text()
     if args.check:
-        if not path.exists() or path.read_text() != content:
+        if not path.exists() or path.read_text(encoding="utf-8") != content:
             raise SystemExit("Contract drift detected. Run make contracts.")
     else:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content)
+        path.write_text(content, encoding="utf-8", newline="\n")

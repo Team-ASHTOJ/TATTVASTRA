@@ -37,15 +37,19 @@ export type IntegrityValid = boolean;
 export type SchemaVersion2 = "1.0.0";
 export type BenchmarkRunId = string;
 export type AotCompileMs = number | null;
+export type AotMs = number | null;
+export type ExecutionMs = number | null;
 export type JirMs = number | null;
 export type JitCompileMs = number | null;
 export type LexMs = number | null;
 export type LlvmGenerationMs = number | null;
+export type OptimizationMs = number | null;
 export type OptimizeMs = number | null;
 export type ParseMs = number | null;
 export type PeakMemoryBytes = number | null;
 export type SchemaVersion3 = "1.0.0";
 export type SemanticMs = number | null;
+export type VariantMs = number | null;
 export type Environment = string;
 /**
  * This interface was referenced by `JockyContracts`'s JSON-Schema
@@ -285,7 +289,7 @@ export type Simulation14 = boolean;
 export type SimulationLabel14 = string | null;
 export type VerificationScope = "SUBMITTED_OBSERVATION_ONLY";
 export type Case1 = string;
-export type CompilerVersion = "0.2.0";
+export type CompilerVersion = "0.3.0";
 export type Executable1 = false;
 export type Hunt1 = string;
 export type Effect = "pure" | "read" | "emit";
@@ -587,15 +591,19 @@ export interface BenchmarkRun {
  */
 export interface CompilerMetrics {
   aot_compile_ms?: AotCompileMs;
+  aot_ms?: AotMs;
+  execution_ms?: ExecutionMs;
   jir_ms?: JirMs;
   jit_compile_ms?: JitCompileMs;
   lex_ms?: LexMs;
   llvm_generation_ms?: LlvmGenerationMs;
+  optimization_ms?: OptimizationMs;
   optimize_ms?: OptimizeMs;
   parse_ms?: ParseMs;
   peak_memory_bytes?: PeakMemoryBytes;
   schema_version?: SchemaVersion3;
   semantic_ms?: SemanticMs;
+  variant_ms?: VariantMs;
 }
 /**
  * This interface was referenced by `JockyContracts`'s JSON-Schema

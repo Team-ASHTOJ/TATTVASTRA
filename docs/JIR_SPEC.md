@@ -1,6 +1,6 @@
 # JIR specification — version 1 target
 
-Status: frontend representation IMPLEMENTED; LLVM lowering and runtime execution remain PLANNED. The current serialization boundary is specified below. JIR is typed, platform-independent and effect-aware. It is not a list of shell commands and contains no arbitrary native payloads.
+Status: frontend representation and fixed-operation LLVM/runtime lowering are IMPLEMENTED and acceptance-tested with LLVM 18 on Ubuntu/WSL. Native Windows verification and real endpoint adapters remain open. The serialization boundary is specified below. JIR is typed, platform-independent and effect-aware. It is not a list of shell commands and contains no arbitrary native payloads.
 
 ## Representation
 
@@ -48,7 +48,11 @@ Diversity may alter internal helper names/order, wrapper layout and equivalent g
 
 Semantic comparisons run against immutable collector fixtures, normalize only documented nondeterminism (run IDs, collection timestamps and ordering where unspecified), and compare every meaningful field plus error/partial status. Live process/network samples are not a valid deterministic equivalence oracle. Reproducibility and semantic equivalence are distinct tests.
 
-## Frontend 0.2.0 implementation boundary
+The 0.3 backend lowers SYSTEM_INFO, USER_ENUMERATE, PROCESS_ENUMERATE, NETWORK_INTERFACE_ENUMERATE, NETWORK_CONNECTION_ENUMERATE, ROUTE_ENUMERATE, FILE_METADATA, FILE_HASH, SERVICE_ENUMERATE, EVENT_QUERY and DRIVER_ENUMERATE to their fixed ABI symbols. Pure analysis and evidence instructions use a runtime dispatcher with a closed allowlist; other read opcodes fail lowering rather than falling back to interpretation. Generated entrypoints preserve JIR order, stop on the first non-OK status and release every owned dataset handle.
+
+Seeded diversity selects deterministic helper order, internal names and one of bounded wrapper-layout templates. The module embeds source/JIR/compiler/seed identity bytes so actual AOT objects differ. Structural fingerprints are calculated from optimized LLVM function/basic-block/helper counts and selected strategy IDs. ORC semantic verification uses a deterministic fixture runtime labeled SIMULATED; it is not endpoint evidence.
+
+## Compiler 0.3.0 implementation boundary
 
 The C++ frontend now emits JIRModule schema 1.0.0. The earlier sections retain the full lowering/ABI acceptance requirements; current output is a straight-line SSA instruction sequence, not executable basic blocks. There is no untrusted JIR loader, interpreter or dispatch path. All nine instruction families are registered with operand arity, effect and resource class. Collectors, pipelines, investigation statements and reports emit actual typed instructions. JOIN is registered for later lowering/optimization; the source correlation form emits CORRELATE. LIMIT and BIND are explicit analysis instructions, PACKAGE_ENUMERATE and MODULE_ENUMERATE extend inventory coverage. Constructor/arithmetic/count expressions are typed trees inside instruction attributes.
 

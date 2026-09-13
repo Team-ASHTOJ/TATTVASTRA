@@ -1,0 +1,2 @@
+*.jky text eol=lf
+fixtures/compiler/*.json text eol=lf

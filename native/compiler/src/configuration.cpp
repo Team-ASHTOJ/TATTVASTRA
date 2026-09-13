@@ -41,8 +41,10 @@ void SemanticAnalyzer::configuration() {
       {"W250", "Selectors are unresolved; this plan is not authorized for dispatch.", program_.span,
        "Resolve enrolled endpoints and enforce local policy before execution.", "warning"});
   module_.warnings.push_back(
-      {"W251", "LLVM source lowering, collectors and resource enforcement are not implemented.",
-       program_.span, "This is a real static frontend plan, not an execution result.", "warning"});
+      {"W251", "Endpoint collectors, Agent admission and resource enforcement are not implemented.",
+       program_.span,
+       "LLVM lowering is available; fixture execution is SIMULATED and not endpoint evidence.",
+       "warning"});
   module_.budget = llvm::json::Object{{"schema_version", "1.0.0"},
                                       {"cpu_percent", 20},
                                       {"memory_bytes", 256000000},
@@ -73,7 +75,7 @@ void SemanticAnalyzer::configuration() {
   for (const auto &[key, option] : program_.runtime) {
     if (key == "variant")
       continue;
-    if (key != "backend" && key != "execution")
+    if (key != "backend" && key != "execution" && key != "protect_literals")
       fail("E233", "Unknown runtime option `" + key + "`.", option.span);
     auto v = option.value->value;
     if (key == "backend" && v != "llvm")
@@ -81,7 +83,13 @@ void SemanticAnalyzer::configuration() {
     if (key == "execution" && v != "memory" && v != "native")
       fail("E234", "Invalid or unavailable execution mode `" + v + "`.", option.span,
            "Use native or memory. Optional VM is not implemented.");
-    module_.runtime[key] = v;
+    if (key == "protect_literals") {
+      if (option.value->literal_kind != "bool")
+        fail("E233", "protect_literals requires a boolean.", option.span);
+      if (v == "true")
+        module_.runtime[key] = true;
+    } else
+      module_.runtime[key] = v;
   }
   llvm::json::Object variant{{"enabled", false},
                              {"seed", "auto"},
