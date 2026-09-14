@@ -1,5 +1,81 @@
 # Build status
 
+## Phase 4 stabilization checkpoint — 2026-09-14
+
+Scope frozen at the operator's request. This section supersedes older control-plane availability claims below. Changes remain in the working tree; no commit, push, or GitHub CI success is claimed. Preserve this architecture and continue from these files rather than restarting implementation.
+
+### VERIFIED COMPLETE
+
+These are scoped backend checks, **not completion of the distributed endpoint product**:
+
+- PostgreSQL UUID models and Alembic migrations for the requested resources, sessions, transactional event outbox, and durable agent receipts. PostgreSQL rejects modification/deletion of protected evidence/audit records. Tests use disposable, uniquely named schemas; only those test schemas are removed.
+- Prototype password sessions and ADMIN/ANALYST/VIEWER enforcement: authenticated domain APIs, viewer write denial, tenant-scoped lookup/list isolation. Configured legacy compiler/verifier routes also require sessions. Live Compose login, authenticated reads, logout, unauthenticated denial, and audit verification passed.
+- Server-side TLS enrollment and mTLS exchange: one-time enrollment token, ECDSA transport certificate plus bound Ed25519 evidence key, heartbeat, durable exact-frame replay receipts, wrong identity rejection. The same protocol test covers job dispatch/reconnect, assigned-artifact byte retrieval, progress, manifest-gated completion, and cancellation acknowledgement using an explicit protocol fixture.
+- Persisted observation hashing, manifest signature/build/agent provenance checks, sealing evidence after manifest submission, actual stored-artifact hash recomputation, tamper detection, and audit-chain checking. Audit has no external checkpoint and does not claim rollback protection.
+- Backend correlation for an explicitly unsigned process and external connection, evidence-linked graph records, timeline filtering; report JSON bytes/metadata and verification; SSE committed-event cursor/resumption; retry identity and partial/cancellation state transitions passed focused tests.
+- Current Python suite, PostgreSQL suite, backend typing/imports, generated contract/binding consistency, dashboard types, and production dashboard build pass as recorded below.
+
+### IMPLEMENTED BUT NOT FULLY VERIFIED
+
+| Component                                          | Actual completion boundary                                                                                                                                                                                                                                                                                                                                   |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Dashboard authentication/resource views            | Login page, HttpOnly same-site cookie proxy, resource tables/details, case/script/hunt/report actions exist; types/build and HTTP page smoke pass. Browser-interactive login, writes, and role-sensitive rendering were **not** acceptance-tested in this checkpoint. Some tools remain API-only; graph is a JSON relationship view, not a graphical canvas. |
+| SSE/live events                                    | Backend durable outbox/cursor tests pass. Browser EventSource view exists; reconnect/session-expiry behavior across real browsers and long-running deployment is not fully tested.                                                                                                                                                                           |
+| Multi-endpoint hunt dispatch/retry/partial-success | Durable per-endpoint jobs, compatibility rejection, signed dispatch/cancel, retries and aggregate state logic exist. Protocol/state tests pass; no real multi-Rust-agent execution or distributed-load/fault acceptance has run.                                                                                                                             |
+| Correlation/timeline                               | Backend fixture acceptance passes. Live Rust evidence integration, full relationship-field coverage, PID reuse edge cases, and large-case performance remain unverified.                                                                                                                                                                                     |
+| Reports                                            | Persisted JSON report and actual artifact verification tested. Full live-evidence report workflow/UI acceptance is not complete; PDF is absent.                                                                                                                                                                                                              |
+| Benchmarks                                         | Invokes the real native compiler fixture and stores measured results with explicit simulation provenance. No end-to-end benchmark acceptance was run in this checkpoint. No remote performance claim.                                                                                                                                                        |
+| Compatibility runs                                 | Authenticated persistence of operator-supplied observations exists. Not an automated compatibility runner; no full API/UI acceptance performed.                                                                                                                                                                                                              |
+| Evidence verification                              | Backend positive/tamper tests pass. Not verified with evidence emitted by a remotely connected Rust agent. Uploaded artifact hashes are not themselves independent producer signatures.                                                                                                                                                                      |
+| RBAC/tenant isolation                              | Prototype API boundaries tested, not a production security review. Full endpoint lifecycle, abuse/rate limiting, and multi-operator concurrency need further acceptance.                                                                                                                                                                                     |
+| Native compilation/variants and DEMO loader        | Native compiler image self-test passes. Durable native-build API and backend DEMO loader exist, but their full deployed workflow was not exercised at checkpoint. Never substitute compiler fixture output for REAL endpoint execution.                                                                                                                      |
+
+### NOT YET IMPLEMENTED
+
+- **Rust-agent remote job execution is NOT complete.** Existing Rust collectors/standalone supervisor remain separate. No Rust enrollment/exchange connection loop, remote spool acknowledgement integration, or compiler AOT/ORC artifact loading in the Agent worker has been delivered here. Python protocol fixtures do not certify those features. Endpoints without execution support must remain incompatible.
+- Certificate renewal/rotation workflow, production deployment hardening, externally anchored audit checkpoints, S3/MinIO object-store adapter/reconciliation, PDF reports, automated compatibility execution, and full cross-platform distributed acceptance.
+- Existing object storage is a content-addressed local filesystem volume with PostgreSQL metadata. MinIO and Redis run in Compose but are not used as authoritative evidence storage or the job queue; PostgreSQL is the queue of record.
+
+### KNOWN ISSUES
+
+- No known blocker in the critical checks below. Two upstream Starlette/httpx/AnyIO deprecation warnings remain.
+- Domain list APIs are bounded but do not yet implement complete cursor pagination. Compilation requests are synchronous and commit stages individually; interrupted build recovery and long-running/concurrent scheduling need acceptance.
+- `/api/variants/{id}/manifest` currently returns the variant resource wrapper including its manifest. Legacy `/api/v1/endpoints` and coverage/Judge text still describe the standalone/foundation scope; use authenticated `/api/endpoints` and this checkpoint for current backend status. Coverage catalog/older architecture sections require later reconciliation; do not inflate their end-to-end status.
+- If `JOCKY_DATABASE_URL` is unset, only legacy local development utilities are exposed, without domain authentication. Compose configures the database; do not expose the unconfigured utility mode remotely.
+- Compose image smoke used the running image build from this work. Some final source-only fixes/tests postdate that build; rebuild with `docker compose up -d --build --wait` before treating containers as identical to the final working tree. Dashboard, gRPC, and scheduler services have no dedicated Compose healthcheck; “running” is not a healthcheck result.
+- A failed early PostgreSQL test used port 5432 instead of Compose's 15432 and printed a generated local password in its traceback. That password was rotated in PostgreSQL and ignored `.env`; application services were recreated and authenticated smoke passed. Test runner now defaults to 15432 and short tracebacks. No secrets were intentionally added to tracked config. Current generated credential values were scanned against tracked and non-ignored files: zero matches; `.env` is ignored and untracked. CI's password is an explicit disposable test fixture.
+- Broader browser E2E, Rust/native acceptance suites, DEMO loading, benchmark/compatibility acceptance, and GitHub-hosted CI were intentionally not rerun after the scope-freeze instruction.
+
+### Exact important checks and results
+
+Windows PowerShell, repository `C:\SIH'26\JOCKEY`, Python 3.12 environment, Docker Desktop Linux containers/PostgreSQL 17.6:
+
+| Command/check                                                                          | Result                                                                                                                                                                                 |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.venv/Scripts/python.exe -m pytest -q --tb=short --basetemp=.cache/pytest-checkpoint` | **66 passed**, 2 deprecation warnings, 32.15 s                                                                                                                                         |
+| `.venv/Scripts/python.exe scripts/test_postgres.py`                                    | **9 passed**, 2 warnings, 28.01 s; isolated real PostgreSQL schemas                                                                                                                    |
+| `test_grpc_tls_enrollment_heartbeat_replay_and_wrong_identity` in both suites above    | **Passed**, real TLS/mTLS sockets, including dispatch/reconnect/artifact/completion/cancel protocol checks; fixture client, not Rust                                                   |
+| `.venv/Scripts/mypy.exe`                                                               | **Passed**, 32 source files; imports also exercised by pytest and live service                                                                                                         |
+| `.venv/Scripts/ruff.exe check .`                                                       | **Passed**                                                                                                                                                                             |
+| `.venv/Scripts/python.exe scripts/generate_contracts.py --check`                       | **Passed**                                                                                                                                                                             |
+| `node scripts/generate-types.mjs --check`                                              | **Passed**                                                                                                                                                                             |
+| `.venv/Scripts/python.exe scripts/generate_agent_python.py --check`                    | **Passed**                                                                                                                                                                             |
+| `npm.cmd run typecheck`                                                                | **Passed**, all four workspaces                                                                                                                                                        |
+| `npm.cmd run build`                                                                    | **Passed**, Next.js 16.3.5, 22 generated pages                                                                                                                                         |
+| `docker compose config --quiet`                                                        | **Passed**                                                                                                                                                                             |
+| `docker compose ps --format json`                                                      | Seven running services; PostgreSQL, Redis, MinIO, API reported healthy; other three have no dedicated healthcheck                                                                      |
+| `docker compose exec -T control-plane /usr/local/bin/jockyc --self-test`               | **PASS: LLVM ORC toolchain and runtime ABI probe**                                                                                                                                     |
+| Inline local HTTP/SQL smoke (credentials read from ignored `.env`, never printed)      | `/health/live`, `/health/ready` 200; unauthenticated `/api/cases` 401; login/me/cases/logout passed; audit integrity true; dashboard `/login`, `/workbench`, `/compiler`, `/cases` 200 |
+
+### Inspect first at handoff
+
+1. `AGENTS.md`, this checkpoint, `docs/API.md`, `docs/ARCHITECTURE.md`, `docs/DEFINITION_OF_DONE.md`, `docs/SECURITY_MODEL.md`.
+2. `services/control-plane/src/jocky_control_plane/{models,api,security,builds,hunts,transport,pki,ingestion,investigation,reporting,scheduler,demo}.py`; `services/control-plane/migrations/versions/`; `services/control-plane/tests/test_distributed.py`.
+3. `proto/jocky/v1/agent.proto`, `scripts/generate_agent_python.py`, `packages/contracts/src/jocky_contracts/control.py`, generated contracts/bindings.
+4. `apps/dashboard/src/components/control-resources.tsx`, `apps/dashboard/src/app/login/page.tsx`, `apps/dashboard/src/app/api/control/[...path]/route.ts`, existing `compiler-workbench.tsx`.
+5. `compose.yaml`, `infra/docker/compose.yaml`, `infra/docker/control-plane.Dockerfile`, `scripts/configure_local.py`, `scripts/test_postgres.py`, `.github/workflows/ci.yml`.
+6. Before any future Rust integration: `services/agent/src/{identity,model}.rs`, existing supervisor/spool/worker code, and `native/runtime/include/jocky/runtime.h`. Preserve their trust boundaries; do not silently reinterpret standalone collector jobs as compiler jobs.
+
 ## Endpoint Agent delivery — 2026-09-14
 
 Status: **IMPLEMENTED and acceptance-tested for local standalone Ubuntu/WSL collection; Windows is compile-checked but not live-verified; distributed endpoint operation remains incomplete.**

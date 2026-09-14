@@ -1,6 +1,7 @@
 import os
 
 from alembic import context
+from jocky_control_plane import models  # noqa: F401
 from jocky_control_plane.db import Base
 from sqlalchemy import create_engine, pool
 

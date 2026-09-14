@@ -37,13 +37,19 @@ services:
       timeout: 3s
       retries: 20
   control-plane:
-    profiles: ["app"]
     build:
       context: ../..
       dockerfile: infra/docker/control-plane.Dockerfile
     environment:
       JOCKY_ENVIRONMENT: development
       JOCKY_MODE: ${JOCKY_MODE:-REAL}
+      JOCKY_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-jocky}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-jocky}
+      JOCKY_BOOTSTRAP_PASSWORD: ${JOCKY_BOOTSTRAP_PASSWORD:?Run make configure-local}
+    volumes: ["control_state:/app/.local"]
+    mem_limit: 2g
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports: ["127.0.0.1:8000:8000"]
     healthcheck:
       # Liveness only: execution readiness intentionally remains 503.
@@ -58,7 +64,6 @@ services:
       timeout: 3s
       retries: 15
   dashboard:
-    profiles: ["app"]
     build:
       context: ../..
       dockerfile: infra/docker/dashboard.Dockerfile
@@ -66,6 +71,33 @@ services:
       JOCKY_API_URL: http://control-plane:8000
       NEXT_TELEMETRY_DISABLED: "1"
     ports: ["127.0.0.1:3000:3000"]
+    depends_on:
+      control-plane:
+        condition: service_healthy
+  agent-control:
+    build:
+      context: ../..
+      dockerfile: infra/docker/control-plane.Dockerfile
+    command: ["/app/.venv/bin/python", "-m", "jocky_control_plane.cli", "grpc"]
+    environment:
+      JOCKY_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-jocky}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-jocky}
+      JOCKY_GRPC_BIND: 0.0.0.0:50051
+      JOCKY_GRPC_ENROLLMENT_BIND: 0.0.0.0:50052
+      JOCKY_MODE: ${JOCKY_MODE:-REAL}
+    volumes: ["control_state:/app/.local"]
+    ports: ["127.0.0.1:50051:50051", "127.0.0.1:50052:50052"]
+    depends_on:
+      control-plane:
+        condition: service_healthy
+  scheduler:
+    build:
+      context: ../..
+      dockerfile: infra/docker/control-plane.Dockerfile
+    command: ["/app/.venv/bin/python", "-m", "jocky_control_plane.cli", "sweep"]
+    environment:
+      JOCKY_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-jocky}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-jocky}
+      JOCKY_MODE: ${JOCKY_MODE:-REAL}
+    volumes: ["control_state:/app/.local"]
     depends_on:
       control-plane:
         condition: service_healthy
@@ -101,6 +133,7 @@ services:
       control-plane:
         condition: service_healthy
 volumes:
+  control_state:
   postgres_data:
   redis_data:
   minio_data:

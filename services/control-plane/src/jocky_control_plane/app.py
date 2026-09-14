@@ -10,6 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from jocky_contracts.common import Problem
 from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Counter, generate_latest
+from sqlalchemy.exc import IntegrityError
 from starlette.exceptions import HTTPException
 
 from jocky_control_plane import __version__
@@ -30,7 +31,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application = FastAPI(
         title="JOCKY Control Plane",
         version=__version__,
-        description="Foundation API. Capability availability is explicit; dispatch is unavailable.",
+        description="Authenticated, durable control plane with explicit endpoint capabilities.",
     )
     application.add_middleware(BodyLimitMiddleware)
     registry = CollectorRegistry()
@@ -93,11 +94,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             request, exception.status_code, "JOCKY_E_HTTP", str(exception.detail)
         )
 
+    @application.exception_handler(IntegrityError)
+    async def integrity_error(request: Request, _: IntegrityError) -> JSONResponse:
+        return problem_response(
+            request, 409, "JOCKY_E_CONFLICT", "Resource conflicts with persisted state."
+        )
+
     @application.get("/metrics", include_in_schema=False)
     def metrics() -> Response:
         return Response(generate_latest(registry), headers={"Content-Type": CONTENT_TYPE_LATEST})
 
     application.include_router(create_router(settings or Settings()))
+    configured = settings or Settings()
+    if configured.database_url:
+        from jocky_control_plane.api import create_domain_router
+        from jocky_control_plane.db import sessions
+
+        factory = sessions(configured.database_url)
+        application.state.session_factory = factory
+        application.include_router(create_domain_router(factory, configured))
     return application
 
 

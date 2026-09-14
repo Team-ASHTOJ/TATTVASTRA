@@ -1,0 +1,10 @@
+{
+  "simulation": true,
+  "simulation_label": "CONTROL_PLANE_DEMO_FIXTURE",
+  "title": "Demo: unsigned process and external connection",
+  "source": "hunt \"control-plane-demo\" { targets { group \"DEMO\" os linux } runtime { backend llvm execution native } capabilities { process.read network.read } collect processes as procs collect connections as conns export report { format json include evidence } }",
+  "observations": [
+    {"collector": "processes", "data": {"pid": 4100, "name": "demo-benign-workload", "user": "demo-user", "signed": false}},
+    {"collector": "connections", "data": {"pid": 4100, "remote_address": "8.8.8.8", "remote_port": 443, "protocol": "TCP"}}
+  ]
+}

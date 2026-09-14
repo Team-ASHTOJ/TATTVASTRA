@@ -1,10 +1,23 @@
 syntax = "proto3";
 package jocky.v1;
 
-// Protocol definitions only. No gRPC service is hosted in the foundation release.
+// Enrollment runs on a TLS listener; Exchange requires an enrolled mTLS identity.
 service AgentControl {
   rpc Enroll(EnrollmentRequest) returns (EnrollmentResponse);
   rpc Exchange(stream AgentFrame) returns (stream ControlFrame);
+  // mTLS only; bytes are restricted to this endpoint's active assigned job.
+  rpc FetchJobArtifact(JobArtifactRequest) returns (stream ArtifactChunk);
+}
+
+message JobArtifactRequest {
+  string job_id = 1;
+}
+
+message ArtifactChunk {
+  string content_hash = 1;
+  uint64 size_bytes = 2;
+  uint64 offset = 3;
+  bytes content = 4;
 }
 
 message CanonicalDocument {
@@ -21,6 +34,11 @@ message EnrollmentRequest {
   string target_os = 5;
   string target_arch = 6;
   optional bool simulation = 7;
+  string hostname = 8;
+  repeated string execution_modes = 9;
+  bytes evidence_public_key = 10;
+  // Ed25519 signature over "JOCKY:enroll:v1\n" + exact CSR PEM bytes.
+  bytes evidence_key_proof = 11;
 }
 
 message EnrollmentResponse {
@@ -28,6 +46,8 @@ message EnrollmentResponse {
   bytes certificate_chain_pem = 2;
   bytes trust_bundle_pem = 3;
   string expires_at = 4;
+  string organization_id = 5;
+  bytes job_authority_public_key = 6;
 }
 
 message Heartbeat {
@@ -49,6 +69,7 @@ message AgentFrame {
     CanonicalDocument observation = 11;
     CanonicalDocument evidence_manifest = 12;
     CanonicalDocument job_progress = 13;
+    CanonicalDocument artifact = 14;
   }
 }
 

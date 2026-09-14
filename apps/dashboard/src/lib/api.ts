@@ -2,7 +2,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api/control/${path}`, {
     ...init,
     cache: "no-store",
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(180_000),
   });
   if (!response.ok) {
     const problem: { detail?: string; message?: string } = await response

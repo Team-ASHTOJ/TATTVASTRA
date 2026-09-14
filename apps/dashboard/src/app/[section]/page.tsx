@@ -5,6 +5,7 @@ import { sections } from "../../lib/sections";
 import { PlatformOverview } from "../../components/platform-overview";
 import { EvidenceVerifier } from "../../components/evidence-verifier";
 import { CompilerWorkbench } from "../../components/compiler-workbench";
+import { ControlResources } from "../../components/control-resources";
 
 export function generateStaticParams() {
   return [
@@ -87,6 +88,37 @@ export default async function SectionPage({
     );
   const definition = sections.find((s) => s.slug === section);
   if (!definition) notFound();
+  if (
+    [
+      "cases",
+      "endpoints",
+      "jobs",
+      "findings",
+      "timeline",
+      "evidence",
+      "reports",
+      "variants",
+      "forge",
+      "compatibility",
+      "performance",
+      "graph",
+      "live",
+    ].includes(section)
+  )
+    return (
+      <>
+        <div className="eyebrow">{definition.group} / CONTROL PLANE</div>
+        <div className="page-heading">
+          <div>
+            <h1>{definition.name}</h1>
+            <p>{definition.description}</p>
+          </div>
+          <StatusBadge tone="good">PERSISTED API</StatusBadge>
+        </div>
+        <ControlResources key={section} section={section} />
+        {section === "evidence" && <EvidenceVerifier />}
+      </>
+    );
   return (
     <>
       <div className="eyebrow">

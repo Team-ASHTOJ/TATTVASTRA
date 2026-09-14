@@ -6,50 +6,114 @@ const routes = new Map([
   ["POST compilations", "compilations"],
   ["POST evidence/verify-observation", "evidence/verify-observation"],
 ]);
+const domains = new Set([
+  "auth",
+  "cases",
+  "scripts",
+  "compilations",
+  "variants",
+  "endpoints",
+  "hunts",
+  "artifacts",
+  "manifests",
+  "findings",
+  "timeline",
+  "graph",
+  "benchmarks",
+  "compatibility-runs",
+  "reports",
+  "events",
+  "audit",
+]);
 
 async function proxy(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> },
 ) {
   const { path } = await context.params;
-  const route = routes.get(`${request.method} ${path.join("/")}`);
+  const persistent = path[0] === "domain";
+  const parts = persistent ? path.slice(1) : path;
+  const route = persistent
+    ? domains.has(parts[0] ?? "") &&
+      parts.every((p) => /^[a-zA-Z0-9-]+$/.test(p))
+      ? parts.join("/")
+      : undefined
+    : routes.get(`${request.method} ${parts.join("/")}`);
   if (!route)
     return NextResponse.json(
       { detail: "Unknown control-plane route" },
       { status: 404 },
     );
+  const mutating = !["GET", "HEAD"].includes(request.method);
+  if (mutating && request.headers.get("origin") !== request.nextUrl.origin)
+    return NextResponse.json(
+      { detail: "Same-origin request required" },
+      { status: 403 },
+    );
   try {
-    const body = request.method === "POST" ? await request.text() : undefined;
+    const body = mutating ? await request.text() : undefined;
     if (body && Buffer.byteLength(body) > 1_048_576)
       return NextResponse.json(
         { detail: "Request exceeds 1 MiB" },
         { status: 413 },
       );
+    const session = request.cookies.get("jocky_session")?.value;
+    const streaming = persistent && route === "events";
     const response = await fetch(
-      `${process.env.JOCKY_API_URL ?? "http://127.0.0.1:8000"}/api/v1/${route}`,
+      `${process.env.JOCKY_API_URL ?? "http://127.0.0.1:8000"}/api/${persistent ? "" : "v1/"}${route}${request.nextUrl.search}`,
       {
         method: request.method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(session ? { Authorization: `Bearer ${session}` } : {}),
+          ...(request.headers.has("last-event-id")
+            ? { "Last-Event-ID": request.headers.get("last-event-id")! }
+            : {}),
+        },
         ...(body === undefined ? {} : { body }),
         cache: "no-store",
-        signal: AbortSignal.timeout(5_000),
+        signal: streaming ? request.signal : AbortSignal.timeout(180_000),
         redirect: "error",
       },
     );
-    return new NextResponse(await response.text(), {
+    if (persistent && route === "auth/login" && response.ok) {
+      const login = await response.json();
+      const result = NextResponse.json({
+        user: login.user,
+        expires_at: login.expires_at,
+      });
+      result.cookies.set("jocky_session", login.access_token, {
+        httpOnly: true,
+        sameSite: "strict",
+        secure: request.nextUrl.protocol === "https:",
+        path: "/",
+        maxAge: 3600,
+      });
+      result.headers.set("Cache-Control", "no-store");
+      return result;
+    }
+    const result = new NextResponse(response.body, {
       status: response.status,
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type":
+          response.headers.get("content-type") ?? "application/json",
         "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+        ...(response.headers.has("content-disposition")
+          ? { "Content-Disposition": "attachment" }
+          : {}),
       },
     });
+    if (route === "auth/logout" || response.status === 401)
+      result.cookies.delete("jocky_session");
+    return result;
   } catch {
     return NextResponse.json(
       {
         simulation: false,
         code: "JOCKY_E_CONTROL_PLANE_UNAVAILABLE",
         detail:
-          "Control plane unavailable. Start the API with make dev-api, then retry.",
+          "Control plane unavailable. Start the API with make dev-api or docker compose up --build, then retry.",
         status: 503,
       },
       { status: 503 },
@@ -58,3 +122,4 @@ async function proxy(
 }
 export const GET = proxy;
 export const POST = proxy;
+export const PATCH = proxy;

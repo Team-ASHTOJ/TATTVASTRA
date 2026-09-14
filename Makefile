@@ -58,6 +58,7 @@ build-python:
 	UV_CACHE_DIR=.cache/uv uv build --all-packages --out-dir dist/python
 
 proto-check:
+	$(VENV_PY) scripts/generate_agent_python.py --check
 	mkdir -p build/proto
 	$(VENV_PY) -m grpc_tools.protoc -I proto --descriptor_set_out=build/proto/jocky.pb --include_imports --python_out=build/proto --grpc_python_out=build/proto proto/jocky/v1/agent.proto
 

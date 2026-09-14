@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from jocky_contracts.common import Problem
 from jocky_contracts.compiler import CompileRequest
@@ -15,6 +15,8 @@ from jocky_control_plane.compiler import (
 )
 from jocky_control_plane.config import Settings
 from jocky_control_plane.coverage import load_coverage
+from jocky_control_plane.models import Role
+from jocky_control_plane.security import session_user
 
 
 def create_router(settings: Settings) -> APIRouter:
@@ -27,7 +29,26 @@ def create_router(settings: Settings) -> APIRouter:
         )
 
     @router.get("/health/ready", response_model=Health, responses={503: {"model": Health}})
-    def ready() -> JSONResponse:
+    def ready(request: Request) -> JSONResponse:
+        if settings.database_url:
+            from sqlalchemy import select
+            from sqlalchemy.exc import SQLAlchemyError
+
+            from jocky_control_plane.models import Organization
+
+            try:
+                with request.app.state.session_factory() as db:
+                    initialized = db.scalar(select(Organization.id).limit(1)) is not None
+                if initialized and settings.signing_key_path.is_file():
+                    health = Health(
+                        simulation=False,
+                        status="ready",
+                        service="control-plane",
+                        version=__version__,
+                    )
+                    return JSONResponse(content=health.model_dump(mode="json"))
+            except SQLAlchemyError:
+                pass
         health = Health(
             simulation=False,
             status="not_ready",
@@ -68,6 +89,11 @@ def create_router(settings: Settings) -> APIRouter:
         tags=["build-forge"],
     )
     def compile_source(payload: CompileRequest, request: Request) -> JSONResponse:
+        if settings.database_url:
+            with request.app.state.session_factory() as db:
+                user = session_user(db, request.headers.get("authorization"))
+                if user.role not in {Role.ADMIN, Role.ANALYST}:
+                    raise HTTPException(403, "ANALYST or ADMIN role required")
         try:
             output = invoke_compiler(
                 settings.compiler_path, payload, settings.compiler_timeout_seconds
@@ -104,7 +130,10 @@ def create_router(settings: Settings) -> APIRouter:
         response_model=IntegrityResult,
         tags=["evidence"],
     )
-    def verify(payload: Observation) -> IntegrityResult:
+    def verify(payload: Observation, request: Request) -> IntegrityResult:
+        if settings.database_url:
+            with request.app.state.session_factory() as db:
+                session_user(db, request.headers.get("authorization"))
         # Stateless hash recomputation only. No ingestion or identity authentication is implied.
         return verify_observation(payload)
 

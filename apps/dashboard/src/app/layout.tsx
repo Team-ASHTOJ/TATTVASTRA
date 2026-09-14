@@ -34,6 +34,7 @@ export default function RootLayout({
           <div className="workspace">
             <header className="topbar">
               <span>One Language. Every Endpoint. No Noise.</span>
+              <Link href="/login">Operator sign in</Link>
               <Link href="/judge" className="button secondary">
                 Judge Mode ↗
               </Link>

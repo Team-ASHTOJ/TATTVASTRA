@@ -37,6 +37,11 @@ select = ["E", "F", "I", "UP", "B"]
 python_version = "3.12"
 strict = true
 files = ["packages/contracts/src", "services/control-plane/src"]
+exclude = ["/generated/"]
+
+[[tool.mypy.overrides]]
+module = "jocky_control_plane.generated.*"
+ignore_errors = true
 
 [build-system]
 requires = ["hatchling>=1.27"]

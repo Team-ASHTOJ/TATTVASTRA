@@ -578,6 +578,62 @@
       "title": "Artifact",
       "type": "object"
     },
+    "ArtifactUpload": {
+      "additionalProperties": false,
+      "properties": {
+        "content_base64": {
+          "maxLength": 800000,
+          "title": "Content Base64",
+          "type": "string"
+        },
+        "content_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Content Hash",
+          "type": "string"
+        },
+        "job_id": {
+          "format": "uuid",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "media_type": {
+          "default": "application/octet-stream",
+          "maxLength": 128,
+          "title": "Media Type",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        }
+      },
+      "required": [
+        "simulation",
+        "job_id",
+        "content_base64",
+        "content_hash"
+      ],
+      "title": "ArtifactUpload",
+      "type": "object"
+    },
     "AuditEvent": {
       "additionalProperties": false,
       "properties": {
@@ -712,6 +768,34 @@
         "first_invalid_sequence"
       ],
       "title": "AuditVerification",
+      "type": "object"
+    },
+    "BenchmarkCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "compilation_id": {
+          "format": "uuid",
+          "title": "Compilation Id",
+          "type": "string"
+        },
+        "repetitions": {
+          "default": 3,
+          "maximum": 16,
+          "minimum": 1,
+          "title": "Repetitions",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "compilation_id"
+      ],
+      "title": "BenchmarkCreate",
       "type": "object"
     },
     "BenchmarkRun": {
@@ -988,6 +1072,168 @@
         "state"
       ],
       "title": "Case",
+      "type": "object"
+    },
+    "CaseCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "maxLength": 10000,
+          "title": "Description",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "title": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "title"
+      ],
+      "title": "CaseCreate",
+      "type": "object"
+    },
+    "CasePatch": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "maxLength": 10000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "enum": [
+                "OPEN",
+                "CLOSED"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        }
+      },
+      "title": "CasePatch",
+      "type": "object"
+    },
+    "CompatibilityCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "alert_observed": {
+          "enum": [
+            "YES",
+            "NO",
+            "NOT_OBSERVED"
+          ],
+          "title": "Alert Observed",
+          "type": "string"
+        },
+        "correctness": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "NOT_MEASURED"
+          ],
+          "title": "Correctness",
+          "type": "string"
+        },
+        "environment": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Environment",
+          "type": "string"
+        },
+        "notes": {
+          "maxLength": 10000,
+          "title": "Notes",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "security_product_label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Security Product Label",
+          "type": "string"
+        },
+        "variant_id": {
+          "format": "uuid",
+          "title": "Variant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "variant_id",
+        "environment",
+        "security_product_label",
+        "correctness",
+        "alert_observed",
+        "notes"
+      ],
+      "title": "CompatibilityCreate",
       "type": "object"
     },
     "CompatibilityRun": {
@@ -1743,6 +1989,55 @@
       "title": "EndpointState",
       "type": "string"
     },
+    "EnrollmentCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "validity_seconds": {
+          "default": 600,
+          "maximum": 3600,
+          "minimum": 60,
+          "title": "Validity Seconds",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "simulation",
+        "capabilities"
+      ],
+      "title": "EnrollmentCreate",
+      "type": "object"
+    },
     "EvidenceManifest": {
       "additionalProperties": false,
       "properties": {
@@ -2466,6 +2761,7 @@
         "status": {
           "enum": [
             "alive",
+            "ready",
             "not_ready"
           ],
           "title": "Status",
@@ -2483,6 +2779,65 @@
         "version"
       ],
       "title": "Health",
+      "type": "object"
+    },
+    "HuntCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "format": "uuid",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "compilation_id": {
+          "format": "uuid",
+          "title": "Compilation Id",
+          "type": "string"
+        },
+        "diverse": {
+          "default": true,
+          "title": "Diverse",
+          "type": "boolean"
+        },
+        "endpoint_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "minItems": 1,
+          "title": "Endpoint Ids",
+          "type": "array"
+        },
+        "execution_mode": {
+          "default": "memory",
+          "enum": [
+            "memory",
+            "native"
+          ],
+          "title": "Execution Mode",
+          "type": "string"
+        },
+        "retry_limit": {
+          "default": 0,
+          "maximum": 3,
+          "minimum": 0,
+          "title": "Retry Limit",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "case_id",
+        "compilation_id",
+        "endpoint_ids"
+      ],
+      "title": "HuntCreate",
       "type": "object"
     },
     "ImplementationStatus": {
@@ -2895,6 +3250,51 @@
       "title": "Job",
       "type": "object"
     },
+    "JobProgress": {
+      "additionalProperties": false,
+      "properties": {
+        "detail": {
+          "default": "",
+          "maxLength": 4096,
+          "title": "Detail",
+          "type": "string"
+        },
+        "job_id": {
+          "format": "uuid",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "measurements": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Measurements",
+          "type": "object"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "RUNNING",
+            "SUCCESS",
+            "FAILED",
+            "CANCELLED"
+          ],
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "job_id",
+        "state"
+      ],
+      "title": "JobProgress",
+      "type": "object"
+    },
     "JobState": {
       "enum": [
         "CREATED",
@@ -2988,6 +3388,41 @@
         "enabled"
       ],
       "title": "LiteralEncryption",
+      "type": "object"
+    },
+    "LoginRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "organization_id": {
+          "format": "uuid",
+          "title": "Organization Id",
+          "type": "string"
+        },
+        "password": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Password",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "username": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Username",
+          "type": "string"
+        }
+      },
+      "required": [
+        "organization_id",
+        "username",
+        "password"
+      ],
+      "title": "LoginRequest",
       "type": "object"
     },
     "Mode": {
@@ -3499,6 +3934,33 @@
       "title": "Report",
       "type": "object"
     },
+    "ReportCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "format": "uuid",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "format": {
+          "const": "json",
+          "default": "json",
+          "title": "Format",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "case_id"
+      ],
+      "title": "ReportCreate",
+      "type": "object"
+    },
     "ResultSchema": {
       "additionalProperties": false,
       "properties": {
@@ -3569,6 +4031,41 @@
         "name"
       ],
       "title": "Script",
+      "type": "object"
+    },
+    "ScriptCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "format": "uuid",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "maxLength": 262144,
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "case_id",
+        "name",
+        "source"
+      ],
+      "title": "ScriptCreate",
       "type": "object"
     },
     "ScriptVersion": {
@@ -4124,6 +4621,91 @@
       "title": "User",
       "type": "object"
     },
+    "UserCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "password": {
+          "maxLength": 256,
+          "minLength": 12,
+          "title": "Password",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "ADMIN",
+            "ANALYST",
+            "VIEWER"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "username": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Username",
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "password",
+        "role"
+      ],
+      "title": "UserCreate",
+      "type": "object"
+    },
+    "VariantCompare": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "variant_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "maxItems": 16,
+          "minItems": 2,
+          "title": "Variant Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "variant_ids"
+      ],
+      "title": "VariantCompare",
+      "type": "object"
+    },
+    "VariantCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "default": 3,
+          "maximum": 16,
+          "minimum": 1,
+          "title": "Count",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "VariantCreate",
+      "type": "object"
+    },
     "VariantManifest": {
       "additionalProperties": false,
       "properties": {
@@ -4262,6 +4844,28 @@
       ],
       "title": "VariantManifest",
       "type": "object"
+    },
+    "VersionCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "maxLength": 262144,
+          "minLength": 1,
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "title": "VersionCreate",
+      "type": "object"
     }
   },
   "$id": "https://jocky.invalid/contracts/v1.0.0",
@@ -4290,11 +4894,17 @@
     "Artifact": {
       "$ref": "#/$defs/Artifact"
     },
+    "ArtifactUpload": {
+      "$ref": "#/$defs/ArtifactUpload"
+    },
     "AuditEvent": {
       "$ref": "#/$defs/AuditEvent"
     },
     "AuditVerification": {
       "$ref": "#/$defs/AuditVerification"
+    },
+    "BenchmarkCreate": {
+      "$ref": "#/$defs/BenchmarkCreate"
     },
     "BenchmarkRun": {
       "$ref": "#/$defs/BenchmarkRun"
@@ -4307,6 +4917,15 @@
     },
     "Case": {
       "$ref": "#/$defs/Case"
+    },
+    "CaseCreate": {
+      "$ref": "#/$defs/CaseCreate"
+    },
+    "CasePatch": {
+      "$ref": "#/$defs/CasePatch"
+    },
+    "CompatibilityCreate": {
+      "$ref": "#/$defs/CompatibilityCreate"
     },
     "CompatibilityRun": {
       "$ref": "#/$defs/CompatibilityRun"
@@ -4332,6 +4951,9 @@
     "EndpointList": {
       "$ref": "#/$defs/EndpointList"
     },
+    "EnrollmentCreate": {
+      "$ref": "#/$defs/EnrollmentCreate"
+    },
     "EvidenceManifest": {
       "$ref": "#/$defs/EvidenceManifest"
     },
@@ -4353,6 +4975,9 @@
     "Health": {
       "$ref": "#/$defs/Health"
     },
+    "HuntCreate": {
+      "$ref": "#/$defs/HuntCreate"
+    },
     "IntegrityResult": {
       "$ref": "#/$defs/IntegrityResult"
     },
@@ -4362,8 +4987,14 @@
     "Job": {
       "$ref": "#/$defs/Job"
     },
+    "JobProgress": {
+      "$ref": "#/$defs/JobProgress"
+    },
     "LiteralEncryption": {
       "$ref": "#/$defs/LiteralEncryption"
+    },
+    "LoginRequest": {
+      "$ref": "#/$defs/LoginRequest"
     },
     "Observation": {
       "$ref": "#/$defs/Observation"
@@ -4383,8 +5014,14 @@
     "Report": {
       "$ref": "#/$defs/Report"
     },
+    "ReportCreate": {
+      "$ref": "#/$defs/ReportCreate"
+    },
     "Script": {
       "$ref": "#/$defs/Script"
+    },
+    "ScriptCreate": {
+      "$ref": "#/$defs/ScriptCreate"
     },
     "ScriptVersion": {
       "$ref": "#/$defs/ScriptVersion"
@@ -4407,8 +5044,20 @@
     "User": {
       "$ref": "#/$defs/User"
     },
+    "UserCreate": {
+      "$ref": "#/$defs/UserCreate"
+    },
+    "VariantCompare": {
+      "$ref": "#/$defs/VariantCompare"
+    },
+    "VariantCreate": {
+      "$ref": "#/$defs/VariantCreate"
+    },
     "VariantManifest": {
       "$ref": "#/$defs/VariantManifest"
+    },
+    "VersionCreate": {
+      "$ref": "#/$defs/VersionCreate"
     }
   },
   "title": "JockyContracts",

@@ -5,6 +5,17 @@ permissions:
 jobs:
   contracts-api-dashboard:
     runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17.6-bookworm
+        env:
+          POSTGRES_USER: jocky
+          POSTGRES_DB: jocky
+          POSTGRES_PASSWORD: ci-test-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U jocky" --health-interval 5s
+          --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -18,6 +29,9 @@ jobs:
           node-version: "24"
           cache: npm
       - run: make bootstrap verify-foundation
+      - run: .venv/bin/python scripts/test_postgres.py
+        env:
+          JOCKY_TEST_DATABASE_URL: postgresql+psycopg://jocky:ci-test-only-password@127.0.0.1:5432/jocky
       - run: PLAYWRIGHT_BROWSERS_PATH=.cache/playwright npx playwright install --with-deps chromium
       - run: make test-e2e
   native:

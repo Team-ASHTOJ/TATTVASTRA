@@ -664,6 +664,51 @@ dd {
     min-width: 200px;
   }
 }
+.control-form {
+  display: grid;
+  gap: 16px;
+  margin: 20px 0;
+  max-width: 900px;
+}
+.control-form label {
+  display: grid;
+  gap: 8px;
+}
+.control-form input,
+.control-form textarea {
+  width: 100%;
+}
+.control-form input[type="checkbox"] {
+  width: auto;
+}
+.control-form textarea {
+  background: var(--bg);
+  color: inherit;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.control-json {
+  max-height: 600px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.resource-table {
+  overflow-x: auto;
+  margin: 20px 0;
+}
+.resource-table table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.resource-table th,
+.resource-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+}
 @media (max-width: 760px) {
   .sidebar {
     position: relative;

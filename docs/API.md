@@ -1,5 +1,17 @@
 # API and engineering contracts
 
+## Phase 4 checkpoint notice — 2026-09-14
+
+The historical foundation/design sections below predate the implemented persistent control plane. The authoritative current completion/verification boundary is the **Phase 4 stabilization checkpoint in [BUILD_STATUS.md](BUILD_STATUS.md)**; remote Rust execution remains incomplete.
+
+With `JOCKY_DATABASE_URL` configured, authenticated routes are hosted under `/api`: `/auth/login`, `/auth/me`, `/auth/logout`, `/users`, cases, scripts/versions/compile, compilations/stage outputs/variants, variants/compare/manifest, endpoint enrollments/inventory/revocation/observations/jobs, hunts/start/cancel/jobs, artifacts/content/verify, manifests/verify, findings, graph, timeline, events, audit verification, benchmarks, compatibility-runs, and JSON reports. `/docs` and `/openapi.json` describe the exact methods and request schemas. Domain resources are UUID-scoped to the authenticated organization. Login returns a one-hour bearer session; ADMIN and ANALYST can author investigations, VIEWER reads and verifies, and ADMIN controls users/enrollment/revocation. Dashboard `/api/control/domain/*` keeps sessions in an HttpOnly same-site cookie.
+
+`GET /health/ready` now checks database initialization and signing authority availability. `/api/v1/status` remains a public capability/status utility; legacy compiler/verifier requests require authentication when persistence is configured. Without database configuration these legacy routes remain local development utilities, not a remote deployment mode.
+
+AgentControl has TLS `Enroll`, mTLS bidirectional `Exchange`, and assigned-job `FetchJobArtifact`. Enroll uses a one-time token, ECDSA CSR and an Ed25519 evidence-key proof bound to the CSR. Frames require explicit simulation and contiguous sequence numbers; exact replay returns the original committed receipt. Completion requires a verified evidence manifest. This is the implemented **server protocol**, not a working Rust remote client. `/api/events` streams committed tenant outbox records with SSE `Last-Event-ID` resumption.
+
+Run `python scripts/configure_local.py` then `docker compose up -d --build --wait`. Dashboard: port 3000; API: 8000; gRPC mTLS: 50051; enrollment TLS: 50052; PostgreSQL host port: 15432. Generated credentials stay in ignored `.env`; organization UUID appears in API initialization output. Storage currently uses the local content-addressed volume, not the provisioned MinIO service. See BUILD_STATUS for unverified and absent features before relying on older design claims below.
+
 ## P0 executable API
 
 Run `make dev-api`; OpenAPI is generated at `/openapi.json`, interactive documentation at `/docs`. API version prefix is `/api/v1`, schema version is `1.0.0`. Routes are local development utilities; remote authentication and production operation are not implemented. Responses use `Cache-Control: no-store` and an `X-Request-ID`. Logs contain measured request duration/status, not source/evidence content.

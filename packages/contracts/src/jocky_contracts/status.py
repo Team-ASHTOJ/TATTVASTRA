@@ -34,7 +34,7 @@ class EndpointList(Provenance):
 
 
 class Health(Provenance):
-    status: Literal["alive", "not_ready"]
+    status: Literal["alive", "ready", "not_ready"]
     service: str
     version: str
     reason: str | None = None
