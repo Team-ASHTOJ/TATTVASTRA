@@ -1,5 +1,48 @@
 # Build status
 
+## Real Rust remote execution — 2026-09-20
+
+Status: **IMPLEMENTED + VERIFIED** for the supported REAL bounded-inventory
+execution path on Ubuntu 24.04 arm64 in Docker. This supersedes the earlier
+Phase 4 stabilization note that described the Rust bridge as unavailable.
+
+The verified path is:
+
+`control plane -> mTLS-enrolled Rust Agent -> signed job admission -> streamed
+artifact retrieval and SHA-256 verification -> LLVM worker -> Rust system
+collector -> signed observation/artifact/manifest/progress frames -> durable
+PostgreSQL state`.
+
+Fresh live evidence:
+
+- The current Rust agent passed `cargo fmt --all -- --check`, locked workspace
+	tests (**18 unit + 6 CLI = 24 Rust tests**), and warnings-denied Clippy in the
+	Rust 1.90 Docker toolchain. The durable remote replay test is
+	`remote_frame_replays_without_reclaiming_or_rerunning_job`.
+- The real agent enrolled through the existing `Enroll` RPC, reused its
+	persisted identity across control-plane restart, and reached ONLINE through
+	the existing mTLS `Exchange` stream. The initial stream deadlock and the
+	memory-object build-mode mismatch were fixed in this checkpoint.
+- REAL hunt `6fef8a00-2796-437f-afe5-cb628f7110c3`, job
+	`34b9b086-edf5-4093-89ab-5d72faf9db5b`: terminal `SUCCESS`, one persisted
+	`simulation=false` system observation, one artifact, one signed evidence
+	manifest, `bytes_read=1839`, and 24 durable transport receipts. The agent
+	spool was empty after acknowledgement.
+- Reconnecting the same enrolled agent left exactly one observation for that
+	job, proving the completed job was not rerun.
+- A live cancellation request reached `CANCEL_REQUESTED`; when execution had
+	already completed, the state machine accepted the late `SUCCESS` rather than
+	leaving the job stuck. Active cancellation remains fail-closed through the
+	Rust supervisor and signed cancellation tests.
+- The corrected control-plane/native images built with the current source;
+	native CTest/self-test and the focused Python distributed/Phase 4 tests pass.
+
+Known verified boundary: the bridge currently admits bounded inventory
+collectors with empty options and `MONITORED` budgets. It rejects strict
+enforcement and richer JOCKY operations. Windows live execution, certificate
+rotation, multi-agent fault/load acceptance, and external audit checkpoints
+remain outside this checkpoint.
+
 ## Phase 4 stabilization checkpoint — 2026-09-14
 
 Scope frozen at the operator's request. This section supersedes older control-plane availability claims below. Changes remain in the working tree; no commit, push, or GitHub CI success is claimed. Preserve this architecture and continue from these files rather than restarting implementation.
@@ -32,7 +75,6 @@ These are scoped backend checks, **not completion of the distributed endpoint pr
 
 ### NOT YET IMPLEMENTED
 
-- **Rust-agent remote job execution is NOT complete.** Existing Rust collectors/standalone supervisor remain separate. No Rust enrollment/exchange connection loop, remote spool acknowledgement integration, or compiler AOT/ORC artifact loading in the Agent worker has been delivered here. Python protocol fixtures do not certify those features. Endpoints without execution support must remain incompatible.
 - Certificate renewal/rotation workflow, production deployment hardening, externally anchored audit checkpoints, S3/MinIO object-store adapter/reconciliation, PDF reports, automated compatibility execution, and full cross-platform distributed acceptance.
 - Existing object storage is a content-addressed local filesystem volume with PostgreSQL metadata. MinIO and Redis run in Compose but are not used as authoritative evidence storage or the job queue; PostgreSQL is the queue of record.
 
@@ -98,7 +140,14 @@ Status: **IMPLEMENTED for native compiler inspection through a locally configure
 
 ### Explicitly open Agent work
 
-The remote protobuf transport is not connected: one-time enrollment, mTLS/certificate rotation, remote heartbeat/job/cancellation and upload receipts remain unimplemented, and doctor reports this honestly. The Agent worker does not yet load compiler-generated AOT or ORC artifacts; the compiler's current ORC host remains a SIMULATED fixture and its output cannot enter REAL evidence. Timeout/result/file/concurrency limits are `ENFORCED`; Linux CPU/memory are sampled `OBSERVED_ONLY`, Windows CPU/memory and network bytes are `UNSUPPORTED`, and strict jobs needing those controls fail admission. Windows credential-store integration, spool quotas, OpenTelemetry spans, optional-adapter execution, independent Windows runtime acceptance and control-plane ingestion remain open.
+The verified remote path is limited to the bounded REAL inventory bridge. The
+compiler's current ORC host remains a SIMULATED fixture and its output cannot
+enter REAL evidence. Timeout/result/file/concurrency limits are `ENFORCED`;
+Linux CPU/memory are sampled `OBSERVED_ONLY`, Windows CPU/memory and network
+bytes are `UNSUPPORTED`, and strict jobs needing those controls fail
+admission. Certificate rotation, Windows credential-store integration, spool
+quotas, OpenTelemetry spans, optional-adapter execution, independent Windows
+runtime acceptance, and multi-agent distributed fault acceptance remain open.
 
 ## Current LLVM backend delivery — 2026-09-13
 
@@ -162,7 +211,7 @@ Status vocabulary: PLANNED, SCAFFOLDED, IMPLEMENTED, VERIFIED, BLOCKED_ENVIRONME
 | P2    | P0 complete LLVM backend and runtime ABI                  | JIR lowering, verified real LLVM IR, optimization metrics, TargetMachine AOT, ABI conformance and minimal system/process collector vertical slice                                                                                           | IMPLEMENTED compiler/ABI/AOT scope; real collector slice remains open                                       |
 | P3    | P0 native and own-memory ORC execution                    | Trusted Agent-owned worker, native/memory equivalence, capability context, cancellation and enforceable resource governor, CPU/RAM/I/O/deadline negative tests                                                                              | IMPLEMENTED separate compiler ORC fixture and Agent collector worker; integration remains open              |
 | P4    | P0 Build Diversity Engine, encrypted configuration, Forge | Reproducible same-input/seed builds, three distinct artifact hashes, normalized fixture equivalence, complete real manifests/signing status, AEAD pool/no plaintext/tag tamper checks, actual build-to-registry lifecycle                   | IMPLEMENTED diversity/AEAD slice; signing/Forge lifecycle remain open                                       |
-| P5    | P0 secure distributed control plane and agents            | Domain migrations, cases/scripts/plans, mTLS enrollment/health, signed expiring nonce-bound jobs, durable replay protection, policy, simultaneous child jobs, scheduling/retry/cancel, encrypted spool/reconnect, direct transport          | IMPLEMENTED local Agent admission/spool slice; remote control plane/transport remain open                   |
+| P5    | P0 secure distributed control plane and agents            | Domain migrations, cases/scripts/plans, mTLS enrollment/health, signed expiring nonce-bound jobs, durable replay protection, policy, simultaneous child jobs, scheduling/retry/cancel, encrypted spool/reconnect, direct transport          | IMPLEMENTED + VERIFIED for one REAL bounded-inventory Rust Agent path; multi-agent/load and rotation remain open |
 | P6    | P0 real Windows and Ubuntu collector coverage             | All fourteen collector groups plus supported DNS; normalized types, documented native APIs, availability/permission matrix, file race checks, optional adapter detection, bounded I/O                                                       | IMPLEMENTED adapters; Ubuntu P0 live-tested, Windows compile-only, DNS/optional execution open              |
 | P7    | P0 provenance, investigation and operational UI           | Persistent scoped evidence/manifest verification, durable audit with checkpoints, NetworkX correlation, timeline/findings, SSE, PDF/JSON, Workbench/Compiler/Variant/Forge/Endpoints/Jobs/Live/Graph/Evidence pages use actual data         | IMPLEMENTED Workbench/Compiler bridge and stateless verifier; persistent investigation surfaces remain open |
 | P8    | Safe driver-risk, fixtures and compatibility lab          | Real driver analysis plus sourced blocklist/CVE imports, separate LAB SIMULATION, harmless fixture lifecycle, operator-recorded correctness/alerts/resources, no attack capabilities                                                        | PLANNED; fixture documents only, no operational simulator                                                   |
@@ -172,7 +221,7 @@ Status vocabulary: PLANNED, SCAFFOLDED, IMPLEMENTED, VERIFIED, BLOCKED_ENVIRONME
 ## Implementation inventory
 
 - C++20/CMake requires LLVM. The compiler emits verified optimized LLVM IR, real host objects, and in-process ORC machine code through runtime ABI v2. check/tokens/ast/jir/plan/llvm/compile/run/variants/variant-info/benchmark are implemented in their documented host/fixture scope. Cross-compilation and unsupported opcodes fail explicitly. Fixed collector calls currently dispatch only to the deterministic fixture or a supplied runtime host; no real OS adapter is claimed.
-- Rust/Tokio/tonic Agent implements local identity/admission, real fixed-registry Windows/Linux collectors, child supervision, normalized signed evidence, encrypted SQLite spool and operational CLI. Doctor reports local standalone execution separately from the unavailable remote protobuf transport and unavailable compiler-artifact host.
+- Rust/Tokio/tonic Agent implements local and mTLS remote identity/admission, real fixed-registry Windows/Linux collectors, compiler-worker supervision, normalized signed evidence, encrypted SQLite spool, replay-safe transport, and operational CLI. The verified remote scope is bounded inventory; ORC remains a simulated compiler fixture.
 - Python contracts contain provenance, all core entities, state machine, budgets, variants/encryption/signatures, nullable stage metrics and evidence. The stateless RFC 8785/SHA-256 observation and audit-chain primitives are implemented. AES-GCM protected pools are implemented in the native compiler/runtime; artifact signing remains unimplemented.
 - FastAPI provides liveness, explicit non-readiness, capability coverage, unavailable endpoint inventory, unavailable compiler and stateless verification. Database metadata/Alembic baseline exists with no domain tables. Redis/MinIO/NetworkX/OTel dependencies do not imply integrated domain features.
 - Next.js/Tailwind/TanStack Query console provides the 18 navigation routes, Judge Mode readiness, backend coverage, unavailable metrics, errors/retry and real submitted-observation verification. Monaco, React Flow and Recharts integration awaits working backend features. No demo telemetry is hardcoded into components.

@@ -256,6 +256,16 @@ fn progress(endpoint: &str, job: &str, state: &str, detail: &str) -> wire::Agent
         "schema_version":"1.0.0","job_id":job,"state":state,"detail":detail,"measurements":{}
     })).expect("fixed progress document") }))
 }
+
+fn queue_terminal(
+    spool: &mut Spool,
+    endpoint: &str,
+    job: &str,
+    state: &str,
+    detail: &str,
+) -> Result<()> {
+    spool.queue_remote(&mut [progress(endpoint, job, state, detail)], Some(job))
+}
 fn documents(endpoint: &str, values: Vec<Value>) -> Result<Vec<wire::AgentFrame>> {
     values
         .into_iter()
@@ -310,6 +320,35 @@ pub async fn connect(root: &Path) -> Result<()> {
         };
         let mut client = AgentControlClient::new(channel);
         let (sender, receiver) = mpsc::channel(32);
+        let mut last_sent = 0;
+        let mut heartbeat_at = std::time::Instant::now() - Duration::from_secs(30);
+        spool.queue_remote(
+            &mut [frame(
+                &binding.endpoint_id,
+                agent_frame::Body::Heartbeat(wire::Heartbeat {
+                    timestamp: Utc::now().to_rfc3339(),
+                    state: if active.is_some() { "BUSY" } else { "IDLE" }.into(),
+                    cpu_percent: None,
+                    memory_bytes: None,
+                    active_job_id: active
+                        .as_ref()
+                        .map_or_else(String::new, |value| value.0.clone()),
+                }),
+            )],
+            None,
+        )?;
+        for record in spool
+            .pending()?
+            .into_iter()
+            .filter(|record| record.kind == "remote")
+            .take(32)
+        {
+            let pending = wire::AgentFrame::decode(record.payload.as_slice()).map_err(failure)?;
+            last_sent = pending.sequence;
+            if sender.send(pending).await.is_err() {
+                break;
+            }
+        }
         let response = client.exchange(ReceiverStream::new(receiver)).await;
         let mut stream = match response {
             Ok(value) => value.into_inner(),
@@ -319,8 +358,6 @@ pub async fn connect(root: &Path) -> Result<()> {
             }
         };
         let mut tick = tokio::time::interval(Duration::from_secs(2));
-        let mut last_sent = 0;
-        let mut heartbeat_at = std::time::Instant::now() - Duration::from_secs(30);
         loop {
             // Only a bounded window of encrypted frames is sent; durable ACKs
             // remove exact bytes. A new stream replays unacknowledged sequences.
@@ -351,7 +388,15 @@ pub async fn connect(root: &Path) -> Result<()> {
                 Some((job,result)) = finished_rx.recv() => {
                     let cancelled = active.as_ref().is_some_and(|v|v.1.load(Ordering::Relaxed));
                     let mut frames = match result {
-                        Ok(values) if !cancelled => documents(&binding.endpoint_id,values)?,
+                        Ok(values) if !cancelled => match documents(&binding.endpoint_id, values) {
+                            Ok(frames) => frames,
+                            Err(error) => vec![progress(
+                                &binding.endpoint_id,
+                                &job,
+                                "FAILED",
+                                &format!("Worker output rejected: {error}"),
+                            )],
+                        },
                         _ => vec![progress(&binding.endpoint_id,&job,if cancelled{"CANCELLED"}else{"FAILED"},"Compiler worker stopped; inspect agent limitations")],
                     };
                     spool.queue_remote(&mut frames,Some(&job))?;
@@ -365,24 +410,56 @@ pub async fn connect(root: &Path) -> Result<()> {
                         Some(control_frame::Body::SignedCancellation(document)) => {
                             let cancellation:Value = serde_json::from_slice(&document.json_utf8)?;
                             verify(&state,&binding,&cancellation,"JOCKY:cancel:v1\n")?;
-                            if let Some((id,cancelled)) = &active { if cancellation["job_id"]==*id { cancelled.store(true,Ordering::Relaxed); } }
+                            if let Some((id,cancelled)) = &active {
+                                if cancellation["job_id"]==*id {
+                                    cancelled.store(true,Ordering::Relaxed);
+                                }
+                            } else if let Some(id) = cancellation["job_id"].as_str() {
+                                if uuid::Uuid::parse_str(id).is_ok() && !spool.remote_job_done(id)? {
+                                    queue_terminal(&mut spool, &binding.endpoint_id, id, "CANCELLED", "Cancellation acknowledged before execution")?;
+                                }
+                            }
                         }
                         Some(control_frame::Body::SignedJob(document)) => {
                             let job: Value = serde_json::from_slice(&document.json_utf8)?;
-                            admit(&state,&binding,&job)?;
                             let id = job["job_id"].as_str().ok_or_else(||failure("Missing job ID"))?.to_owned();
+                            if let Err(error) = admit(&state,&binding,&job) {
+                                queue_terminal(&mut spool, &binding.endpoint_id, &id, "FAILED", &format!("Job admission failed: {error}"))?;
+                                continue;
+                            }
                             if !spool.claim_remote_job(&id,&hash(&document.json_utf8),job["nonce"].as_str().unwrap_or(""))? { continue; }
                             if active.is_some() {
                                 spool.queue_remote(&mut [progress(&binding.endpoint_id,&id,"FAILED","Endpoint concurrency limit reached")],Some(&id))?; continue;
                             }
                             let mut bytes = Vec::new();
-                            let mut chunks = client.fetch_job_artifact(wire::JobArtifactRequest{job_id:id.clone()}).await.map_err(failure)?.into_inner();
-                            while let Some(chunk) = chunks.message().await.map_err(failure)? {
-                                if chunk.offset != bytes.len() as u64 || chunk.size_bytes > 64_000_000 || chunk.content_hash != job["artifact_hash"].as_str().unwrap_or("") { return Err(failure("Artifact stream provenance mismatch")); }
-                                bytes.extend(chunk.content);
-                                if bytes.len()>64_000_000 { return Err(failure("Artifact size limit")); }
+                            let artifact = async {
+                                let mut chunks = client
+                                    .fetch_job_artifact(wire::JobArtifactRequest { job_id: id.clone() })
+                                    .await
+                                    .map_err(failure)?
+                                    .into_inner();
+                                while let Some(chunk) = chunks.message().await.map_err(failure)? {
+                                    if chunk.offset != bytes.len() as u64
+                                        || chunk.size_bytes > 64_000_000
+                                        || chunk.content_hash != job["artifact_hash"].as_str().unwrap_or("")
+                                    {
+                                        return Err(failure("Artifact stream provenance mismatch"));
+                                    }
+                                    bytes.extend(chunk.content);
+                                    if bytes.len() > 64_000_000 {
+                                        return Err(failure("Artifact size limit"));
+                                    }
+                                }
+                                if hash(&bytes) != job["artifact_hash"].as_str().unwrap_or("") {
+                                    return Err(failure("Artifact SHA-256 mismatch"));
+                                }
+                                Ok::<(), AgentError>(())
                             }
-                            if hash(&bytes)!=job["artifact_hash"].as_str().unwrap_or("") { return Err(failure("Artifact SHA-256 mismatch")); }
+                            .await;
+                            if let Err(error) = artifact {
+                                queue_terminal(&mut spool, &binding.endpoint_id, &id, "FAILED", &format!("Artifact retrieval failed: {error}"))?;
+                                continue;
+                            }
                             let artifact=root.join(format!("build-{id}")); fs::write(&artifact,bytes)?;
                             #[cfg(unix)] { use std::os::unix::fs::PermissionsExt; fs::set_permissions(&artifact,fs::Permissions::from_mode(0o500))?; }
                             spool.queue_remote(&mut [progress(&binding.endpoint_id,&id,"RUNNING","Compiler artifact verified; dedicated worker acknowledged")],None)?;

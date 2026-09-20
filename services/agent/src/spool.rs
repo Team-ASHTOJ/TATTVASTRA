@@ -308,6 +308,18 @@ impl Spool {
             .collect::<std::result::Result<Vec<_>, _>>()?;
         Ok(jobs)
     }
+
+    pub fn remote_job_done(&self, job: &str) -> Result<bool> {
+        Ok(self
+            .connection
+            .query_row(
+                "SELECT done FROM remote_jobs WHERE job_id=?1",
+                [job],
+                |row| row.get::<_, i64>(0),
+            )
+            .optional()?
+            .is_some_and(|done| done != 0))
+    }
 }
 
 fn write_secret(path: &Path, bytes: &[u8]) -> Result<()> {
@@ -327,6 +339,7 @@ fn write_secret(path: &Path, bytes: &[u8]) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use prost::Message;
 
     #[test]
     fn encrypted_spool_survives_reopen_and_acknowledges() {
@@ -375,5 +388,48 @@ mod tests {
                 ..
             })
         ));
+    }
+
+    #[test]
+    fn remote_frame_replays_without_reclaiming_or_rerunning_job() {
+        let temp = tempfile::tempdir().unwrap();
+        let mut spool = Spool::open(temp.path()).unwrap();
+        let job = "job-remote-replay";
+        assert!(spool
+            .claim_remote_job(job, "envelope-hash", "nonce")
+            .unwrap());
+        assert!(!spool
+            .claim_remote_job(job, "envelope-hash", "nonce")
+            .unwrap());
+        let mut frames = [crate::wire::AgentFrame {
+            schema_version: "1.0.0".into(),
+            endpoint_id: "endpoint".into(),
+            sequence: 0,
+            simulation: Some(false),
+            body: Some(crate::wire::agent_frame::Body::JobProgress(
+                crate::wire::CanonicalDocument {
+                    json_utf8: br#"{"schema_version":"1.0.0","job_id":"job-remote-replay","state":"SUCCESS"}"#.to_vec(),
+                },
+            )),
+        }];
+        spool.queue_remote(&mut frames, Some(job)).unwrap();
+        let original = spool.pending().unwrap().pop().unwrap();
+        drop(spool);
+
+        let reopened = Spool::open(temp.path()).unwrap();
+        assert!(!reopened
+            .claim_remote_job(job, "envelope-hash", "nonce")
+            .unwrap());
+        let replay = reopened.pending().unwrap().pop().unwrap();
+        assert_eq!(replay.record_id, original.record_id);
+        assert_eq!(replay.payload, original.payload);
+        assert_eq!(
+            crate::wire::AgentFrame::decode(replay.payload.as_slice())
+                .unwrap()
+                .sequence,
+            1
+        );
+        assert!(reopened.acknowledge(&replay.record_id).unwrap());
+        assert_eq!(reopened.pending_count().unwrap(), 0);
     }
 }

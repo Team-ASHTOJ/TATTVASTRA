@@ -118,7 +118,7 @@ def build_variants(
                         "--target",
                         "host",
                         "--execution",
-                        execution_mode,
+                        "native",
                         "--seed",
                         seed,
                         "--output",
@@ -132,6 +132,10 @@ def build_variants(
                     raise HTTPException(422, "Native object compilation failed")
                 document = json.loads(result.stdout)
                 manifest = document["manifest"]
+                # The compiler emits relocatable LLVM objects through its native
+                # compilation mode; the signed manifest still records the agent
+                # execution mode selected by the hunt.
+                manifest["execution_mode"] = execution_mode
                 content = output.read_bytes()
                 if digest(content) != manifest["artifact_hash"]:
                     raise HTTPException(422, "Compiler artifact does not match its manifest")
