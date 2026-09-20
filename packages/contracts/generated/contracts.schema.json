@@ -1196,6 +1196,19 @@
           "title": "Correctness",
           "type": "string"
         },
+        "endpoint_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Endpoint Id"
+        },
         "environment": {
           "maxLength": 1000,
           "minLength": 1,
@@ -2053,6 +2066,14 @@
           "title": "Artifact Hash",
           "type": "string"
         },
+        "artifact_hashes": {
+          "items": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "title": "Artifact Hashes",
+          "type": "array"
+        },
         "case_id": {
           "maxLength": 128,
           "minLength": 1,
@@ -2808,6 +2829,29 @@
           "minItems": 1,
           "title": "Endpoint Ids",
           "type": "array"
+        },
+        "endpoint_modes": {
+          "additionalProperties": {
+            "enum": [
+              "memory",
+              "native"
+            ],
+            "type": "string"
+          },
+          "propertyNames": {
+            "format": "uuid"
+          },
+          "title": "Endpoint Modes",
+          "type": "object"
+        },
+        "enforcement_mode": {
+          "default": "MONITORED",
+          "enum": [
+            "MONITORED",
+            "STRICT"
+          ],
+          "title": "Enforcement Mode",
+          "type": "string"
         },
         "execution_mode": {
           "default": "memory",
@@ -3861,6 +3905,152 @@
         "condition"
       ],
       "title": "PushdownCandidate",
+      "type": "object"
+    },
+    "RemoteJobEnvelope": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Artifact Hash",
+          "type": "string"
+        },
+        "budget": {
+          "$ref": "#/$defs/Budget"
+        },
+        "build_manifest": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Build Manifest",
+          "type": "object"
+        },
+        "case_id": {
+          "format": "uuid",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "endpoint_id": {
+          "format": "uuid",
+          "title": "Endpoint Id",
+          "type": "string"
+        },
+        "enforcement_mode": {
+          "enum": [
+            "MONITORED",
+            "STRICT"
+          ],
+          "title": "Enforcement Mode",
+          "type": "string"
+        },
+        "execution_mode": {
+          "enum": [
+            "memory",
+            "native"
+          ],
+          "title": "Execution Mode",
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "issued_at": {
+          "format": "date-time",
+          "title": "Issued At",
+          "type": "string"
+        },
+        "jir_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Jir Hash",
+          "type": "string"
+        },
+        "job_id": {
+          "format": "uuid",
+          "title": "Job Id",
+          "type": "string"
+        },
+        "nonce": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Nonce",
+          "type": "string"
+        },
+        "organization_id": {
+          "format": "uuid",
+          "title": "Organization Id",
+          "type": "string"
+        },
+        "plan_id": {
+          "format": "uuid",
+          "title": "Plan Id",
+          "type": "string"
+        },
+        "required_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Capabilities",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "signature": {
+          "$ref": "#/$defs/Signature"
+        },
+        "simulation": {
+          "title": "Simulation",
+          "type": "boolean"
+        },
+        "simulation_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Simulation Label"
+        },
+        "source_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Hash",
+          "type": "string"
+        },
+        "variant_id": {
+          "format": "uuid",
+          "title": "Variant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "simulation",
+        "job_id",
+        "case_id",
+        "organization_id",
+        "endpoint_id",
+        "plan_id",
+        "variant_id",
+        "artifact_hash",
+        "source_hash",
+        "jir_hash",
+        "execution_mode",
+        "enforcement_mode",
+        "build_manifest",
+        "required_capabilities",
+        "budget",
+        "nonce",
+        "issued_at",
+        "expires_at",
+        "signature"
+      ],
+      "title": "RemoteJobEnvelope",
       "type": "object"
     },
     "Report": {
@@ -5010,6 +5200,9 @@
     },
     "Provenance": {
       "$ref": "#/$defs/Provenance"
+    },
+    "RemoteJobEnvelope": {
+      "$ref": "#/$defs/RemoteJobEnvelope"
     },
     "Report": {
       "$ref": "#/$defs/Report"

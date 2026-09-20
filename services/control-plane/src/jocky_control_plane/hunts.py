@@ -142,7 +142,10 @@ def start(db: Session, hunt: Hunt, user: User, settings: Settings) -> None:
                 for instruction in instructions
             )
         ):
-            reason = "REAL execution bridge supports bounded inventory collectors without options; this JIR requires an unavailable host operation"
+            reason = (
+                "REAL execution bridge supports bounded inventory collectors without options; "
+                "this JIR requires an unavailable host operation"
+            )
         elif endpoint.last_seen is None or datetime.now(UTC) - aware(
             endpoint.last_seen
         ) > timedelta(seconds=90):

@@ -1,5 +1,37 @@
 # Phase 4 control-plane gap matrix — 2026-09-20
 
+## Stabilization checkpoint
+
+The current remote execution bridge is **PARTIAL**. The Rust source contains
+TLS enrollment, signed job admission, durable remote replay, artifact hash
+verification, cancellation, and an agent-owned compiler worker. It is not
+classified as verified because this macOS host has no `cargo`/`rustfmt`, the
+clean native configure is blocked by missing LLVM development files, and no
+real Rust-agent-to-control-plane execution acceptance was run. The Docker
+agent-runtime image built successfully, but its Dockerfile copies the binary
+from the prebuilt `jocky-agent:foundation` image, so that result does not
+compile the current working-tree Rust bridge.
+
+Fresh stabilization evidence on this host:
+
+- Python: `70 passed`; focused Phase 4/distributed tests: `13 passed`; two
+	existing Starlette/httpx/AnyIO deprecation warnings remain.
+- PostgreSQL: `13 passed` from `scripts/test_postgres.py`.
+- Dashboard: all workspace typechecks and the production Next.js build passed.
+- Docker: both Compose configurations validated; `agent-runtime.Dockerfile`
+	built successfully.
+- Rust: blocked by missing host Cargo; no current-source Rust result is claimed.
+- Native worker: blocked during clean CMake configure by missing `LLVMConfig.cmake`;
+	the existing `build/frontend-linux` cache points to `/workspace` and is not
+	a valid local build result.
+
+Exact remaining bridge gaps are current-source Rust/native compilation,
+real mTLS enrollment and heartbeat against the running control plane, remote
+artifact download and worker execution, durable upload/ack/reconnect under
+failure, and distributed cancellation/partial-outcome acceptance. The worker
+currently admits only bounded inventory collectors without options and rejects
+strict budget enforcement or richer JOCKY operations.
+
 Pre-edit inspection against all sixteen requested areas. PASS means scoped implementation plus test evidence; PARTIAL includes unverified acceptance; MISSING means no working path; BROKEN means observed failure. Historical acceptance is distinguished from this machine's fresh results. Existing uncommitted dashboard next-env changes and `.freebuff/` belong to the operator and are preserved.
 
 | Requirement | Initial classification | Evidence / remaining gap |
@@ -13,7 +45,7 @@ Pre-edit inspection against all sixteen requested areas. PASS means scoped imple
 | 2. Evidence artifact list/detail/verify, manifest detail/verify | PARTIAL | Rehashes actual local content and checks Ed25519 manifests. Artifact sealing and signed artifact membership missing. |
 | 2. Findings/timeline/graph | PARTIAL | NetworkX and persisted observations/findings present; full relationships and live-agent integration unverified. |
 | 2. Benchmark/compatibility/report APIs | PARTIAL | Persisted code paths exist; native run happy paths and browser flow unverified, compatibility observations not consulted during hunt admission. |
-| 3. gRPC enrollment/heartbeat/dispatch/ack/progress/observations/artifact/completion/failure/cancel | PARTIAL | Server protocol fixture tests cover most operations. This is not real Rust execution. |
+| 3. gRPC enrollment/heartbeat/dispatch/ack/progress/observations/artifact/completion/failure/cancel | PARTIAL | Server protocol fixture tests cover most operations, and the Rust bridge source implements the client path. Current-source Rust compilation and real Rust execution remain unverified. |
 | 3. Rust remote enrollment/stream/replay/upload/execute/finish | MISSING | Standalone Rust supervisor/collectors/spool are working code; no network connection loop or compiler artifact host. Add the smallest signed compiler-artifact bridge; preserve standalone behavior. |
 | 4. Multi-endpoint selection/compatibility/compile-once/variants/concurrency/retry/cancel/partial outcome | PARTIAL | One durable compilation, per-endpoint jobs, seeded object variants, retry/cancel aggregation exist. One execution mode per hunt, no real multi-agent test, build failure can abort whole start transaction. |
 | 5. SSE compiler/hunt/agent/observation/finding/timeline/benchmark | PARTIAL | Transactional outbox and Last-Event-ID tests exist; browser feed misses some topics and does not refresh resource views; reconnect/session acceptance missing. |
@@ -27,8 +59,8 @@ Pre-edit inspection against all sixteen requested areas. PASS means scoped imple
 | 13. Benchmark create/status/results/list/events | PARTIAL | Runs actual compiler fixture with simulation provenance, but no happy-path acceptance. No remote benchmark claim. |
 | 13. Compatibility create/outcome/list/hunt decisions | PARTIAL | Operator observations persisted; no endpoint decision integration or acceptance. Automated security-tool execution is outside safe prototype scope. |
 | 13. Reports request/status/metadata/download/audit | PARTIAL | Real JSON artifact path tested; full evidence/manifest report membership and browser acceptance pending. PDF not required by current request contract. |
-| 14. Preserve tests; PostgreSQL/lifecycle/real agent/partial evidence/auth/replay/seal/tamper/cancel | PARTIAL | Existing baseline is 66 tests, nine in distributed suite. Initial local run: 65 pass, TLS test blocked by sandbox bind; rerun with sockets authorized. Add meaningful integration tests, not fake agent substitution. |
-| 15. Documented Compose/fresh start, seven services | BROKEN (local environment) | Existing `.env` lacked new bootstrap password; existing generator added only missing key. Docker daemon initially stopped. No service health inferred until actual startup. Fresh isolated-schema smoke planned; existing data preserved. |
-| 16. API/status/docs with exact completion and limits | PARTIAL | Checkpoint honest but older architecture/API/status sections conflict. Reconcile current scope and append fresh commands/results. |
+| 14. Preserve tests; PostgreSQL/lifecycle/real agent/partial evidence/auth/replay/seal/tamper/cancel | PARTIAL | Fresh local run: 70 Python tests and 13 PostgreSQL tests pass. Protocol fixtures pass, but real Rust-agent execution and distributed failure/cancel acceptance remain open. |
+| 15. Documented Compose/fresh start, seven services | PARTIAL | Both Compose configurations validate and the agent-runtime image builds. This checkpoint did not claim a fresh seven-service health/start acceptance. |
+| 16. API/status/docs with exact completion and limits | PARTIAL | This checkpoint records current host evidence, the bridge as PARTIAL, and exact remaining Rust/native/distributed gaps. Older architecture/API sections still need later reconciliation. |
 
 Implementation order: restore baseline environment; close integrity/correlation/API gaps with PostgreSQL tests; implement the signed Rust/LLVM execution bridge and mixed-endpoint hunts; verify real distributed failure/cancel/reconnect; complete existing browser views/events and acceptance; run full checks and record precise platform/optional limits. Unsupported instructions or platform artifacts must be rejected during compatibility/admission, never silently interpreted or simulated.
