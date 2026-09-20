@@ -1,14 +1,20 @@
 # API and engineering contracts
 
-## Phase 4 checkpoint notice — 2026-09-14
+## Phase 4 backend contract checkpoint — 2026-09-20
 
-The historical foundation/design sections below predate the implemented persistent control plane. The authoritative current completion/verification boundary is the **Phase 4 stabilization checkpoint in [BUILD_STATUS.md](BUILD_STATUS.md)**; remote Rust execution remains incomplete.
+The historical foundation/design sections below predate the implemented persistent control plane. The authoritative current completion/verification boundary is the **Phase 4 backend contract checkpoint in [BUILD_STATUS.md](BUILD_STATUS.md)**. Remote Rust execution and three-endpoint hunt orchestration are verified within their documented bounded scopes.
 
 With `JOCKY_DATABASE_URL` configured, authenticated routes are hosted under `/api`: `/auth/login`, `/auth/me`, `/auth/logout`, `/users`, cases, scripts/versions/compile, compilations/stage outputs/variants, variants/compare/manifest, endpoint enrollments/inventory/revocation/observations/jobs, hunts/start/cancel/jobs, artifacts/content/verify, manifests/verify, findings, graph, timeline, events, audit verification, benchmarks, compatibility-runs, and JSON reports. `/docs` and `/openapi.json` describe the exact methods and request schemas. Domain resources are UUID-scoped to the authenticated organization. Login returns a one-hour bearer session; ADMIN and ANALYST can author investigations, VIEWER reads and verifies, and ADMIN controls users/enrollment/revocation. Dashboard `/api/control/domain/*` keeps sessions in an HttpOnly same-site cookie.
 
+The focused backend contract suite covers authentication/RBAC, legacy compiler
+route gates, evidence sealing/tamper checks, stored-observation correlation,
+timeline filters, report generation/download/audit, benchmark lifecycle/events,
+compatibility persistence and hunt admission, and simulation-labeled DEMO
+provenance against local and PostgreSQL fixtures.
+
 `GET /health/ready` now checks database initialization and signing authority availability. `/api/v1/status` remains a public capability/status utility; legacy compiler/verifier requests require authentication when persistence is configured. Without database configuration these legacy routes remain local development utilities, not a remote deployment mode.
 
-AgentControl has TLS `Enroll`, mTLS bidirectional `Exchange`, and assigned-job `FetchJobArtifact`. Enroll uses a one-time token, ECDSA CSR and an Ed25519 evidence-key proof bound to the CSR. Frames require explicit simulation and contiguous sequence numbers; exact replay returns the original committed receipt. Completion requires a verified evidence manifest. This is the implemented **server protocol**, not a working Rust remote client. `/api/events` streams committed tenant outbox records with SSE `Last-Event-ID` resumption.
+AgentControl has TLS `Enroll`, mTLS bidirectional `Exchange`, and assigned-job `FetchJobArtifact`. Enroll uses a one-time token, ECDSA CSR and an Ed25519 evidence-key proof bound to the CSR. Frames require explicit simulation and contiguous sequence numbers; exact replay returns the original committed receipt. Completion requires a verified evidence manifest. The Rust client and bounded REAL execution path are verified in Docker; strict budgets, richer JOCKY operations, Windows live execution, certificate rotation, and multi-agent load/fault acceptance remain outside scope. `/api/events` streams committed tenant outbox records with SSE `Last-Event-ID` resumption.
 
 Run `python scripts/configure_local.py` then `docker compose up -d --build --wait`. Dashboard: port 3000; API: 8000; gRPC mTLS: 50051; enrollment TLS: 50052; PostgreSQL host port: 15432. Generated credentials stay in ignored `.env`; organization UUID appears in API initialization output. Storage currently uses the local content-addressed volume, not the provisioned MinIO service. See BUILD_STATUS for unverified and absent features before relying on older design claims below.
 
@@ -47,24 +53,27 @@ Contracts reject unknown fields and non-finite numbers, require timezone-aware t
 
 Additive optional fields require compatible schema evolution; changing field meaning, enum semantics, canonicalization or required fields requires a versioned transition. Producers/consumers negotiate schema/runtime/compiler versions. Reject unsupported majors and report VERSION_MISMATCH. Canonical signed JSON avoids protobuf serialization differences; absent simulation presence in transport is invalid rather than implicitly false.
 
-## Planned domain API (not hosted yet)
+## Current persistent domain API
 
-| Area          | Planned routes / behavior                                                                                                        |
+| Area          | Current routes / behavior                                                                                                        |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Cases/scripts | `/cases`, `/cases/{id}`, `/scripts`, `/scripts/{id}/versions`; tenant scope and immutable source versions                        |
-| Build Forge   | `/compilations/{id}`, `/compilations/{id}/stages`, `/variants`, `/forge/builds`; actual compiler artifacts and manifest registry |
-| Plans/jobs    | `/execution-plans`, `/hunts`, `/jobs/{id}`, `/jobs/{id}/cancel`, `/jobs/{id}/retry`; signed per-endpoint work                    |
-| Agents        | `/enrollment-tokens`, endpoint detail/health; one-time enrollment and certificate lifecycle                                      |
-| Events        | `/cases/{id}/events` SSE with Last-Event-ID, committed sequence IDs, heartbeat and scope validation                              |
-| Evidence      | Scoped observation ingestion, artifact upload initiation/completion, manifest verification, `/artifacts/{id}/verify`             |
-| Analysis      | `/cases/{id}/graph`, `/timeline`, `/findings`; source/endpoint/severity filters and evidence links                               |
-| Lab           | `/drivers/risk-imports`, `/lab/simulations`, `/compatibility-runs`, `/benchmark-runs`; explicit provenance                       |
-| Reports       | `/cases/{id}/reports`, authorized download; PDF/JSON with verification/audit status                                              |
+| Cases/scripts | `/cases`, `/cases/{id}`, `/scripts`, `/scripts/{id}/versions`; tenant-scoped cases and immutable source versions |
+| Build Forge   | `/compilations/{id}`, `/compilations/{id}/{stage}`, `/compilations/{id}/variants`, `/variants/{id}`; real compiler artifacts and manifests |
+| Plans/jobs    | `/hunts`, `/hunts/{id}/start`, `/hunts/{id}/cancel`, `/hunts/{id}/jobs`; signed per-endpoint work and aggregate state |
+| Agents        | `/endpoints/enrollments`, `/endpoints`, `/endpoints/{id}`, `/endpoints/{id}/revoke`; one-time enrollment and identity-bound health |
+| Events        | `/events` SSE with `Last-Event-ID`, committed sequence IDs, keepalives and tenant/session validation |
+| Evidence      | `/observations`, `/artifacts`, `/artifacts/{id}/content`, `/artifacts/{id}/verify`, `/manifests/{id}/verify`; durable hash/seal checks |
+| Analysis      | `/graph`, `/timeline`, `/findings`; endpoint/collector/severity/type/time filters and evidence-linked relationships |
+| Lab           | `/compatibility-runs`, `/benchmarks`; persisted explicit provenance and benchmark events |
+| Reports       | `/reports`, `/reports/{id}`, authorized artifact download; persisted JSON report with audit verification |
 
-Collection routes use cursor pagination and bounded limits. Mutations accept idempotency keys scoped to organization/action; retries return the original committed result or create explicitly linked new attempts. Job transitions use optimistic version checks/409 conflicts. Object uploads bind expected digest/size/case/job and expire. Never acknowledge evidence before durable verification and metadata commit. These semantics are design contracts, not existing P0 endpoints.
+Collection routes are bounded to current API limits. Job transitions and
+durable evidence verification are enforced by the control-plane state machine;
+cursor pagination, generalized idempotency keys, optimistic version columns,
+and object-upload expiry remain later hardening work.
 
 ## Agent gRPC
 
-`proto/jocky/v1/agent.proto` defines `AgentControl.Enroll` and bidirectional `AgentControl.Exchange`. AgentFrame carries version, endpoint ID, monotonic sequence, presence-aware simulation flag and heartbeat/observation/manifest/progress. ControlFrame carries signed job/cancellation or durable acknowledgement. CanonicalDocument carries schema-normalized RFC 8785 JSON bytes. Generated Rust client/server types and wire round-trip tests exist; no gRPC server or agent connection loop is active yet.
+`proto/jocky/v1/agent.proto` defines `AgentControl.Enroll` and bidirectional `AgentControl.Exchange`. AgentFrame carries version, endpoint ID, monotonic sequence, presence-aware simulation flag and heartbeat/observation/manifest/progress. ControlFrame carries signed job/cancellation or durable acknowledgement. CanonicalDocument carries schema-normalized RFC 8785 JSON bytes. The gRPC server and Rust connection loop are active for the verified bounded REAL execution path; generated wire types and replay tests remain the transport contract authority.
 
 Schema validation, frame size limits, certificate identity binding, sequence replay handling, signature verification and simulation agreement between frame/document are required before exposing transport. The runtime C ABI is independently versioned and returns explicit status codes. JIR and native artifact compatibility cannot be inferred from protobuf version alone.

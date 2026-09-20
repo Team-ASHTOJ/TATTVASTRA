@@ -10,11 +10,9 @@ test("overview shows real availability without invented fleet metrics", async ({
   ).toBeVisible();
   await expect(page.getByText("API CONNECTED")).toBeVisible();
   await expect(
-    page.getByText("REAL mode — endpoint execution is not available yet"),
+    page.getByText("REAL mode — persisted endpoint execution is available"),
   ).toBeVisible();
-  await expect(page.getByLabel("Not available", { exact: true })).toHaveCount(
-    4,
-  );
+  await expect(page.getByText("Open persisted investigations")).toBeVisible();
 });
 
 test("coverage comes from API and preserves safe technique mappings", async ({

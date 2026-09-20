@@ -1,5 +1,40 @@
 # Build status
 
+## PHASE 4 STATUS — COMPLETE
+
+Phase 4 is **COMPLETE** within the documented prototype acceptance boundary.
+Required control-plane, agent, multi-endpoint, evidence, dashboard, and live
+event flows pass; remaining items are explicit noncritical/platform
+limitations, not untracked TODOs.
+
+Final verification on 2026-09-20:
+
+- Python: full current suite **74 passed**, 2 upstream deprecation warnings.
+- PostgreSQL: fresh disposable-schema integration suite **17 passed**, 2
+	upstream deprecation warnings.
+- Rust: Docker Rust 1.90 `fmt`, `cargo check --locked --workspace`, and
+	workspace tests **18 unit + 6 CLI = 24 passed**.
+- Native: Docker LLVM 18 configure/build, CTest, and `jockyc --self-test`
+	passed.
+- Dashboard: all workspace typechecks and Next.js production build passed;
+	**23 pages** generated.
+- Browser E2E: Playwright Chromium desktop/mobile **14 passed**.
+- Docker: Compose config passed; PostgreSQL, Redis, MinIO, API, gRPC control,
+	scheduler, and dashboard built/started healthy. `/health/live`,
+	`/health/ready`, and dashboard HTTP smoke passed.
+- Live dashboard event smoke: authenticated proxy login -> persisted case POST
+	-> `case.created` SSE receipt -> persisted cases refetch passed.
+- REAL distributed evidence remains recorded in the remote execution section
+	below: enrollment, heartbeat, dispatch, worker execution, observation,
+	artifact, manifest, completion, reconnect, partial success, and audit checks.
+
+Known limitations: bounded inventory collectors only, MONITORED budgets only,
+Linux live endpoint acceptance only, Windows live execution and certificate
+rotation unavailable, no external audit checkpoint, local content-addressed
+storage rather than MinIO authority, no PDF report, and no multi-agent load or
+fault trial. These limitations are documented as LIMITATION in the final gap
+matrix and do not conceal failed required prototype checks.
+
 ## Real Rust remote execution — 2026-09-20
 
 Status: **IMPLEMENTED + VERIFIED** for the supported REAL bounded-inventory
@@ -43,6 +78,73 @@ enforcement and richer JOCKY operations. Windows live execution, certificate
 rotation, multi-agent fault/load acceptance, and external audit checkpoints
 remain outside this checkpoint.
 
+## Multi-endpoint hunt orchestration — 2026-09-20
+
+Status: **IMPLEMENTED + VERIFIED** for endpoint-scoped scheduling and aggregate
+state semantics.
+
+`test_multi_endpoint_hunt_isolates_variants_failures_retries_and_evidence` in
+`services/control-plane/tests/test_phase4.py` proves one logical compilation
+creates independent jobs for three endpoints: A receives a memory Variant A,
+B receives a native Variant B and fails at runtime, and C receives a distinct
+memory Variant C. A and C evidence rows survive, B gets one endpoint-scoped
+retry, no successful endpoint is retried, and the Hunt becomes `PARTIAL`.
+The same test verifies shared source/JIR/plan provenance and endpoint-specific
+variant/mode provenance.
+
+Additional targeted coverage proves recorded compatibility failure marks only
+that endpoint `INCOMPATIBLE`, and a variant build failure for endpoint A leaves
+endpoint B and C queued with valid variants. The focused distributed and Phase
+4 suites pass **16/16** in both the local SQLite fixture and the PostgreSQL
+integration runner (`scripts/test_postgres.py`).
+
+Cancellation and retry remain endpoint/job-scoped through the existing state
+machine; active cancellation preserves already-persisted evidence. Broader
+multi-agent load/fault acceptance remains open.
+
+## Backend contract closure — 2026-09-20
+
+| Area | Classification | Evidence |
+| --- | --- | --- |
+| Auth / RBAC | GREEN | ADMIN/ANALYST/VIEWER, unauthenticated rejection, tenant isolation, viewer mutation denial, and legacy `/api/v1/compilations` auth gates pass. |
+| Evidence | GREEN | Manifest artifact membership, stored-byte rehashing, tamper rejection, sealed-job late evidence rejection, and audit mutation detection pass. |
+| Correlation | GREEN | Persisted observations produce all eight required relationships and the unsigned-process/external-connection finding. |
+| Timeline | GREEN | Persisted timeline records support endpoint, collector, severity, type, and timezone-aware start/end filters. |
+| Reports | GREEN | POST generation persists SUCCESS status/artifact, GET status returns metadata, download returns stored JSON, and generation is audited. |
+| Benchmarks | GREEN | POST creates a persisted simulated compiler-fixture run, samples/status/events persist, and GET lists runs. |
+| Compatibility runs | GREEN | POST/GET persistence is tested and an API-recorded correctness FAIL is consumed by endpoint-specific hunt admission. |
+| DEMO fixtures | PARTIAL | Backend loader uses normal persisted contracts with `simulation=true` and labels; direct loader acceptance is not independently tested in this checkpoint. |
+
+The focused backend contract suite passes **17/17** locally and **17/17**
+against PostgreSQL. Two existing Starlette/httpx/AnyIO deprecation warnings
+remain. DEMO is the only listed area left PARTIAL; no UI-only synthetic records
+are claimed.
+
+## Dashboard integration and live events — 2026-09-20
+
+Status: **IMPLEMENTED + VERIFIED** for the authenticated persisted-resource
+surface and committed SSE event refresh path.
+
+- Dashboard typecheck and production build pass; Next.js generated 23 pages,
+	including persisted Scripts / Versions.
+- The existing HttpOnly same-site session proxy forwards bearer authentication
+	to domain routes, clears invalid sessions on 401, and prompts/redirects to
+	login without an auth retry loop. ADMIN/ANALYST write controls remain hidden
+	for VIEWER sessions.
+- `useControlEvents` consumes the existing `/api/control/domain/events` SSE
+	proxy, preserves durable event IDs across reconnects, ignores duplicate or
+	out-of-order events, and invalidates persisted case/resource/child queries.
+	Expired SSE sessions now emit `auth.expired`, clear the cookie, and redirect
+	through the existing session flow.
+- Live smoke through the production dashboard on port 3001: authenticated
+	proxy login -> POST persisted case -> received `case.created` SSE event ->
+	GET cases contained the same case. No frontend-generated progress or result
+	store was used.
+- Scripts/versions and job-scoped evidence manifests now use existing
+	persisted API routes. Stale unavailable execution metrics and claims were
+	removed from the platform overview; compiler fixture text remains explicitly
+	labeled as a fixture.
+
 ## Phase 4 stabilization checkpoint — 2026-09-14
 
 Scope frozen at the operator's request. This section supersedes older control-plane availability claims below. Changes remain in the working tree; no commit, push, or GitHub CI success is claimed. Preserve this architecture and continue from these files rather than restarting implementation.
@@ -64,11 +166,11 @@ These are scoped backend checks, **not completion of the distributed endpoint pr
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Dashboard authentication/resource views            | Login page, HttpOnly same-site cookie proxy, resource tables/details, case/script/hunt/report actions exist; types/build and HTTP page smoke pass. Browser-interactive login, writes, and role-sensitive rendering were **not** acceptance-tested in this checkpoint. Some tools remain API-only; graph is a JSON relationship view, not a graphical canvas. |
 | SSE/live events                                    | Backend durable outbox/cursor tests pass. Browser EventSource view exists; reconnect/session-expiry behavior across real browsers and long-running deployment is not fully tested.                                                                                                                                                                           |
-| Multi-endpoint hunt dispatch/retry/partial-success | Durable per-endpoint jobs, compatibility rejection, signed dispatch/cancel, retries and aggregate state logic exist. Protocol/state tests pass; no real multi-Rust-agent execution or distributed-load/fault acceptance has run.                                                                                                                             |
+| Multi-endpoint hunt dispatch/retry/partial-success | IMPLEMENTED + VERIFIED for three-endpoint endpoint-scoped orchestration, per-job retry, compatibility/build isolation, partial success, and provenance tests. Multi-agent load/fault acceptance remains open. |
 | Correlation/timeline                               | Backend fixture acceptance passes. Live Rust evidence integration, full relationship-field coverage, PID reuse edge cases, and large-case performance remain unverified.                                                                                                                                                                                     |
-| Reports                                            | Persisted JSON report and actual artifact verification tested. Full live-evidence report workflow/UI acceptance is not complete; PDF is absent.                                                                                                                                                                                                              |
-| Benchmarks                                         | Invokes the real native compiler fixture and stores measured results with explicit simulation provenance. No end-to-end benchmark acceptance was run in this checkpoint. No remote performance claim.                                                                                                                                                        |
-| Compatibility runs                                 | Authenticated persistence of operator-supplied observations exists. Not an automated compatibility runner; no full API/UI acceptance performed.                                                                                                                                                                                                              |
+| Reports                                            | GREEN for backend JSON generation/status/download/audit and evidence verification; PDF and browser acceptance are absent.                                                                                                                                                                                                                                  |
+| Benchmarks                                         | GREEN for the persisted simulated compiler-fixture lifecycle, samples, status, and events; no remote performance claim.                                                                                                                                                                                                                                      |
+| Compatibility runs                                 | GREEN for POST/GET persistence and hunt admission consuming recorded endpoint correctness; automated security-tool execution remains outside scope.                                                                                                                                                                                                            |
 | Evidence verification                              | Backend positive/tamper tests pass. Not verified with evidence emitted by a remotely connected Rust agent. Uploaded artifact hashes are not themselves independent producer signatures.                                                                                                                                                                      |
 | RBAC/tenant isolation                              | Prototype API boundaries tested, not a production security review. Full endpoint lifecycle, abuse/rate limiting, and multi-operator concurrency need further acceptance.                                                                                                                                                                                     |
 | Native compilation/variants and DEMO loader        | Native compiler image self-test passes. Durable native-build API and backend DEMO loader exist, but their full deployed workflow was not exercised at checkpoint. Never substitute compiler fixture output for REAL endpoint execution.                                                                                                                      |

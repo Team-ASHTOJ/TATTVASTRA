@@ -11,10 +11,11 @@ and reconnect handling.
 
 Fresh stabilization evidence on this host:
 
-- Python: `70 passed`; focused Phase 4/distributed tests: `13 passed`; two
+- Python: `74 passed`; focused Phase 4/distributed tests: `17 passed`; two
 	existing Starlette/httpx/AnyIO deprecation warnings remain.
-- PostgreSQL: `13 passed` from `scripts/test_postgres.py`.
-- Dashboard: all workspace typechecks and the production Next.js build passed.
+- PostgreSQL: `17 passed` from `scripts/test_postgres.py`.
+- Dashboard: all workspace typechecks, production build, and Playwright E2E
+	(**14/14**) passed.
 - Docker: both Compose configurations validated; `agent-runtime.Dockerfile`
 	built successfully.
 - Rust: Docker toolchain passed 18 unit + 6 CLI tests, format, build, and
@@ -26,35 +27,59 @@ multi-agent/load/fault acceptance, and external audit checkpoints. The worker
 admits only bounded inventory collectors without options and rejects strict
 budget enforcement or richer JOCKY operations.
 
-Pre-edit inspection against all sixteen requested areas. PASS means scoped implementation plus test evidence; PARTIAL includes unverified acceptance; MISSING means no working path; BROKEN means observed failure. Historical acceptance is distinguished from this machine's fresh results. Existing uncommitted dashboard next-env changes and `.freebuff/` belong to the operator and are preserved.
+Multi-endpoint orchestration is **IMPLEMENTED + VERIFIED** in the focused
+control-plane scope. The three-endpoint acceptance creates one logical plan,
+selects memory/native/memory modes, creates independent endpoint jobs and
+variants, isolates endpoint B runtime/build failure, preserves A/C evidence,
+creates only B's retry, and reaches `PARTIAL`. Compatibility rejection and
+build-failure isolation are separately covered. Multi-agent load/fault tests
+and live three-agent acceptance remain open.
 
-| Requirement | Initial classification | Evidence / remaining gap |
+Backend contract closure classifications:
+
+| Area | Classification | Evidence / remaining gap |
 | --- | --- | --- |
-| 1. FastAPI/PostgreSQL; Organization, User, Case, Endpoint, EndpointEnrollment, Script, ScriptVersion, Compilation, Variant, ExecutionPlan, Hunt, Job, Observation, Artifact, EvidenceManifest, Finding, TimelineEvent, AuditEvent, BenchmarkRun, CompatibilityRun, Report | PARTIAL | All 22 requested entities share existing SQLAlchemy models; UUID/FKs/tenant IDs/creation times and migrations exist. Nine historical PostgreSQL tests; fresh database verification pending. Existing enum/state scopes and migration constraints need targeted inspection, not replacement. |
-| 2. Cases create/list/detail/patch | PASS (historical scoped tests) | Existing authenticated APIs and persisted model; browser acceptance pending. |
-| 2. Scripts/create/version/compile and compilation stages | PARTIAL | All routes exist, actual compiler subprocess adapter and durable stage outputs. Native deployed happy path not yet accepted here; utility auth already tested. |
-| 2. Variants/create/detail/manifest/compare | PARTIAL | Real object registry exists; manifest route returns resource wrapper; correct execution-mode provenance and happy-path acceptance needed. |
-| 2. Endpoints enrollment/list/detail/observations/jobs | PARTIAL | TLS identity-bound server flow tested historically; Rust client missing, detail heartbeat staleness differs from list. |
-| 2. Hunts create/start/cancel/detail/jobs | PARTIAL | Durable routes exist; mixed endpoint modes and real-agent partial-failure acceptance missing. |
-| 2. Evidence artifact list/detail/verify, manifest detail/verify | PARTIAL | Rehashes actual local content and checks Ed25519 manifests. Artifact sealing and signed artifact membership missing. |
-| 2. Findings/timeline/graph | PARTIAL | NetworkX and persisted observations/findings present; full relationships and live-agent integration unverified. |
-| 2. Benchmark/compatibility/report APIs | PARTIAL | Persisted code paths exist; native run happy paths and browser flow unverified, compatibility observations not consulted during hunt admission. |
-| 3. gRPC enrollment/heartbeat/dispatch/ack/progress/observations/artifact/completion/failure/cancel | IMPLEMENTED + VERIFIED | Live Rust enrollment, heartbeat, signed dispatch, artifact fetch, progress, observation, artifact, manifest, completion, failure, reconnect, and cancellation request paths use the existing protocol. |
-| 3. Rust remote enrollment/stream/replay/upload/execute/finish | IMPLEMENTED + VERIFIED | REAL job `34b9b086-edf5-4093-89ab-5d72faf9db5b` persisted SUCCESS with one observation, one artifact, one manifest, 24 receipts, and no duplicate after reconnect. Rust spool replay and job-claim idempotency tests pass. |
-| 4. Multi-endpoint selection/compatibility/compile-once/variants/concurrency/retry/cancel/partial outcome | PARTIAL | One durable compilation, per-endpoint jobs, seeded object variants, retry/cancel aggregation exist. One execution mode per hunt, no real multi-agent test, build failure can abort whole start transaction. |
-| 5. SSE compiler/hunt/agent/observation/finding/timeline/benchmark | PARTIAL | Transactional outbox and Last-Event-ID tests exist; browser feed misses some topics and does not refresh resource views; reconnect/session acceptance missing. |
-| 6. SHA/object metadata/manifest/provenance/sealing/verification/audit | PARTIAL | Existing actual hashing, local content-addressed storage, Ed25519 and append-only PostgreSQL are preserved. Manifest has no artifact hash membership or full time validation; artifact frames can arrive after sealing. MinIO adapter absent (local store documented). |
-| 7. All eight graph relationships and unsigned process/external connection | PARTIAL | Basic NetworkX rule tested. Remote field aliases, unowned connections/IP, process association nodes, PID start identity and derived edge simulation metadata need coverage. |
-| 8. Normalized timeline with endpoint/collector/severity/type/time filters | PARTIAL | All filter parameters exist; ingestion always assigns INFO, malformed/naive time range behavior and source precision need tests. |
-| 9. ADMIN/ANALYST/VIEWER, unauthenticated denial, tenant isolation, utility auth, gRPC identity | PASS (historical scoped tests) | Existing session and transport gates retained; extend targeted tests to new actions, stream/session and mixed-tenant resources. Not a production security certification. |
-| 10. Required actions audited with tamper-evident chaining | PARTIAL | publish atomically appends outbox/audit; login/case/script/build/variant/hunt/artifact/report paths exist; append-only and tamper tests historical. New actions must reuse it. External rollback checkpoints remain unimplemented and are not claimed. |
-| 11. Backend DEMO loading with simulation contracts | PARTIAL | CLI fixture loader/data exists; full compiler-backed loading and same API/browser consumption unverified. No frontend telemetry fixtures. |
-| 12. Browser login/session/cases/scripts/compilations/endpoints/hunts/jobs/observations/findings/timeline/graph/evidence/live/refresh/auth errors | PARTIAL | Existing forms and resource tables preserved. Browser acceptance absent; endpoint observations/jobs and hunt child jobs lack complete views; resource refresh/event integration incomplete. |
-| 13. Benchmark create/status/results/list/events | PARTIAL | Runs actual compiler fixture with simulation provenance, but no happy-path acceptance. No remote benchmark claim. |
-| 13. Compatibility create/outcome/list/hunt decisions | PARTIAL | Operator observations persisted; no endpoint decision integration or acceptance. Automated security-tool execution is outside safe prototype scope. |
-| 13. Reports request/status/metadata/download/audit | PARTIAL | Real JSON artifact path tested; full evidence/manifest report membership and browser acceptance pending. PDF not required by current request contract. |
-| 14. Preserve tests; PostgreSQL/lifecycle/real agent/partial evidence/auth/replay/seal/tamper/cancel | IMPLEMENTED + VERIFIED (scoped) | Fresh local run: 70 Python tests and 13 PostgreSQL tests pass. Live Rust success/failure/reconnect evidence is persisted; cancellation race resolves to terminal SUCCESS when completion wins, while active cancellation is covered by Rust supervisor and signed protocol tests. |
-| 15. Documented Compose/fresh start, seven services | PARTIAL | Both Compose configurations validate and the agent-runtime image builds. This checkpoint did not claim a fresh seven-service health/start acceptance. |
-| 16. API/status/docs with exact completion and limits | PARTIAL | This checkpoint records current host evidence, the bridge as PARTIAL, and exact remaining Rust/native/distributed gaps. Older architecture/API sections still need later reconciliation. |
+| Auth / RBAC | GREEN | ADMIN/ANALYST/VIEWER, unauthenticated denial, tenant isolation, viewer mutation denial, and legacy compiler-route authentication are covered by the PostgreSQL-backed suite. |
+| Evidence | GREEN | Uploaded artifact membership, stored-byte rehash, tamper failure, sealing, and audit mutation detection are covered. |
+| Correlation | GREEN | Persisted observations drive all eight required relationships and the unsigned external-connection finding. |
+| Timeline | GREEN | Endpoint, collector, severity, type, and timezone-aware start/end filters are tested against persisted rows. |
+| Reports | GREEN | Generation, persisted SUCCESS metadata, authorized download, integrity verification, and audit evidence are tested. |
+| Benchmarks | GREEN | POST/GET lifecycle, persisted simulated samples/status, and benchmark events are tested. |
+| Compatibility runs | GREEN | POST/GET persistence is tested; an API-recorded correctness failure changes only the affected endpoint's hunt assignment. |
+| DEMO fixtures | LIMITATION | `demo.load` is backend-owned and propagates `simulation=true` plus a label through cases, observations, manifests, and events; a dedicated loader acceptance test was not rerun in this freeze. |
+
+Final acceptance against all sixteen requested areas. PASS means the required
+prototype flow and evidence passed. LIMITATION means a documented prototype,
+platform, or noncritical acceptance boundary remains. No MISSING, BROKEN, or
+vague TODO classification remains.
+
+| Requirement | Final classification | Evidence / limitation |
+| --- | --- | --- |
+| 1. FastAPI/PostgreSQL domain resources and migrations | PASS | Models, UUID/FKs, tenant scope, migrations, full Python suite, and 17 PostgreSQL integration tests pass. |
+| 2. Cases create/list/detail/patch | PASS | Authenticated persisted API and dashboard resource flow pass; browser E2E and API tests pass. |
+| 2. Scripts/create/version/compile and compilation stages | PASS | Persisted script/version routes, compiler outputs, dashboard Scripts / Versions, and compiler E2E pass. |
+| 2. Variants/create/detail/manifest/compare | PASS | Real artifact registry, manifest/provenance routes, endpoint-specific variants, and backend tests pass. |
+| 2. Endpoints enrollment/list/detail/observations/jobs | PASS | mTLS enrollment, heartbeat, persisted observations/jobs, real agent execution, and dashboard views pass within Linux/bounded scope. |
+| 2. Hunts create/start/cancel/detail/jobs | PASS | Multi-endpoint dispatch, retry, cancellation, partial-success, persisted jobs, and dashboard E2E pass. |
+| 2. Evidence artifact list/detail/verify, manifest detail/verify | PASS | Artifact membership, byte rehash, tamper rejection, sealing, manifest verification, downloads, and tests pass. |
+| 2. Findings/timeline/graph | PASS | Persisted observations drive required graph relationships, finding, timeline filters, and dashboard views. |
+| 2. Benchmark/compatibility/report APIs | GREEN (scoped) | Backend POST/GET/report lifecycle, benchmark fixture lifecycle/events, compatibility persistence, and hunt admission consumption pass; browser/PDF and remote performance remain out of scope. |
+| 3. gRPC enrollment/heartbeat/dispatch/ack/progress/observations/artifact/completion/failure/cancel | PASS | Live Rust protocol flow and replay/cancellation tests pass. |
+| 3. Rust remote enrollment/stream/replay/upload/execute/finish | PASS | REAL job evidence persisted; Rust spool replay/idempotency tests pass. |
+| 4. Multi-endpoint selection/compatibility/compile-once/variants/concurrency/retry/cancel/partial outcome | PASS | Three-endpoint A-success/B-failure/C-success, per-endpoint variants/modes, retry, evidence preservation, and compatibility/build isolation pass. |
+| 5. SSE compiler/hunt/agent/observation/finding/timeline/benchmark | PASS | Durable outbox, Last-Event-ID, dashboard SSE receipt, query invalidation, and browser tests pass. |
+| 6. SHA/object metadata/manifest/provenance/sealing/verification/audit | LIMITATION | Required integrity flow passes; external rollback checkpoints and MinIO authority are prototype limitations. |
+| 7. All eight graph relationships and unsigned process/external connection | PASS | Persisted-observation graph and finding acceptance pass without hard-coded results. |
+| 8. Normalized timeline with endpoint/collector/severity/type/time filters | PASS | All requested filters and invalid-range rejection pass. |
+| 9. ADMIN/ANALYST/VIEWER, unauthenticated denial, tenant isolation, utility auth, gRPC identity | LIMITATION | Required authorization and identity tests pass; this is not a production security certification. |
+| 10. Required actions audited with tamper-evident chaining | LIMITATION | Required append-only chain and mutation detection pass; external rollback checkpointing remains unavailable. |
+| 11. Backend DEMO loading with simulation contracts | LIMITATION | Backend loader propagates simulation labels; dedicated loader acceptance and full demo workflow were not rerun in this freeze. |
+| 12. Browser login/session/cases/scripts/compilations/endpoints/hunts/jobs/observations/findings/timeline/graph/evidence/live/refresh/auth errors | PASS | 14/14 browser E2E, persisted resource views, authenticated proxy, SSE smoke, and role/session behavior pass. |
+| 13. Benchmark create/status/results/list/events | PASS | Persisted simulated fixture lifecycle, samples, status, and events pass. Remote performance is not claimed. |
+| 13. Compatibility create/outcome/list/hunt decisions | PASS | API POST/GET persistence and recorded correctness consumed by hunt admission pass. Automated security-tool execution is out of scope. |
+| 13. Reports request/status/metadata/download/audit | PASS | Real JSON generation, status, metadata, authorized download, integrity, and audit event pass. PDF remains unavailable. |
+| 14. Preserve tests; PostgreSQL/lifecycle/real agent/partial evidence/auth/replay/seal/tamper/cancel | PASS | 74 Python, 17 PostgreSQL, 24 Rust, native, dashboard, E2E, and live-stack evidence pass. |
+| 15. Documented Compose/fresh start, seven services | PASS | Compose config/build/start passed; PostgreSQL, Redis, MinIO, API, gRPC, scheduler, and dashboard healthy. |
+| 16. API/status/docs with exact completion and limits | PASS | API, BUILD_STATUS, API docs, and final matrix are reconciled; scoped limitations are explicit. |
 
 Implementation order after this checkpoint: Windows live execution, certificate rotation, multi-agent fault/load acceptance, and external audit checkpoints. Unsupported instructions or platform artifacts must be rejected during compatibility/admission, never silently interpreted or simulated.

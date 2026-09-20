@@ -49,46 +49,32 @@ export function PlatformOverview({
             <div>
               <strong>
                 {query.data.mode === "DEMO"
-                  ? "DEMO mode — synthetic fixture execution is not available yet"
-                  : "REAL mode — endpoint execution is not available yet"}
+                  ? "DEMO mode — backend fixtures are explicitly simulated"
+                  : "REAL mode — persisted endpoint execution is available"}
               </strong>
               <p>
-                The native compiler and local Agent slices are implemented.
-                Remote enrollment and distributed forensic execution are not
-                available yet.
+                Cases, endpoints, hunts, jobs, observations, findings,
+                timelines, evidence, and reports are read from the control
+                plane. Live updates appear in Live Investigation.
               </p>
             </div>
             <StatusBadge>API CONNECTED</StatusBadge>
           </div>
           {!coverageOnly && (
             <>
-              <div className="metric-grid">
-                {[
-                  "Connected endpoints",
-                  "Active hunts",
-                  "Verified evidence",
-                  "Execution latency",
-                ].map((label) => (
-                  <div className="metric panel" key={label}>
-                    <span>{label}</span>
-                    <strong aria-label="Not available">—</strong>
-                    <small>Not available in this phase</small>
-                  </div>
-                ))}
-              </div>
               <div className="split-grid">
                 <section className="panel">
                   <div className="panel-heading">
                     <h2>Investigation activity</h2>
-                    <StatusBadge>NO LIVE DATA</StatusBadge>
+                    <StatusBadge tone="good">PERSISTED DATA</StatusBadge>
                   </div>
-                  <EmptyState title="Awaiting the execution platform">
+                  <EmptyState title="Open persisted investigations">
                     <p>
-                      Live activity will appear after authorized agents enroll
-                      and run a JOCKY hunt.
+                      Review persisted cases, jobs, evidence, and live committed
+                      events from the control-plane sections.
                     </p>
-                    <Link href="/architecture" className="text-link">
-                      Review implementation coverage →
+                    <Link href="/cases" className="text-link">
+                      Open cases →
                     </Link>
                   </EmptyState>
                 </section>

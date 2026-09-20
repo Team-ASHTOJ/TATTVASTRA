@@ -150,6 +150,14 @@ def test_migrations_and_rbac_tenant_isolation(runtime):
         == 403
     )
     with factory.begin() as db:
+        analyst = User(
+            organization_id=org_id,
+            username="analyst",
+            password_hash=password_hash(PASSWORD),
+            role=Role.ANALYST,
+        )
+        db.add(analyst)
+        db.flush()
         other = Organization(name="Other tenant")
         db.add(other)
         db.flush()
@@ -165,6 +173,41 @@ def test_migrations_and_rbac_tenant_isolation(runtime):
             json={"title": "Wrong mode", "simulation": True, "simulation_label": "DEMO"},
         ).status_code
         == 409
+    )
+    legacy_payload = {
+        "simulation": False,
+        "source": 'hunt "auth-bound" {}',
+        "target": {"os": "linux", "arch": "x86_64"},
+        "execution_mode": "memory",
+    }
+    assert (
+        client.post(
+            "/api/v1/compilations",
+            json=legacy_payload,
+            headers={"Authorization": ""},
+        ).status_code
+        == 401
+    )
+    assert (
+        client.post(
+            "/api/v1/compilations",
+            json=legacy_payload,
+            headers=viewer,
+        ).status_code
+        == 403
+    )
+    analyst_login = client.post(
+        "/api/auth/login",
+        json={"organization_id": str(org_id), "username": "analyst", "password": PASSWORD},
+    )
+    assert analyst_login.status_code == 200
+    assert (
+        client.post(
+            "/api/v1/compilations",
+            json=legacy_payload,
+            headers={"Authorization": "Bearer " + analyst_login.json()["access_token"]},
+        ).status_code
+        == 501
     )
 
 
@@ -429,7 +472,13 @@ def test_objects_reports_audit_and_modified_bytes(runtime):
     case = client.post("/api/cases", json={"title": "Report", "simulation": False}).json()
     report = client.post("/api/reports", json={"case_id": case["id"]})
     assert report.status_code == 201, report.text
+    report_status = client.get(f"/api/reports/{report.json()['id']}")
+    assert report_status.status_code == 200
+    assert report_status.json()["status"] == "SUCCESS"
     identifier = report.json()["artifact_id"]
+    downloaded = client.get(f"/api/artifacts/{identifier}/content")
+    assert downloaded.status_code == 200
+    assert b'"audit_verification"' in downloaded.content
     assert client.post(f"/api/artifacts/{identifier}/verify").json()["integrity_valid"]
     with factory() as db:
         artifact = db.get(Artifact, UUID(identifier))

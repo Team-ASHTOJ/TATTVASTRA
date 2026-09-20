@@ -45,11 +45,22 @@ async function proxy(
       { status: 404 },
     );
   const mutating = !["GET", "HEAD"].includes(request.method);
-  if (mutating && request.headers.get("origin") !== request.nextUrl.origin)
-    return NextResponse.json(
-      { detail: "Same-origin request required" },
-      { status: 403 },
-    );
+  if (mutating) {
+    const origin = request.headers.get("origin");
+    let sameOrigin = origin === request.nextUrl.origin;
+    if (!sameOrigin && origin) {
+      try {
+        sameOrigin = new URL(origin).host === request.headers.get("host");
+      } catch {
+        sameOrigin = false;
+      }
+    }
+    if (!sameOrigin)
+      return NextResponse.json(
+        { detail: "Same-origin request required" },
+        { status: 403 },
+      );
+  }
   try {
     const body = mutating ? await request.text() : undefined;
     if (body && Buffer.byteLength(body) > 1_048_576)
@@ -90,6 +101,21 @@ async function proxy(
         maxAge: 3600,
       });
       result.headers.set("Cache-Control", "no-store");
+      return result;
+    }
+    if (streaming && response.status === 401) {
+      const result = new NextResponse(
+        'event: auth.expired\ndata: {"detail":"Session expired"}\n\n',
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+          },
+        },
+      );
+      result.cookies.delete("jocky_session");
       return result;
     }
     const result = new NextResponse(response.body, {

@@ -91,6 +91,7 @@ export default async function SectionPage({
   if (
     [
       "cases",
+      "scripts",
       "endpoints",
       "jobs",
       "findings",

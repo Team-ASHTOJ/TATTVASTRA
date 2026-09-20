@@ -20,6 +20,7 @@ type RecordRow = {
 };
 const collections: Record<string, string> = {
   cases: "cases",
+  scripts: "scripts",
   endpoints: "endpoints",
   jobs: "hunts",
   findings: "findings",
@@ -66,6 +67,7 @@ export function ControlResources({ section }: { section: string }) {
   const childPaths = selected
     ? section === "endpoints" ? [`endpoints/${selected.id}/jobs`, `endpoints/${selected.id}/observations`]
     : section === "jobs" ? [`hunts/${selected.id}/jobs`]
+    : section === "scripts" ? [`scripts/${selected.id}/versions`]
     : section === "evidence" && selected.job_id ? [`manifests?job_id=${String(selected.job_id)}`]
     : [] : [];
   const children = useQuery({

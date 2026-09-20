@@ -15,6 +15,14 @@ export const sections = [
       "Scoped investigations, assigned operators, and evidence retention.",
   },
   {
+    slug: "scripts",
+    name: "Scripts / Versions",
+    group: "BUILD",
+    phase: "P5",
+    description:
+      "Persisted JOCKY source versions and their compiler lifecycle.",
+  },
+  {
     slug: "workbench",
     name: "JOCKY Workbench",
     group: "BUILD",
@@ -100,7 +108,7 @@ export const sections = [
     group: "ASSURANCE",
     phase: "P0 / P7",
     description:
-      "Hash verification is available. Persistent evidence ingestion and signatures are planned.",
+      "Persisted artifacts, manifests, hashes, signatures, and verification status.",
   },
   {
     slug: "drivers",
@@ -132,7 +140,7 @@ export const sections = [
     group: "ASSURANCE",
     phase: "P7",
     description:
-      "Case-scoped JSON/PDF exports with evidence manifests and audit history.",
+      "Persisted JSON exports with evidence verification and audit history.",
   },
   {
     slug: "architecture",
