@@ -75,7 +75,10 @@ impl Spool {
              CREATE TABLE IF NOT EXISTS metrics (
                name TEXT PRIMARY KEY,
                value INTEGER NOT NULL
-             );",
+             );
+             CREATE TABLE IF NOT EXISTS remote_sequence (id INTEGER PRIMARY KEY CHECK(id=1), value INTEGER NOT NULL);
+             INSERT OR IGNORE INTO remote_sequence VALUES (1, 0);
+             CREATE TABLE IF NOT EXISTS remote_jobs (job_id TEXT PRIMARY KEY, envelope_hash TEXT NOT NULL, nonce TEXT UNIQUE NOT NULL, done INTEGER NOT NULL DEFAULT 0);",
         )?;
         Ok(Self {
             root: root.to_path_buf(),
@@ -222,6 +225,88 @@ impl Spool {
 
     pub fn database_path(&self) -> PathBuf {
         self.root.join("agent.db")
+    }
+
+    /// Allocate sequence numbers and persist encrypted protobuf bytes atomically.
+    /// A crash cannot leave a gap or change an already transmitted frame.
+    pub fn queue_remote(
+        &mut self,
+        frames: &mut [crate::wire::AgentFrame],
+        completed_job: Option<&str>,
+    ) -> Result<()> {
+        use prost::Message;
+        let transaction = self.connection.transaction()?;
+        let mut sequence: u64 =
+            transaction.query_row("SELECT value FROM remote_sequence WHERE id=1", [], |r| {
+                r.get(0)
+            })?;
+        let cipher = Aes256Gcm::new_from_slice(&self.key).map_err(|_| AgentError::Crypto)?;
+        for frame in frames {
+            sequence += 1;
+            frame.sequence = sequence;
+            let id = format!("remote-{sequence:020}");
+            let mut nonce = [0_u8; 12];
+            OsRng.fill_bytes(&mut nonce);
+            let ciphertext = cipher
+                .encrypt(
+                    Nonce::from_slice(&nonce),
+                    Payload {
+                        msg: &frame.encode_to_vec(),
+                        aad: format!("JOCKY:spool:v1:{id}:remote").as_bytes(),
+                    },
+                )
+                .map_err(|_| AgentError::Crypto)?;
+            transaction.execute(
+                "INSERT INTO spool VALUES (?1,'remote',?2,?3,?4)",
+                params![
+                    id,
+                    nonce.as_slice(),
+                    ciphertext,
+                    chrono::Utc::now().to_rfc3339()
+                ],
+            )?;
+        }
+        transaction.execute("UPDATE remote_sequence SET value=?1 WHERE id=1", [sequence])?;
+        if let Some(job) = completed_job {
+            transaction.execute("UPDATE remote_jobs SET done=1 WHERE job_id=?1", [job])?;
+        }
+        transaction.commit()?;
+        Ok(())
+    }
+
+    pub fn claim_remote_job(&self, job: &str, hash: &str, nonce: &str) -> Result<bool> {
+        let existing: Option<String> = self
+            .connection
+            .query_row(
+                "SELECT envelope_hash FROM remote_jobs WHERE job_id=?1",
+                [job],
+                |r| r.get(0),
+            )
+            .optional()?;
+        if let Some(existing) = existing {
+            if existing != hash {
+                return Err(AgentError::rejected(
+                    "JOB_CONFLICT",
+                    "Job ID reused with different signed content",
+                ));
+            }
+            return Ok(false);
+        }
+        self.connection.execute(
+            "INSERT INTO remote_jobs(job_id,envelope_hash,nonce) VALUES (?1,?2,?3)",
+            params![job, hash, nonce],
+        )?;
+        Ok(true)
+    }
+
+    pub fn interrupted_remote_jobs(&self) -> Result<Vec<String>> {
+        let mut statement = self
+            .connection
+            .prepare("SELECT job_id FROM remote_jobs WHERE done=0 ORDER BY job_id")?;
+        let jobs = statement
+            .query_map([], |r| r.get(0))?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(jobs)
     }
 }
 

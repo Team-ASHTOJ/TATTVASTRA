@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     mode: Mode = Mode.REAL
     transport_mode: Literal["DIRECT"] = "DIRECT"
     compiler_path: Path | None = None
+    worker_sdk_path: Path | None = None
     database_url: str | None = None
     object_root: Path = Path(".local/objects")
     signing_key_path: Path = Path(".local/control-plane.key")

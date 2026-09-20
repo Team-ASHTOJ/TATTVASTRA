@@ -26,6 +26,7 @@ raise SystemExit(
             "-m",
             "pytest",
             "services/control-plane/tests/test_distributed.py",
+            "services/control-plane/tests/test_phase4.py",
             "--basetemp=.cache/pytest-postgres",
             "-q",
             "--tb=short",

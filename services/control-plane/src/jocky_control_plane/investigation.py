@@ -19,7 +19,7 @@ def graph(db: Session, case_id: UUID, user: User, *, persist: bool = False) -> d
         .order_by(Observation.created_at, Observation.id)
     ).all()
     network = nx.MultiDiGraph()
-    processes: dict[tuple[str, str, str], Observation] = {}
+    processes: dict[tuple[str, str, str], list[Observation]] = {}
     connections: list[Observation] = []
     for observation in observations:
         endpoint = str(observation.endpoint_id)
@@ -34,7 +34,7 @@ def graph(db: Session, case_id: UUID, user: User, *, persist: bool = False) -> d
         }
         network.add_node(endpoint, type="Endpoint", **meta)
         if observation.collector == "processes" and pid is not None:
-            processes[process_key] = observation
+            processes.setdefault(process_key, []).append(observation)
             network.add_node(process, type="Process", pid=pid, **meta)
             network.add_edge(endpoint, process, relationship="Endpoint -> Process", **meta)
             username = data.get("username") or data.get("user")
@@ -42,25 +42,43 @@ def graph(db: Session, case_id: UUID, user: User, *, persist: bool = False) -> d
                 account = f"user:{endpoint}:{username}"
                 network.add_node(account, type="User", name=username, **meta)
                 network.add_edge(account, process, relationship="User -> Process", **meta)
-        elif observation.collector in {"connections", "network"} and pid is not None:
+        elif observation.collector in {"connections", "network"}:
             connections.append(observation)
             connection_node = "connection:" + str(observation.id)
             network.add_node(connection_node, type="Connection", **meta)
-            network.add_node(process, type="Process", pid=pid, **meta)
-            network.add_edge(process, connection_node, relationship="Process -> Connection", **meta)
-            remote = data.get("remote_address") or data.get("remote_ip")
+            if pid is not None:
+                network.add_node(process, type="Process", pid=pid, **meta)
+                network.add_edge(
+                    process, connection_node, relationship="Process -> Connection", **meta
+                )
+            remote = data.get("remote_address") or data.get("remote_ip") or data.get("remote")
             if remote:
                 network.add_node("ip:" + str(remote), type="IP", address=remote, **meta)
                 network.add_edge(
                     connection_node, "ip:" + str(remote), relationship="Connection -> IP", **meta
                 )
-        elif observation.collector in {"files", "services", "drivers", "modules"}:
-            kind = {"files": "File", "services": "Service"}.get(observation.collector, "Driver")
+        elif observation.collector in {
+            "files",
+            "file_metadata",
+            "file_hash",
+            "services",
+            "drivers",
+            "modules",
+        }:
+            kind = (
+                "Service"
+                if observation.collector == "services"
+                else "File"
+                if observation.collector.startswith("file")
+                else "Driver"
+            )
             node = f"{kind}:{observation.id}"
             network.add_node(node, type=kind, **meta)
             if kind != "Driver" and pid is None:
                 continue  # No observed process association; do not invent one.
             parent = endpoint if kind == "Driver" else process
+            if kind != "Driver":
+                network.add_node(process, type="Process", pid=pid, **meta)
             network.add_edge(
                 parent,
                 node,
@@ -70,12 +88,17 @@ def graph(db: Session, case_id: UUID, user: User, *, persist: bool = False) -> d
 
     for connection in connections:
         data = connection.document["data"]
-        pid = data.get("pid") or data.get("process_id")
-        process_observation = processes.get(
-            (str(connection.endpoint_id), str(connection.job_id), str(pid))
+        pid = data.get("pid", data.get("process_id"))
+        candidates = processes.get(
+            (str(connection.endpoint_id), str(connection.job_id), str(pid)), []
         )
-        if process_observation is None:
+        started = data.get("process_start_time")
+        if started is not None:
+            candidates = [p for p in candidates if p.document["data"].get("start_time") == started]
+        identities = {str(p.document["data"].get("start_time")) for p in candidates}
+        if not candidates or len(identities) != 1:
             continue
+        process_observation = candidates[-1]
         process_data = process_observation.document["data"]
         # Unknown/null signing status never means unsigned. Match within one job
         # to avoid joining a reused PID across unrelated collection sessions.
@@ -83,7 +106,7 @@ def graph(db: Session, case_id: UUID, user: User, *, persist: bool = False) -> d
             continue
         try:
             external = ipaddress.ip_address(
-                data.get("remote_address") or data.get("remote_ip", "")
+                data.get("remote_address") or data.get("remote_ip") or data.get("remote", "")
             ).is_global
         except ValueError:
             continue
@@ -128,7 +151,13 @@ def graph(db: Session, case_id: UUID, user: User, *, persist: bool = False) -> d
                 simulation=finding.simulation,
                 simulation_label=finding.simulation_label,
             )
-            network.add_edge(node, identifier, relationship="Finding -> Observation")
+            network.add_edge(
+                node,
+                identifier,
+                relationship="Finding -> Observation",
+                simulation=finding.simulation,
+                simulation_label=finding.simulation_label,
+            )
     return {
         "nodes": [{"id": key, **value} for key, value in network.nodes(data=True)],
         "edges": [

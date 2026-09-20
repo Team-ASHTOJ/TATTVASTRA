@@ -230,7 +230,13 @@ def setup_job(factory, org_id, simulation=False):
                 "source_hash": version.source_hash,
                 "jir_hash": digest(b"fixture-jir"),
                 "required_capabilities": ["process.read", "network.read"],
-                "budget": {},
+                "budget": {
+                    "schema_version": "1.0.0",
+                    "cpu_percent": 20,
+                    "memory_bytes": 256000000,
+                    "io_bytes": 150000000,
+                    "duration_ms": 120000,
+                },
             },
         )
         endpoint = Endpoint(

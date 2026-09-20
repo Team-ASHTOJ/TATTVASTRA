@@ -178,10 +178,18 @@ class AgentControl:
                     if body == "observation":
                         ingest_observation(db, endpoint, payload, user)
                     elif body == "evidence_manifest":
-                        ingest_manifest(db, endpoint, payload, user)
+                        ingest_manifest(
+                            db, endpoint, payload, user, ObjectStore(self.settings.object_root)
+                        )
                     elif body == "artifact":
                         upload = ArtifactUpload.model_validate(payload)
                         job = owned(db, Job, upload.job_id, user)
+                        if db.scalar(
+                            select(EvidenceManifest.id).where(EvidenceManifest.job_id == job.id)
+                        ):
+                            raise HTTPException(
+                                409, "Job evidence is sealed by its immutable manifest"
+                            )
                         if (
                             job.endpoint_id != endpoint.id
                             or upload.simulation != job.simulation
@@ -194,8 +202,20 @@ class AgentControl:
                             raise HTTPException(422, "Artifact content hash mismatch")
                         key = ObjectStore(self.settings.object_root).put(content)
                         hunt = owned(db, Hunt, job.hunt_id, user)
-                        db.add(
-                            Artifact(
+                        existing_artifact = db.scalar(
+                            select(Artifact).where(
+                                Artifact.job_id == job.id, Artifact.content_hash == key
+                            )
+                        )
+                        if existing_artifact and (
+                            existing_artifact.media_type != upload.media_type
+                            or existing_artifact.size_bytes != len(content)
+                        ):
+                            raise HTTPException(
+                                409, "Artifact hash was reused with conflicting metadata"
+                            )
+                        if existing_artifact is None:
+                            artifact = Artifact(
                                 **provenance(job),
                                 case_id=hunt.case_id,
                                 job_id=job.id,
@@ -204,7 +224,16 @@ class AgentControl:
                                 media_type=upload.media_type,
                                 storage_key=key,
                             )
-                        )
+                            db.add(artifact)
+                            db.flush()
+                            publish(
+                                db,
+                                user,
+                                "artifact.created",
+                                artifact.id,
+                                simulation=job.simulation,
+                                simulation_label=job.simulation_label,
+                            )
                     else:
                         progress = JobProgress.model_validate(payload)
                         job = owned(db, Job, progress.job_id, user)

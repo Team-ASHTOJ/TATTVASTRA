@@ -1,6 +1,7 @@
 """Real compiler invocation and durable build representations."""
 
 import json
+import re
 import secrets
 import subprocess
 import tempfile
@@ -90,6 +91,8 @@ def build_variants(
     count: int,
     user: User,
     settings: Settings,
+    *,
+    execution_mode: str = "memory",
 ) -> list[Variant]:
     if compilation.status != State.SUCCESS:
         raise HTTPException(409, "Compilation must succeed before generating variants")
@@ -115,7 +118,7 @@ def build_variants(
                         "--target",
                         "host",
                         "--execution",
-                        "native",
+                        execution_mode,
                         "--seed",
                         seed,
                         "--output",
@@ -132,6 +135,45 @@ def build_variants(
                 content = output.read_bytes()
                 if digest(content) != manifest["artifact_hash"]:
                     raise HTTPException(422, "Compiler artifact does not match its manifest")
+                manifest["entry_symbol"] = "jocky_entry_" + manifest["variant_id"][:16]
+                manifest["artifact_format"] = "llvm-object"
+                if execution_mode == "native":
+                    sdk = settings.worker_sdk_path
+                    if sdk is None:
+                        raise HTTPException(503, "Native execution worker SDK unavailable")
+                    entry = manifest["entry_symbol"]
+                    if not re.fullmatch(r"jocky_entry_[0-9a-f]{16}", entry):
+                        raise HTTPException(422, "Invalid compiler entry symbol")
+                    wrapper = directory / "entry.cpp"
+                    wrapper.write_text(
+                        '#include "jocky/worker.h"\n'
+                        f'extern "C" uint32_t {entry}(jocky_context *);\n'
+                        f"int main() {{ return jocky_worker_run(&{entry}); }}\n"
+                    )
+                    executable = directory / "variant-worker"
+                    linked = subprocess.run(
+                        [
+                            "c++",
+                            str(wrapper),
+                            str(output),
+                            "-I",
+                            str(sdk / "include"),
+                            str(sdk / "libjocky_worker_host.a"),
+                            str(sdk / "libjocky_runtime.a"),
+                            "-lcrypto",
+                            "-o",
+                            str(executable),
+                        ],
+                        capture_output=True,
+                        check=False,
+                        timeout=settings.compiler_timeout_seconds,
+                    )
+                    if linked.returncode:
+                        raise HTTPException(503, "Native worker linking failed")
+                    manifest["compiler_object_hash"] = manifest["artifact_hash"]
+                    content = executable.read_bytes()
+                    manifest["artifact_hash"] = digest(content)
+                    manifest["artifact_format"] = "native-worker"
                 key = store.put(content)
             except (OSError, subprocess.TimeoutExpired, ValueError, KeyError) as error:
                 raise HTTPException(

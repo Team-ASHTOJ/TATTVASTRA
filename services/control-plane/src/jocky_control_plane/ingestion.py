@@ -10,21 +10,27 @@ import rfc8785
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from fastapi import HTTPException
+from jocky_contracts.evidence import EvidenceManifest as WireManifest
 from jocky_contracts.evidence import Observation as WireObservation
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from jocky_control_plane.models import (
+    Artifact,
+    Compilation,
     Endpoint,
     EvidenceManifest,
     Hunt,
     Job,
     Observation,
+    ScriptVersion,
     State,
     TimelineEvent,
     User,
     Variant,
 )
+from jocky_control_plane.objects import ObjectStore
 from jocky_control_plane.security import aware, digest, owned, provenance, publish
 
 
@@ -87,7 +93,10 @@ def ingest_observation(
         timestamp=timestamp,
         time_basis="source" if parsed.source_time else "collection",
         collector=row.collector,
-        severity="INFO",
+        severity=str(parsed.data.get("severity", "INFO")).upper()
+        if str(parsed.data.get("severity", "INFO")).upper()
+        in {"INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"}
+        else "INFO",
         type=parsed.type,
     )
     db.add(timeline)
@@ -114,7 +123,9 @@ def ingest_observation(
     return row
 
 
-def verify_manifest_document(db: Session, row: EvidenceManifest, user: User) -> dict[str, Any]:
+def verify_manifest_document(
+    db: Session, row: EvidenceManifest, user: User, store: ObjectStore | None = None
+) -> dict[str, Any]:
     job: Job = owned(db, Job, row.job_id, user)
     endpoint: Endpoint = owned(db, Endpoint, job.endpoint_id, user)
     observations = db.scalars(
@@ -123,6 +134,10 @@ def verify_manifest_document(db: Session, row: EvidenceManifest, user: User) -> 
         .order_by(Observation.created_at, Observation.id)
     ).all()
     document = row.document
+    try:
+        parsed = WireManifest.model_validate(document)
+    except ValidationError:
+        return {"integrity_valid": False, "provenance_valid": False, "schema_valid": False}
     hunt: Hunt = owned(db, Hunt, job.hunt_id, user)
     if job.variant_id is None:
         return {
@@ -149,6 +164,27 @@ def verify_manifest_document(db: Session, row: EvidenceManifest, user: User) -> 
     }
     provenance_valid = all(document.get(field) == value for field, value in expected.items())
     provenance_valid = provenance_valid and expected["llvm_ir_hash"] is not None
+    compilation: Compilation = owned(db, Compilation, hunt.compilation_id, user)
+    version: ScriptVersion = owned(db, ScriptVersion, compilation.script_version_id, user)
+    provenance_valid = provenance_valid and (
+        variant.compilation_id == compilation.id and version.source_hash == document["source_hash"]
+    )
+    time_valid = parsed.completed_at <= datetime.now(UTC) + timedelta(minutes=5)
+    time_valid = time_valid and parsed.started_at >= aware(job.created_at) - timedelta(minutes=5)
+    artifacts = db.scalars(select(Artifact).where(Artifact.job_id == job.id)).all()
+    artifact_hashes_valid = sorted(a.content_hash for a in artifacts) == sorted(
+        parsed.artifact_hashes
+    )
+    artifact_content_valid = not artifacts
+    if artifacts and store is not None:
+        try:
+            artifact_content_valid = all(
+                digest(content := store.get(a.storage_key)) == a.content_hash
+                and len(content) == a.size_bytes
+                for a in artifacts
+            )
+        except (OSError, ValueError):
+            artifact_content_valid = False
     actual = [observation.integrity_hash for observation in observations]
     declared = document.get("observation_hashes", [])
     valid_hashes = len(actual) == len(declared) and sorted(actual) == sorted(declared)
@@ -175,17 +211,29 @@ def verify_manifest_document(db: Session, row: EvidenceManifest, user: User) -> 
     except (ValueError, InvalidSignature, KeyError):
         pass
     return {
-        "integrity_valid": valid_hashes and signature_valid and provenance_valid,
+        "integrity_valid": valid_hashes
+        and signature_valid
+        and provenance_valid
+        and time_valid
+        and artifact_hashes_valid
+        and artifact_content_valid,
         "provenance_valid": provenance_valid,
         "signature_valid": signature_valid,
         "observation_hashes_valid": valid_hashes,
+        "timestamps_valid": time_valid,
+        "artifact_hashes_valid": artifact_hashes_valid,
+        "artifact_content_valid": artifact_content_valid,
         "simulation": row.simulation,
         "simulation_label": row.simulation_label,
     }
 
 
 def ingest_manifest(
-    db: Session, endpoint: Endpoint, payload: dict[str, Any], user: User
+    db: Session,
+    endpoint: Endpoint,
+    payload: dict[str, Any],
+    user: User,
+    store: ObjectStore | None = None,
 ) -> EvidenceManifest:
     from jocky_contracts.evidence import EvidenceManifest as WireManifest
 
@@ -214,7 +262,7 @@ def ingest_manifest(
     row = EvidenceManifest(
         **provenance(job), job_id=job.id, document=payload, signature_verified=False
     )
-    result = verify_manifest_document(db, row, user)
+    result = verify_manifest_document(db, row, user, store)
     if not result["integrity_valid"]:
         raise HTTPException(422, "Manifest signature or observation hashes do not verify")
     row.signature_verified = True

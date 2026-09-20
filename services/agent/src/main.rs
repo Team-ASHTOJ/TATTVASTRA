@@ -31,6 +31,26 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Bind this evidence identity to an ECDSA transport identity over TLS.
+    Enroll {
+        #[arg(long)]
+        enrollment_server: String,
+        #[arg(long)]
+        server: String,
+        #[arg(long)]
+        ca: PathBuf,
+        #[arg(long)]
+        token_file: PathBuf,
+        #[arg(long, default_value = "/usr/local/bin/jocky-worker")]
+        worker: PathBuf,
+    },
+    /// Connect with mTLS, replay durable frames and execute authorized compiler jobs.
+    Connect,
+    #[command(name = "__remote-worker", hide = true)]
+    __RemoteWorker {
+        #[arg(long)]
+        request: PathBuf,
+    },
     /// Create a stable local endpoint identity and encrypted spool.
     Init {
         #[arg(long, default_value = "local-development")]
@@ -114,7 +134,7 @@ async fn main() {
         .with_writer(std::io::stderr)
         .with_target(false)
         .init();
-    if let Err(error) = execute(Cli::parse()) {
+    if let Err(error) = execute(Cli::parse()).await {
         let (code, detail) = match error {
             AgentError::Rejected { code, message } => (code, message),
             other => ("AGENT_FAILURE", other.to_string()),
@@ -134,8 +154,29 @@ async fn main() {
     }
 }
 
-fn execute(cli: Cli) -> Result<()> {
+async fn execute(cli: Cli) -> Result<()> {
     match cli.command {
+        Command::Enroll {
+            enrollment_server,
+            server,
+            ca,
+            token_file,
+            worker,
+        } => print_json(
+            &jocky_agent::remote::enroll(
+                &cli.state_dir,
+                &enrollment_server,
+                &server,
+                &ca,
+                &token_file,
+                &worker,
+            )
+            .await?,
+        ),
+        Command::Connect => jocky_agent::remote::connect(&cli.state_dir).await,
+        Command::__RemoteWorker { request } => {
+            print_json(&jocky_agent::remote_worker::run_child(&request)?)
+        }
         Command::Init { organization_id } => {
             let state = AgentState::initialize(&cli.state_dir, &organization_id)?;
             let spool = Spool::open(&cli.state_dir)?;

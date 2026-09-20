@@ -5,12 +5,14 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import HTTPException
+from jocky_contracts.control import RemoteJobEnvelope
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from jocky_control_plane.builds import build_variants
 from jocky_control_plane.config import Settings
 from jocky_control_plane.models import (
+    CompatibilityRun,
     Compilation,
     Endpoint,
     ExecutionPlan,
@@ -58,7 +60,7 @@ def envelope(
     job: Job, hunt: Hunt, plan: ExecutionPlan, variant: Variant, settings: Settings
 ) -> dict[str, Any]:
     now = datetime.now(UTC)
-    return sign(
+    signed = sign(
         settings.signing_key_path,
         {
             "schema_version": "1.0.0",
@@ -73,7 +75,11 @@ def envelope(
             "artifact_hash": variant.content_hash,
             "source_hash": plan.document["source_hash"],
             "jir_hash": plan.document["jir_hash"],
-            "execution_mode": hunt.execution_mode,
+            "execution_mode": (hunt.endpoint_modes or {}).get(
+                str(job.endpoint_id), hunt.execution_mode
+            ),
+            "enforcement_mode": hunt.enforcement_mode,
+            "build_manifest": variant.manifest,
             "required_capabilities": plan.document["required_capabilities"],
             "budget": plan.document["budget"],
             "nonce": secrets.token_hex(32),
@@ -81,6 +87,8 @@ def envelope(
             "expires_at": (now + timedelta(minutes=10)).isoformat(),
         },
     )
+    RemoteJobEnvelope.model_validate(signed)
+    return signed
 
 
 def start(db: Session, hunt: Hunt, user: User, settings: Settings) -> None:
@@ -96,12 +104,25 @@ def start(db: Session, hunt: Hunt, user: User, settings: Settings) -> None:
     db.add(plan)
     db.flush()
     hunt.status = State.RUNNING
-    shared: Variant | None = None
+    shared: dict[str, Variant] = {}
     for identifier in hunt.endpoint_ids:
         from uuid import UUID
 
         endpoint: Endpoint = owned(db, Endpoint, UUID(identifier), user)
+        mode = (hunt.endpoint_modes or {}).get(identifier, hunt.execution_mode)
         reason = None
+        instructions = compilation.outputs.get("jir", {}).get("instructions", [])
+        supported = {
+            "SYSTEM_INFO",
+            "USER_ENUMERATE",
+            "PROCESS_ENUMERATE",
+            "NETWORK_INTERFACE_ENUMERATE",
+            "NETWORK_CONNECTION_ENUMERATE",
+            "ROUTE_ENUMERATE",
+            "SERVICE_ENUMERATE",
+            "EVENT_QUERY",
+            "DRIVER_ENUMERATE",
+        }
         if endpoint.status == State.REVOKED:
             reason = "Endpoint identity has been revoked"
         elif endpoint.simulation != hunt.simulation:
@@ -110,12 +131,38 @@ def start(db: Session, hunt: Hunt, user: User, settings: Settings) -> None:
             reason = "Source does not support endpoint OS"
         elif not set(plan_document["required_capabilities"]).issubset(endpoint.capabilities):
             reason = "Endpoint policy does not grant required capabilities"
-        elif hunt.execution_mode not in endpoint.execution_modes:
+        elif mode not in endpoint.execution_modes:
             reason = "Agent does not support compiler artifact execution in requested mode"
+        elif hunt.enforcement_mode == "STRICT":
+            reason = "Agent build cannot enforce strict CPU and memory budgets"
+        elif not hunt.simulation and (
+            not instructions
+            or any(
+                instruction["opcode"] not in supported or instruction["attributes"].get("options")
+                for instruction in instructions
+            )
+        ):
+            reason = "REAL execution bridge supports bounded inventory collectors without options; this JIR requires an unavailable host operation"
         elif endpoint.last_seen is None or datetime.now(UTC) - aware(
             endpoint.last_seen
         ) > timedelta(seconds=90):
             reason = "Endpoint heartbeat is stale"
+        compatibility = db.scalar(
+            select(CompatibilityRun)
+            .join(Variant, CompatibilityRun.variant_id == Variant.id)
+            .where(
+                CompatibilityRun.endpoint_id == endpoint.id,
+                Variant.compilation_id == compilation.id,
+            )
+            .order_by(CompatibilityRun.created_at.desc())
+            .limit(1)
+        )
+        if (
+            reason is None
+            and compatibility
+            and compatibility.observations.get("correctness") == "FAIL"
+        ):
+            reason = "Latest endpoint compatibility run failed correctness for this compilation"
         job = Job(
             **provenance(hunt),
             hunt_id=hunt.id,
@@ -128,16 +175,26 @@ def start(db: Session, hunt: Hunt, user: User, settings: Settings) -> None:
         db.add(job)
         db.flush()
         if reason is None:
-            variant = shared
+            variant = shared.get(mode)
             if variant is None or hunt.diverse:
-                variant = build_variants(db, compilation, version, 1, user, settings)[0]
-                shared = variant
-            triple = variant.manifest.get("target_triple", "")
+                try:
+                    with db.begin_nested():
+                        variant = build_variants(
+                            db, compilation, version, 1, user, settings, execution_mode=mode
+                        )[0]
+                    shared[mode] = variant
+                except HTTPException as error:
+                    job.status = State.FAILED
+                    job.reason = str(error.detail)
+                    variant = None
+            triple = variant.manifest.get("target_triple", "") if variant else ""
             manifest_os = (
                 "windows" if "windows" in triple else "linux" if "linux" in triple else None
             )
             manifest_arch = triple.split("-")[0]
-            if manifest_os != endpoint.target_os or manifest_arch != endpoint.target_arch:
+            if variant is None:
+                pass  # A failed build cannot discard other endpoints' jobs and evidence.
+            elif manifest_os != endpoint.target_os or manifest_arch != endpoint.target_arch:
                 job.status = State.INCOMPATIBLE
                 job.reason = "Host compiler artifact target does not match endpoint"
             else:

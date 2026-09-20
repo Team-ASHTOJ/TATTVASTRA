@@ -8,6 +8,8 @@ pub mod evidence;
 pub mod identity;
 pub mod model;
 pub mod policy;
+pub mod remote;
+pub mod remote_worker;
 pub mod risk;
 pub mod runner;
 pub mod spool;

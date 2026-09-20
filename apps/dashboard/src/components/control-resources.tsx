@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
+import { useControlEvents } from "../lib/use-control-events";
 import type {
   CaseCreate,
   ScriptCreate,
@@ -61,6 +62,19 @@ export function ControlResources({ section }: { section: string }) {
     retry: false,
   });
   const write = user.data?.role === "ADMIN" || user.data?.role === "ANALYST";
+  const feed = useControlEvents(!!user.data);
+  const childPaths = selected
+    ? section === "endpoints" ? [`endpoints/${selected.id}/jobs`, `endpoints/${selected.id}/observations`]
+    : section === "jobs" ? [`hunts/${selected.id}/jobs`]
+    : section === "evidence" && selected.job_id ? [`manifests?job_id=${String(selected.job_id)}`]
+    : [] : [];
+  const children = useQuery({
+    queryKey: ["children", section, selected?.id],
+    queryFn: () => Promise.all(childPaths.map((path) => api<RecordRow[]>(`domain/${path}`))),
+    enabled: !!user.data && childPaths.length > 0,
+  });
+  const current = Array.isArray(records.data) ? records.data.find((row) => row.id === selected?.id) : undefined;
+  const inspected = current ?? selected;
   async function mutate(route: string, body?: unknown) {
     setBusy(true);
     setNotice("");
@@ -94,7 +108,7 @@ export function ControlResources({ section }: { section: string }) {
         </p>
       </section>
     );
-  if (section === "live") return <LiveEvents />;
+  if (section === "live") return <section className="panel"><h2>Live investigation events</h2><p role="status">{feed.status}</p><p>The latest 100 committed events are shown. Reconnects resume from the durable sequence cursor.</p><pre className="control-json">{JSON.stringify(feed.events, null, 2)}</pre></section>;
   const rows = Array.isArray(records.data) ? records.data : [];
   return (
     <>
@@ -232,6 +246,8 @@ export function ControlResources({ section }: { section: string }) {
                 data.get("mode") === "native" ? "native" : "memory",
               diverse: true,
               retry_limit: 1,
+              endpoint_modes: {},
+              enforcement_mode: "MONITORED",
             };
             void mutate("hunts", body);
           }}
@@ -358,7 +374,7 @@ export function ControlResources({ section }: { section: string }) {
               <>
                 <button
                   className="button"
-                  disabled={busy || selected.status !== "CREATED"}
+                  disabled={busy || inspected?.status !== "CREATED"}
                   onClick={() => void mutate(`hunts/${selected.id}/start`)}
                 >
                   Start hunt
@@ -400,73 +416,14 @@ export function ControlResources({ section }: { section: string }) {
               )}
           </div>
           <pre className="control-json">
-            {JSON.stringify(selected, null, 2)}
+            {JSON.stringify(inspected, null, 2)}
           </pre>
+          {children.error && <p role="alert">{children.error.message}</p>}
+          {children.data?.map((rows, index) => <div key={childPaths[index]}><h3>{childPaths[index]?.split("/").at(-1)?.split("?")[0]}</h3>
+            {section === "evidence" && rows.map((manifest) => <button key={manifest.id} className="button secondary" disabled={busy} onClick={() => void mutate(`manifests/${manifest.id}/verify`)}>Verify signed manifest</button>)}
+            <pre className="control-json">{JSON.stringify(rows, null, 2)}</pre></div>)}
         </section>
       )}
     </>
-  );
-}
-
-function LiveEvents() {
-  const [events, setEvents] = useState<RecordRow[]>([]);
-  const [status, setStatus] = useState(
-    "Connecting to committed backend events…",
-  );
-  useEffect(() => {
-    const stream = new EventSource("/api/control/domain/events");
-    stream.onopen = () => setStatus("Connected — committed events only");
-    stream.onerror = () =>
-      setStatus(
-        "Disconnected; reconnecting. Sign in again if your session expired.",
-      );
-    const consume = (event: MessageEvent<string>) => {
-      try {
-        const record = JSON.parse(event.data) as RecordRow;
-        setEvents((prior) =>
-          [record, ...prior.filter((item) => item.id !== record.id)].slice(
-            0,
-            100,
-          ),
-        );
-      } catch {
-        setStatus("Invalid event payload rejected");
-      }
-    };
-    const topics = [
-      "compiler.started",
-      "compiler.stage",
-      "compiler.completed",
-      "compiler.failed",
-      "variant.generated",
-      "hunt.started",
-      "hunt.progress",
-      "hunt.cancelled",
-      "hunt.job.created",
-      "hunt.job.retry",
-      "agent.state",
-      "endpoint.revoked",
-      "observation.created",
-      "finding.created",
-      "timeline.created",
-      "benchmark.completed",
-      "benchmark.failed",
-      "case.created",
-      "report.generated",
-      "manifest.verified",
-    ];
-    for (const topic of topics) stream.addEventListener(topic, consume);
-    return () => stream.close();
-  }, []);
-  return (
-    <section className="panel">
-      <h2>Live investigation events</h2>
-      <p role="status">{status}</p>
-      <p>
-        The latest 100 received events are shown. EventSource reconnects using
-        the committed sequence cursor.
-      </p>
-      <pre className="control-json">{JSON.stringify(events, null, 2)}</pre>
-    </section>
   );
 }

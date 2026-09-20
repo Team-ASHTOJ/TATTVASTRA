@@ -157,6 +157,8 @@ class Hunt(Scoped, Base):
     compilation_id: Mapped[UUID] = mapped_column(ForeignKey("compilations.id"))
     endpoint_ids: Mapped[list[str]] = mapped_column(JSON)
     execution_mode: Mapped[str] = mapped_column(String(16))
+    endpoint_modes: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)
+    enforcement_mode: Mapped[str] = mapped_column(String(16), default="MONITORED")
     diverse: Mapped[bool] = mapped_column(default=True)
     retry_limit: Mapped[int] = mapped_column(default=0)
     status: Mapped[State] = mapped_column(Enum(State, native_enum=False), default=State.CREATED)
@@ -258,6 +260,7 @@ class BenchmarkRun(Scoped, Base):
 class CompatibilityRun(Scoped, Base):
     __tablename__ = "compatibility_runs"
     variant_id: Mapped[UUID] = mapped_column(ForeignKey("variants.id"))
+    endpoint_id: Mapped[UUID | None] = mapped_column(ForeignKey("endpoints.id"))
     observations: Mapped[dict[str, Any]] = mapped_column(JSON)
     recorded_by: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
 

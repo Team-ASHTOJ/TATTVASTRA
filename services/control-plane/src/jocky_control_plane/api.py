@@ -144,6 +144,32 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
     def scripts(db: DB, user: Reader, case_id: UUID | None = None) -> Any:
         return collection(db, user, Script, case_id=case_id)
 
+    @router.get("/scripts/{identifier}")
+    def script_detail(identifier: UUID, db: DB, user: Reader) -> Any:
+        return document(owned(db, Script, identifier, user))
+
+    @router.get("/scripts/{identifier}/versions")
+    def script_versions(identifier: UUID, db: DB, user: Reader) -> Any:
+        owned(db, Script, identifier, user)
+        return collection(db, user, ScriptVersion, script_id=identifier)
+
+    @router.get("/observations")
+    def observations(db: DB, user: Reader, case_id: UUID) -> Any:
+        from jocky_control_plane.models import Observation
+
+        owned(db, Case, case_id, user)
+        return collection(db, user, Observation, case_id=case_id)
+
+    @router.get("/manifests")
+    def manifests(db: DB, user: Reader, job_id: UUID | None = None) -> Any:
+        if job_id is not None:
+            owned(db, Job, job_id, user)
+        return collection(db, user, EvidenceManifest, job_id=job_id)
+
+    @router.get("/jobs/{identifier}")
+    def job_detail(identifier: UUID, db: DB, user: Reader) -> Any:
+        return document(owned(db, Job, identifier, user))
+
     @router.get("/compilations")
     def compilations(db: DB, user: Reader) -> Any:
         return collection(db, user, Compilation)
@@ -342,11 +368,14 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
         }
 
     @router.get("/variants/{identifier}")
-    @router.get("/variants/{identifier}/manifest")
     def variant(identifier: UUID, db: DB, user: Reader) -> Any:
         from jocky_control_plane.models import Variant
 
         return document(owned(db, Variant, identifier, user))
+
+    @router.get("/variants/{identifier}/manifest")
+    def variant_manifest(identifier: UUID, db: DB, user: Reader) -> Any:
+        return owned(db, Variant, identifier, user).manifest
 
     @router.post("/endpoints/enrollments", status_code=201)
     def enrollment(payload: contracts.EnrollmentCreate, db: DB, user: Admin) -> Any:
@@ -422,12 +451,16 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
             raise HTTPException(409, "Compilation belongs to a different case")
         for identifier in payload.endpoint_ids:
             owned(db, Endpoint, identifier, user)
+        if not set(payload.endpoint_modes).issubset(payload.endpoint_ids):
+            raise HTTPException(422, "Execution overrides must reference selected endpoints")
         row = Hunt(
             **provenance(case),
             case_id=case.id,
             compilation_id=compilation.id,
             endpoint_ids=list(dict.fromkeys(str(i) for i in payload.endpoint_ids)),
             execution_mode=payload.execution_mode,
+            endpoint_modes={str(key): mode for key, mode in payload.endpoint_modes.items()},
+            enforcement_mode=payload.enforcement_mode,
             diverse=payload.diverse,
             retry_limit=payload.retry_limit,
         )
@@ -538,7 +571,17 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
         from jocky_control_plane.ingestion import verify_manifest_document
 
         row = owned(db, EvidenceManifest, identifier, user)
-        return verify_manifest_document(db, row, user)
+        result = verify_manifest_document(db, row, user, store)
+        publish(
+            db,
+            user,
+            "manifest.checked",
+            row.id,
+            result,
+            simulation=row.simulation,
+            simulation_label=row.simulation_label,
+        )
+        return result
 
     @router.get("/findings")
     def findings(db: DB, user: Reader, case_id: UUID) -> Any:
@@ -563,6 +606,10 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
         end: datetime | None = None,
     ) -> Any:
         owned(db, Case, case_id, user)
+        if any(value is not None and value.tzinfo is None for value in (start, end)):
+            raise HTTPException(422, "Timeline range requires timezone-aware timestamps")
+        if start is not None and end is not None and start > end:
+            raise HTTPException(422, "Timeline range start must not follow end")
         query = select(TimelineEvent).where(
             TimelineEvent.organization_id == user.organization_id, TimelineEvent.case_id == case_id
         )
@@ -594,11 +641,14 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
         user: Reader,
         last_event_id: Annotated[str | None, Header()] = None,
         after: int = Query(-1, ge=-1),
+        authorization: Annotated[str | None, Header()] = None,
     ) -> StreamingResponse:
         try:
             cursor = int(last_event_id) if last_event_id is not None else after
         except ValueError as error:
             raise HTTPException(422, "Invalid event cursor") from error
+        if cursor < -1:
+            raise HTTPException(422, "Invalid event cursor")
 
         async def stream() -> AsyncIterator[str]:
             nonlocal cursor
@@ -606,6 +656,13 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
             until = asyncio.get_running_loop().time() + settings.event_stream_seconds
             while asyncio.get_running_loop().time() < until:
                 with factory() as session:
+                    try:
+                        current = session_user(session, authorization)
+                        if current.organization_id != user.organization_id:
+                            return
+                    except HTTPException:
+                        yield 'event: auth.expired\ndata: {"detail":"Session expired"}\n\n'
+                        return
                     rows = session.scalars(
                         select(EventOutbox)
                         .where(
@@ -632,9 +689,14 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
         from jocky_control_plane.models import Variant
 
         variant = owned(db, Variant, payload.variant_id, user)
+        if payload.endpoint_id is not None:
+            endpoint = owned(db, Endpoint, payload.endpoint_id, user)
+            if endpoint.simulation != variant.simulation:
+                raise HTTPException(409, "Compatibility provenance mismatch")
         row = CompatibilityRun(
             **provenance(variant),
             variant_id=variant.id,
+            endpoint_id=payload.endpoint_id,
             recorded_by=user.id,
             observations=payload.model_dump(mode="json"),
         )

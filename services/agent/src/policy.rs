@@ -164,7 +164,7 @@ fn capabilities_for(collectors: &[CollectorRequest]) -> Result<BTreeSet<String>>
     Ok(capabilities)
 }
 
-fn validate_budget(requested: &ResourceBudget, maximum: &ResourceBudget) -> Result<()> {
+pub(crate) fn validate_budget(requested: &ResourceBudget, maximum: &ResourceBudget) -> Result<()> {
     let invalid = requested.cpu_percent == 0
         || requested.cpu_percent > maximum.cpu_percent
         || requested.memory_bytes == 0

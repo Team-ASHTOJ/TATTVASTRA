@@ -3,9 +3,10 @@
 from typing import Literal
 from uuid import UUID
 
-from pydantic import Field, JsonValue
+from pydantic import AwareDatetime, Field, JsonValue
 
-from jocky_contracts.common import Contract, Provenance
+from jocky_contracts.common import Contract, Hash, Provenance, Signature
+from jocky_contracts.compiler import Budget
 
 
 class LoginRequest(Contract):
@@ -59,6 +60,8 @@ class HuntCreate(Contract):
     compilation_id: UUID
     endpoint_ids: list[UUID] = Field(min_length=1, max_length=1000)
     execution_mode: Literal["memory", "native"] = "memory"
+    endpoint_modes: dict[UUID, Literal["memory", "native"]] = Field(default_factory=dict)
+    enforcement_mode: Literal["MONITORED", "STRICT"] = "MONITORED"
     diverse: bool = True
     retry_limit: int = Field(default=0, ge=0, le=3)
 
@@ -75,6 +78,7 @@ class CompatibilityCreate(Contract):
     correctness: Literal["PASS", "FAIL", "NOT_MEASURED"]
     alert_observed: Literal["YES", "NO", "NOT_OBSERVED"]
     notes: str = Field(max_length=10000)
+    endpoint_id: UUID | None = None
 
 
 class ReportCreate(Contract):
@@ -94,3 +98,24 @@ class ArtifactUpload(Provenance):
     content_base64: str = Field(max_length=800000)
     content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     media_type: str = Field(default="application/octet-stream", max_length=128)
+
+
+class RemoteJobEnvelope(Provenance):
+    job_id: UUID
+    case_id: UUID
+    organization_id: UUID
+    endpoint_id: UUID
+    plan_id: UUID
+    variant_id: UUID
+    artifact_hash: Hash
+    source_hash: Hash
+    jir_hash: Hash
+    execution_mode: Literal["memory", "native"]
+    enforcement_mode: Literal["MONITORED", "STRICT"]
+    build_manifest: dict[str, JsonValue]
+    required_capabilities: list[str]
+    budget: Budget
+    nonce: str = Field(pattern=r"^[0-9a-f]{64}$")
+    issued_at: AwareDatetime
+    expires_at: AwareDatetime
+    signature: Signature

@@ -14,9 +14,13 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates python3.12 python3.12-venv libssl3t64 libzstd1 libedit2 \
-    zlib1g libxml2 libz3-4 libffi8 libtinfo6 && rm -rf /var/lib/apt/lists/*
+    zlib1g libxml2 libz3-4 libffi8 libtinfo6 g++ libssl-dev && rm -rf /var/lib/apt/lists/*
 COPY --from=uv /uv /usr/local/bin/uv
 COPY --from=native /src/build/native/compiler/jockyc /usr/local/bin/jockyc
+COPY --from=native /src/build/native/compiler/jocky-worker /usr/local/bin/jocky-worker
+COPY --from=native /src/build/native/runtime/libjocky_worker_host.a /opt/jocky-worker/libjocky_worker_host.a
+COPY --from=native /src/build/native/runtime/libjocky_runtime.a /opt/jocky-worker/libjocky_runtime.a
+COPY native/runtime/include/ /opt/jocky-worker/include/
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 COPY packages/contracts/ packages/contracts/
@@ -26,5 +30,6 @@ RUN uv sync --frozen --all-packages --no-dev --no-editable \
     && mkdir -p /app/.local && chown -R 10001:10001 /app/.local
 USER 10001
 ENV JOCKY_COMPILER_PATH=/usr/local/bin/jockyc
+ENV JOCKY_WORKER_SDK_PATH=/opt/jocky-worker
 EXPOSE 8000
 CMD ["/app/.venv/bin/python", "-m", "jocky_control_plane.entrypoint"]

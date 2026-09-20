@@ -38,6 +38,8 @@ class EvidenceManifest(Provenance):
     started_at: AwareDatetime
     completed_at: AwareDatetime
     observation_hashes: list[Hash]
+    # Additive v1 field: legacy manifests without uploaded objects remain valid.
+    artifact_hashes: list[Hash] = Field(default_factory=list)
     signature: Signature
 
     @model_validator(mode="after")
@@ -46,6 +48,8 @@ class EvidenceManifest(Provenance):
             raise ValueError("Evidence completion cannot precede collection start")
         if len(self.observation_hashes) != len(set(self.observation_hashes)):
             raise ValueError("Evidence manifest cannot repeat observation hashes")
+        if len(self.artifact_hashes) != len(set(self.artifact_hashes)):
+            raise ValueError("Evidence manifest cannot repeat artifact hashes")
         return self
 
 
