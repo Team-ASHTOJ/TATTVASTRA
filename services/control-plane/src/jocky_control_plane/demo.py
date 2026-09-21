@@ -32,7 +32,10 @@ from jocky_control_plane.models import (
 from jocky_control_plane.objects import ObjectStore
 from jocky_control_plane.security import digest, provenance, publish
 
-READY = "JOCKY_VIDEO_V1_READY"
+# Increment this marker whenever persisted fixture semantics change. Older demo
+# cases may remain in the isolated volume, but must not be mistaken for a
+# scenario prepared with the current fixture contract.
+READY = "JOCKY_VIDEO_V2_READY"
 
 
 def load(factory: sessionmaker[Session], settings: Settings, user_id: UUID | None = None) -> str:

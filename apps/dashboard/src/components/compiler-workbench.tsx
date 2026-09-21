@@ -74,7 +74,7 @@ export function CompilerWorkbench({
       const cases =
         await api<{ id: string; description: string }[]>("domain/cases");
       const scenario = cases.find(
-        (row) => row.description === "JOCKY_VIDEO_V1_READY",
+        (row) => row.description === "JOCKY_VIDEO_V2_READY",
       );
       if (!scenario)
         throw new Error("Prepare the demo scenario in Judge Mode first.");

@@ -9,6 +9,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+READY = "JOCKY_VIDEO_V2_READY"
 COMPOSE = [
     "docker",
     "compose",
@@ -85,11 +86,7 @@ def main() -> None:
     if args.check:
         cases = request("cases")
         scenario = next(
-            (
-                row
-                for row in cases
-                if row["description"] == "JOCKY_VIDEO_V1_READY" and row["simulation"]
-            ),
+            (row for row in cases if row["description"] == READY and row["simulation"]),
             None,
         )
         assert scenario, "Run make demo-prepare first"
@@ -108,9 +105,16 @@ def main() -> None:
         (ROOT / "services/control-plane/src/jocky_control_plane/data/demo.json").read_text()
     )
     observations = request(f"observations?case_id={case_id}")
-    assert len(observations) == sum(len(row["observations"]) for row in fixture["endpoints"])
-    assert all(row["simulation"] for row in observations)
-    assert all(row["document"]["source_time"] == fixture["timestamp"] for row in observations)
+    expected_observations = sum(len(row["observations"]) for row in fixture["endpoints"])
+    assert len(observations) == expected_observations, (
+        f"Expected {expected_observations} demo observations, got {len(observations)}"
+    )
+    assert all(row["simulation"] for row in observations), (
+        "Demo observations must all be explicitly simulated"
+    )
+    assert all(row["document"]["source_time"] == fixture["timestamp"] for row in observations), (
+        "Prepared observations do not use the current fixture source time"
+    )
     job_by_id = {row["id"]: row for row in jobs}
     for observation in observations:
         job = job_by_id[observation["job_id"]]

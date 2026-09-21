@@ -3,6 +3,7 @@
 from jocky_contracts import control as contracts
 from jocky_contracts.common import Mode
 from jocky_control_plane.api import create_domain_router
+from jocky_control_plane.demo import READY
 from jocky_control_plane.models import Case, Compilation, State
 from sqlalchemy import select
 from test_distributed import PASSWORD, runtime
@@ -44,7 +45,7 @@ def test_demo_is_explicit_and_compiler_failure_is_durable(runtime):
         compilation = db.scalar(select(Compilation))
         assert compilation is not None and compilation.status == State.FAILED
         assert compilation.simulation and compilation.outputs == {}
-        assert db.scalar(select(Case)).description != "JOCKY_VIDEO_V1_READY"
+        assert db.scalar(select(Case)).description != READY
 
 
 def test_demo_rejects_viewer_and_unauthenticated_operator(runtime):

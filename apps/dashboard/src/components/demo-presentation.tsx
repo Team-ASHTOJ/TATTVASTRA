@@ -47,7 +47,7 @@ export function DemoPresentation({ section = "home" }: { section?: string }) {
       const cases = await api<Row[]>("domain/cases");
       const scenario = cases.find(
         (row) =>
-          row.simulation === true && row.description === "JOCKY_VIDEO_V1_READY",
+          row.simulation === true && row.description === "JOCKY_VIDEO_V2_READY",
       );
       if (!scenario) return null;
       const [

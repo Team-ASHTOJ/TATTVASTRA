@@ -1,5 +1,31 @@
 # Build status
 
+## Persistent demo scenario compatibility — 2026-09-21 (macOS development host)
+
+Status: **VERIFIED**. `make demo-prepare` previously reused an older persisted
+`JOCKY_VIDEO_V1_READY` case whose observations predated the fixed `source_time`
+contract, then failed the current verifier with an empty assertion message. The
+prepared-scenario marker is now V2 across the loader, preparation checker, and
+dashboard consumers. Existing isolated demo data is preserved; it is no longer
+mistaken for the current scenario, and preparation creates a current case.
+
+- `make demo-up`: PASS; native LLVM/control-plane and dashboard images rebuilt,
+  and PostgreSQL, control plane, and dashboard reported healthy.
+- `make demo-prepare`: PASS against the existing `jocky-video` volume, including
+  real compilation, three distinct artifact hashes, simulated PARTIAL outcomes,
+  evidence verification, audit verification, and repeat loading.
+- `make demo-check`: PASS for dashboard/control-plane health and all prepared
+  scenario invariants.
+- Focused demo tests: 3 passed with two existing upstream deprecation warnings.
+- Changed Python Ruff lint/format and dashboard TypeScript checks: PASS.
+- `make verify-foundation`: PASS with 77 Python tests (two existing upstream
+  warnings), formatting, lint, typing, generated-contract/protobuf drift checks,
+  Python package builds, and the 23-page dashboard production build. The first
+  sandboxed attempt reached 76 passed and one local gRPC bind denial; the full
+  rerun with loopback socket permission passed.
+- macOS is the development host only; no endpoint collector support claim is
+  added by this verification.
+
 ## Prompt B recording stabilization - 2026-09-21 (Windows)
 
 Current acceptance: **READY within the documented recording scope**. This entry supersedes
