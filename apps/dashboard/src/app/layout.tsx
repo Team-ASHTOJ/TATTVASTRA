@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Navigation } from "../components/navigation";
 import { Providers } from "../components/providers";
 import "./globals.css";
+import { ModeIndicator } from "../components/demo-presentation";
 
 export const metadata: Metadata = {
   title: "JOCKY | Forensic Operations",
@@ -28,12 +29,13 @@ export default function RootLayout({
             </Link>
             <Navigation />
             <div className="sidebar-footer">
-              v0.1.0 <span>FOUNDATION</span>
+              v0.1.0 <span>IDEA PROTOTYPE</span>
             </div>
           </aside>
           <div className="workspace">
             <header className="topbar">
               <span>One Language. Every Endpoint. No Noise.</span>
+              <ModeIndicator />
               <Link href="/login">Operator sign in</Link>
               <Link href="/judge" className="button secondary">
                 Judge Mode ↗

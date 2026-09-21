@@ -57,11 +57,18 @@ test("verifier calls backend and detects changed evidence", async ({
   ).toBeVisible();
 });
 
-test("judge mode identifies incomplete execution and narrow screens do not overflow", async ({
+test("judge mode keeps simulated execution separate and narrow screens do not overflow", async ({
   page,
 }) => {
   await page.goto("/judge");
-  await expect(page.getByText("NOT READY", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "REAL environment", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No simulated endpoints are substituted here.", {
+      exact: false,
+    }),
+  ).toBeVisible();
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth,
   );

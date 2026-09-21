@@ -118,3 +118,13 @@ browser-install:
 
 test-e2e:
 	PLAYWRIGHT_BROWSERS_PATH=.cache/playwright npm run test:e2e
+
+.PHONY: demo-up demo-prepare demo-down
+demo-up: configure-local
+	docker compose --env-file .env -f infra/docker/prototype.compose.yaml up -d --build --wait
+
+demo-prepare:
+	$(VENV_PY) scripts/prepare_demo.py
+
+demo-down:
+	docker compose --env-file .env -f infra/docker/prototype.compose.yaml down

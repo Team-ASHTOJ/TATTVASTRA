@@ -1,5 +1,44 @@
 # Build status
 
+## Idea-submission prototype freeze — 2026-09-21
+
+**READY.** Closure required no further application changes. `make test-e2e`
+passed 14 tests; the dedicated desktop/mobile prototype walkthrough passed 2.
+`make verify-foundation` passed with 76 Python tests (2 upstream warnings), all
+format/lint/type/contract/protobuf/package checks, and a 23-page production build.
+Fresh preparation passed in `jocky-video-closure` with separate PostgreSQL/evidence
+volumes: actual compilation and three hashes, two simulated successes plus one
+simulated failure, PARTIAL hunt, derived finding/graph, signed manifests, stored
+byte verification and audit chain. All three demo services are healthy.
+
+No final-production features were added. The exact REAL / MEASURED / SIMULATED /
+DEFERRED boundary and recording commands are in PROTOTYPE_STATUS.md and DEMO_FLOW.md.
+
+## Idea-submission video prototype — 2026-09-20
+
+**READY within the documented simulated recording scope.** This supersedes the
+old foundation-only Judge Mode / DEMO_FLOW descriptions, not the Phase 4 platform
+limitations below. See [PROTOTYPE_STATUS.md](PROTOTYPE_STATUS.md) and
+[DEMO_FLOW.md](DEMO_FLOW.md).
+
+- Isolated PostgreSQL/API/dashboard DEMO stack built and started healthy on
+  ports 18080/13000. Fresh database migrations and actual compiler preparation ran.
+- `make verify-foundation` passed: 76 Python tests, format/lint, contracts and
+  coverage drift, Python/TypeScript typing, protobuf, package and Next.js builds.
+- `make demo-prepare` passed: real compilation, three actual distinct artifact
+  hashes, three simulated endpoint outcomes with PARTIAL aggregate, persisted
+  correlation, signed evidence/byte rehashing, audit chain and repeat loading.
+- Existing browser regression suite: 14 passed (desktop/mobile). The obsolete
+  Judge Mode expectation now checks explicit REAL/DEMO separation.
+- Dedicated prototype browser suite: 2 passed (desktop/mobile), exercising the
+  recording flow, actual compiler, evidence verification, benchmark and refresh.
+- No production or Windows live execution claim was added. Driver risk and
+  endpoint outcomes are explicit backend fixtures. Measured compiler samples
+  are real timings of the labeled compiler fixture, not fleet benchmarks.
+
+The reference video stack needs no Redis/MinIO/gRPC service because it does not
+execute endpoint jobs. The existing full REAL Compose workflow is unchanged.
+
 ## PHASE 4 STATUS — COMPLETE
 
 Phase 4 is **COMPLETE** within the documented prototype acceptance boundary.
@@ -11,22 +50,22 @@ Final verification on 2026-09-20:
 
 - Python: full current suite **74 passed**, 2 upstream deprecation warnings.
 - PostgreSQL: fresh disposable-schema integration suite **17 passed**, 2
-	upstream deprecation warnings.
+  upstream deprecation warnings.
 - Rust: Docker Rust 1.90 `fmt`, `cargo check --locked --workspace`, and
-	workspace tests **18 unit + 6 CLI = 24 passed**.
+  workspace tests **18 unit + 6 CLI = 24 passed**.
 - Native: Docker LLVM 18 configure/build, CTest, and `jockyc --self-test`
-	passed.
+  passed.
 - Dashboard: all workspace typechecks and Next.js production build passed;
-	**23 pages** generated.
+  **23 pages** generated.
 - Browser E2E: Playwright Chromium desktop/mobile **14 passed**.
 - Docker: Compose config passed; PostgreSQL, Redis, MinIO, API, gRPC control,
-	scheduler, and dashboard built/started healthy. `/health/live`,
-	`/health/ready`, and dashboard HTTP smoke passed.
+  scheduler, and dashboard built/started healthy. `/health/live`,
+  `/health/ready`, and dashboard HTTP smoke passed.
 - Live dashboard event smoke: authenticated proxy login -> persisted case POST
-	-> `case.created` SSE receipt -> persisted cases refetch passed.
+  -> `case.created` SSE receipt -> persisted cases refetch passed.
 - REAL distributed evidence remains recorded in the remote execution section
-	below: enrollment, heartbeat, dispatch, worker execution, observation,
-	artifact, manifest, completion, reconnect, partial success, and audit checks.
+  below: enrollment, heartbeat, dispatch, worker execution, observation,
+  artifact, manifest, completion, reconnect, partial success, and audit checks.
 
 Known limitations: bounded inventory collectors only, MONITORED budgets only,
 Linux live endpoint acceptance only, Windows live execution and certificate
@@ -51,26 +90,26 @@ PostgreSQL state`.
 Fresh live evidence:
 
 - The current Rust agent passed `cargo fmt --all -- --check`, locked workspace
-	tests (**18 unit + 6 CLI = 24 Rust tests**), and warnings-denied Clippy in the
-	Rust 1.90 Docker toolchain. The durable remote replay test is
-	`remote_frame_replays_without_reclaiming_or_rerunning_job`.
+  tests (**18 unit + 6 CLI = 24 Rust tests**), and warnings-denied Clippy in the
+  Rust 1.90 Docker toolchain. The durable remote replay test is
+  `remote_frame_replays_without_reclaiming_or_rerunning_job`.
 - The real agent enrolled through the existing `Enroll` RPC, reused its
-	persisted identity across control-plane restart, and reached ONLINE through
-	the existing mTLS `Exchange` stream. The initial stream deadlock and the
-	memory-object build-mode mismatch were fixed in this checkpoint.
+  persisted identity across control-plane restart, and reached ONLINE through
+  the existing mTLS `Exchange` stream. The initial stream deadlock and the
+  memory-object build-mode mismatch were fixed in this checkpoint.
 - REAL hunt `6fef8a00-2796-437f-afe5-cb628f7110c3`, job
-	`34b9b086-edf5-4093-89ab-5d72faf9db5b`: terminal `SUCCESS`, one persisted
-	`simulation=false` system observation, one artifact, one signed evidence
-	manifest, `bytes_read=1839`, and 24 durable transport receipts. The agent
-	spool was empty after acknowledgement.
+  `34b9b086-edf5-4093-89ab-5d72faf9db5b`: terminal `SUCCESS`, one persisted
+  `simulation=false` system observation, one artifact, one signed evidence
+  manifest, `bytes_read=1839`, and 24 durable transport receipts. The agent
+  spool was empty after acknowledgement.
 - Reconnecting the same enrolled agent left exactly one observation for that
-	job, proving the completed job was not rerun.
+  job, proving the completed job was not rerun.
 - A live cancellation request reached `CANCEL_REQUESTED`; when execution had
-	already completed, the state machine accepted the late `SUCCESS` rather than
-	leaving the job stuck. Active cancellation remains fail-closed through the
-	Rust supervisor and signed cancellation tests.
+  already completed, the state machine accepted the late `SUCCESS` rather than
+  leaving the job stuck. Active cancellation remains fail-closed through the
+  Rust supervisor and signed cancellation tests.
 - The corrected control-plane/native images built with the current source;
-	native CTest/self-test and the focused Python distributed/Phase 4 tests pass.
+  native CTest/self-test and the focused Python distributed/Phase 4 tests pass.
 
 Known verified boundary: the bridge currently admits bounded inventory
 collectors with empty options and `MONITORED` budgets. It rejects strict
@@ -104,16 +143,16 @@ multi-agent load/fault acceptance remains open.
 
 ## Backend contract closure — 2026-09-20
 
-| Area | Classification | Evidence |
-| --- | --- | --- |
-| Auth / RBAC | GREEN | ADMIN/ANALYST/VIEWER, unauthenticated rejection, tenant isolation, viewer mutation denial, and legacy `/api/v1/compilations` auth gates pass. |
-| Evidence | GREEN | Manifest artifact membership, stored-byte rehashing, tamper rejection, sealed-job late evidence rejection, and audit mutation detection pass. |
-| Correlation | GREEN | Persisted observations produce all eight required relationships and the unsigned-process/external-connection finding. |
-| Timeline | GREEN | Persisted timeline records support endpoint, collector, severity, type, and timezone-aware start/end filters. |
-| Reports | GREEN | POST generation persists SUCCESS status/artifact, GET status returns metadata, download returns stored JSON, and generation is audited. |
-| Benchmarks | GREEN | POST creates a persisted simulated compiler-fixture run, samples/status/events persist, and GET lists runs. |
-| Compatibility runs | GREEN | POST/GET persistence is tested and an API-recorded correctness FAIL is consumed by endpoint-specific hunt admission. |
-| DEMO fixtures | PARTIAL | Backend loader uses normal persisted contracts with `simulation=true` and labels; direct loader acceptance is not independently tested in this checkpoint. |
+| Area               | Classification | Evidence                                                                                                                                                   |
+| ------------------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth / RBAC        | GREEN          | ADMIN/ANALYST/VIEWER, unauthenticated rejection, tenant isolation, viewer mutation denial, and legacy `/api/v1/compilations` auth gates pass.              |
+| Evidence           | GREEN          | Manifest artifact membership, stored-byte rehashing, tamper rejection, sealed-job late evidence rejection, and audit mutation detection pass.              |
+| Correlation        | GREEN          | Persisted observations produce all eight required relationships and the unsigned-process/external-connection finding.                                      |
+| Timeline           | GREEN          | Persisted timeline records support endpoint, collector, severity, type, and timezone-aware start/end filters.                                              |
+| Reports            | GREEN          | POST generation persists SUCCESS status/artifact, GET status returns metadata, download returns stored JSON, and generation is audited.                    |
+| Benchmarks         | GREEN          | POST creates a persisted simulated compiler-fixture run, samples/status/events persist, and GET lists runs.                                                |
+| Compatibility runs | GREEN          | POST/GET persistence is tested and an API-recorded correctness FAIL is consumed by endpoint-specific hunt admission.                                       |
+| DEMO fixtures      | PARTIAL        | Backend loader uses normal persisted contracts with `simulation=true` and labels; direct loader acceptance is not independently tested in this checkpoint. |
 
 The focused backend contract suite passes **17/17** locally and **17/17**
 against PostgreSQL. Two existing Starlette/httpx/AnyIO deprecation warnings
@@ -126,24 +165,24 @@ Status: **IMPLEMENTED + VERIFIED** for the authenticated persisted-resource
 surface and committed SSE event refresh path.
 
 - Dashboard typecheck and production build pass; Next.js generated 23 pages,
-	including persisted Scripts / Versions.
+  including persisted Scripts / Versions.
 - The existing HttpOnly same-site session proxy forwards bearer authentication
-	to domain routes, clears invalid sessions on 401, and prompts/redirects to
-	login without an auth retry loop. ADMIN/ANALYST write controls remain hidden
-	for VIEWER sessions.
+  to domain routes, clears invalid sessions on 401, and prompts/redirects to
+  login without an auth retry loop. ADMIN/ANALYST write controls remain hidden
+  for VIEWER sessions.
 - `useControlEvents` consumes the existing `/api/control/domain/events` SSE
-	proxy, preserves durable event IDs across reconnects, ignores duplicate or
-	out-of-order events, and invalidates persisted case/resource/child queries.
-	Expired SSE sessions now emit `auth.expired`, clear the cookie, and redirect
-	through the existing session flow.
+  proxy, preserves durable event IDs across reconnects, ignores duplicate or
+  out-of-order events, and invalidates persisted case/resource/child queries.
+  Expired SSE sessions now emit `auth.expired`, clear the cookie, and redirect
+  through the existing session flow.
 - Live smoke through the production dashboard on port 3001: authenticated
-	proxy login -> POST persisted case -> received `case.created` SSE event ->
-	GET cases contained the same case. No frontend-generated progress or result
-	store was used.
+  proxy login -> POST persisted case -> received `case.created` SSE event ->
+  GET cases contained the same case. No frontend-generated progress or result
+  store was used.
 - Scripts/versions and job-scoped evidence manifests now use existing
-	persisted API routes. Stale unavailable execution metrics and claims were
-	removed from the platform overview; compiler fixture text remains explicitly
-	labeled as a fixture.
+  persisted API routes. Stale unavailable execution metrics and claims were
+  removed from the platform overview; compiler fixture text remains explicitly
+  labeled as a fixture.
 
 ## Phase 4 stabilization checkpoint — 2026-09-14
 
@@ -166,11 +205,11 @@ These are scoped backend checks, **not completion of the distributed endpoint pr
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Dashboard authentication/resource views            | Login page, HttpOnly same-site cookie proxy, resource tables/details, case/script/hunt/report actions exist; types/build and HTTP page smoke pass. Browser-interactive login, writes, and role-sensitive rendering were **not** acceptance-tested in this checkpoint. Some tools remain API-only; graph is a JSON relationship view, not a graphical canvas. |
 | SSE/live events                                    | Backend durable outbox/cursor tests pass. Browser EventSource view exists; reconnect/session-expiry behavior across real browsers and long-running deployment is not fully tested.                                                                                                                                                                           |
-| Multi-endpoint hunt dispatch/retry/partial-success | IMPLEMENTED + VERIFIED for three-endpoint endpoint-scoped orchestration, per-job retry, compatibility/build isolation, partial success, and provenance tests. Multi-agent load/fault acceptance remains open. |
+| Multi-endpoint hunt dispatch/retry/partial-success | IMPLEMENTED + VERIFIED for three-endpoint endpoint-scoped orchestration, per-job retry, compatibility/build isolation, partial success, and provenance tests. Multi-agent load/fault acceptance remains open.                                                                                                                                                |
 | Correlation/timeline                               | Backend fixture acceptance passes. Live Rust evidence integration, full relationship-field coverage, PID reuse edge cases, and large-case performance remain unverified.                                                                                                                                                                                     |
-| Reports                                            | GREEN for backend JSON generation/status/download/audit and evidence verification; PDF and browser acceptance are absent.                                                                                                                                                                                                                                  |
+| Reports                                            | GREEN for backend JSON generation/status/download/audit and evidence verification; PDF and browser acceptance are absent.                                                                                                                                                                                                                                    |
 | Benchmarks                                         | GREEN for the persisted simulated compiler-fixture lifecycle, samples, status, and events; no remote performance claim.                                                                                                                                                                                                                                      |
-| Compatibility runs                                 | GREEN for POST/GET persistence and hunt admission consuming recorded endpoint correctness; automated security-tool execution remains outside scope.                                                                                                                                                                                                            |
+| Compatibility runs                                 | GREEN for POST/GET persistence and hunt admission consuming recorded endpoint correctness; automated security-tool execution remains outside scope.                                                                                                                                                                                                          |
 | Evidence verification                              | Backend positive/tamper tests pass. Not verified with evidence emitted by a remotely connected Rust agent. Uploaded artifact hashes are not themselves independent producer signatures.                                                                                                                                                                      |
 | RBAC/tenant isolation                              | Prototype API boundaries tested, not a production security review. Full endpoint lifecycle, abuse/rate limiting, and multi-operator concurrency need further acceptance.                                                                                                                                                                                     |
 | Native compilation/variants and DEMO loader        | Native compiler image self-test passes. Durable native-build API and backend DEMO loader exist, but their full deployed workflow was not exercised at checkpoint. Never substitute compiler fixture output for REAL endpoint execution.                                                                                                                      |
@@ -306,19 +345,19 @@ Status vocabulary: PLANNED, SCAFFOLDED, IMPLEMENTED, VERIFIED, BLOCKED_ENVIRONME
 
 ## Phase plan and acceptance
 
-| Phase | Priority / scope                                          | Acceptance criteria                                                                                                                                                                                                                         | Current status / dependency                                                                                 |
-| ----- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| P0    | Mandatory engineering foundation                          | Required directories/docs, AGENTS, schema/protobuf authority, lockfiles, Make/CI, buildable C++/Rust/Python/Next boundaries, explicit unavailability, formatter/linter/type/test/build evidence                                             | VERIFIED foundation; acceptance scope and limits below                                                      |
-| P1    | P0 language frontend and typed JIR                        | Handwritten lexer/parser with spans; AST/types/nullability/capabilities/budget grammar; all accepted source examples and negative corpus; deterministic typed JIR and CLI check/ast/jir/plan                                                | VERIFIED static frontend; see current delivery evidence                                                     |
-| P2    | P0 complete LLVM backend and runtime ABI                  | JIR lowering, verified real LLVM IR, optimization metrics, TargetMachine AOT, ABI conformance and minimal system/process collector vertical slice                                                                                           | IMPLEMENTED compiler/ABI/AOT scope; real collector slice remains open                                       |
-| P3    | P0 native and own-memory ORC execution                    | Trusted Agent-owned worker, native/memory equivalence, capability context, cancellation and enforceable resource governor, CPU/RAM/I/O/deadline negative tests                                                                              | IMPLEMENTED separate compiler ORC fixture and Agent collector worker; integration remains open              |
-| P4    | P0 Build Diversity Engine, encrypted configuration, Forge | Reproducible same-input/seed builds, three distinct artifact hashes, normalized fixture equivalence, complete real manifests/signing status, AEAD pool/no plaintext/tag tamper checks, actual build-to-registry lifecycle                   | IMPLEMENTED diversity/AEAD slice; signing/Forge lifecycle remain open                                       |
+| Phase | Priority / scope                                          | Acceptance criteria                                                                                                                                                                                                                         | Current status / dependency                                                                                      |
+| ----- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| P0    | Mandatory engineering foundation                          | Required directories/docs, AGENTS, schema/protobuf authority, lockfiles, Make/CI, buildable C++/Rust/Python/Next boundaries, explicit unavailability, formatter/linter/type/test/build evidence                                             | VERIFIED foundation; acceptance scope and limits below                                                           |
+| P1    | P0 language frontend and typed JIR                        | Handwritten lexer/parser with spans; AST/types/nullability/capabilities/budget grammar; all accepted source examples and negative corpus; deterministic typed JIR and CLI check/ast/jir/plan                                                | VERIFIED static frontend; see current delivery evidence                                                          |
+| P2    | P0 complete LLVM backend and runtime ABI                  | JIR lowering, verified real LLVM IR, optimization metrics, TargetMachine AOT, ABI conformance and minimal system/process collector vertical slice                                                                                           | IMPLEMENTED compiler/ABI/AOT scope; real collector slice remains open                                            |
+| P3    | P0 native and own-memory ORC execution                    | Trusted Agent-owned worker, native/memory equivalence, capability context, cancellation and enforceable resource governor, CPU/RAM/I/O/deadline negative tests                                                                              | IMPLEMENTED separate compiler ORC fixture and Agent collector worker; integration remains open                   |
+| P4    | P0 Build Diversity Engine, encrypted configuration, Forge | Reproducible same-input/seed builds, three distinct artifact hashes, normalized fixture equivalence, complete real manifests/signing status, AEAD pool/no plaintext/tag tamper checks, actual build-to-registry lifecycle                   | IMPLEMENTED diversity/AEAD slice; signing/Forge lifecycle remain open                                            |
 | P5    | P0 secure distributed control plane and agents            | Domain migrations, cases/scripts/plans, mTLS enrollment/health, signed expiring nonce-bound jobs, durable replay protection, policy, simultaneous child jobs, scheduling/retry/cancel, encrypted spool/reconnect, direct transport          | IMPLEMENTED + VERIFIED for one REAL bounded-inventory Rust Agent path; multi-agent/load and rotation remain open |
-| P6    | P0 real Windows and Ubuntu collector coverage             | All fourteen collector groups plus supported DNS; normalized types, documented native APIs, availability/permission matrix, file race checks, optional adapter detection, bounded I/O                                                       | IMPLEMENTED adapters; Ubuntu P0 live-tested, Windows compile-only, DNS/optional execution open              |
-| P7    | P0 provenance, investigation and operational UI           | Persistent scoped evidence/manifest verification, durable audit with checkpoints, NetworkX correlation, timeline/findings, SSE, PDF/JSON, Workbench/Compiler/Variant/Forge/Endpoints/Jobs/Live/Graph/Evidence pages use actual data         | IMPLEMENTED Workbench/Compiler bridge and stateless verifier; persistent investigation surfaces remain open |
-| P8    | Safe driver-risk, fixtures and compatibility lab          | Real driver analysis plus sourced blocklist/CVE imports, separate LAB SIMULATION, harmless fixture lifecycle, operator-recorded correctness/alerts/resources, no attack capabilities                                                        | PLANNED; fixture documents only, no operational simulator                                                   |
-| P9    | Profiling, scale, presentation                            | Raw compiler/variant/agent/distributed samples, baseline comparisons, real chart data, 1/2/10/50 endpoint trials as available, complete 3–5 minute Judge Mode                                                                               | PLANNED; no forensic benchmark values collected                                                             |
-| P10   | Release hardening and endpoint compatibility              | Windows/Ubuntu CI and live acceptance, mTLS rotation/revocation, RBAC/tenant/object isolation, anchored audit rollback detection, offline/tamper/cancel/replay cases, signed artifacts, dependency/SBOM review, legitimate relay validation | PLANNED; remote/product deployment remains disabled                                                         |
+| P6    | P0 real Windows and Ubuntu collector coverage             | All fourteen collector groups plus supported DNS; normalized types, documented native APIs, availability/permission matrix, file race checks, optional adapter detection, bounded I/O                                                       | IMPLEMENTED adapters; Ubuntu P0 live-tested, Windows compile-only, DNS/optional execution open                   |
+| P7    | P0 provenance, investigation and operational UI           | Persistent scoped evidence/manifest verification, durable audit with checkpoints, NetworkX correlation, timeline/findings, SSE, PDF/JSON, Workbench/Compiler/Variant/Forge/Endpoints/Jobs/Live/Graph/Evidence pages use actual data         | IMPLEMENTED Workbench/Compiler bridge and stateless verifier; persistent investigation surfaces remain open      |
+| P8    | Safe driver-risk, fixtures and compatibility lab          | Real driver analysis plus sourced blocklist/CVE imports, separate LAB SIMULATION, harmless fixture lifecycle, operator-recorded correctness/alerts/resources, no attack capabilities                                                        | PLANNED; fixture documents only, no operational simulator                                                        |
+| P9    | Profiling, scale, presentation                            | Raw compiler/variant/agent/distributed samples, baseline comparisons, real chart data, 1/2/10/50 endpoint trials as available, complete 3–5 minute Judge Mode                                                                               | PLANNED; no forensic benchmark values collected                                                                  |
+| P10   | Release hardening and endpoint compatibility              | Windows/Ubuntu CI and live acceptance, mTLS rotation/revocation, RBAC/tenant/object isolation, anchored audit rollback detection, offline/tamper/cancel/replay cases, signed artifacts, dependency/SBOM review, legitimate relay validation | PLANNED; remote/product deployment remains disabled                                                              |
 
 ## Implementation inventory
 

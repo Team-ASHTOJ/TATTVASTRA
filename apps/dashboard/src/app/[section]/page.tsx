@@ -5,6 +5,10 @@ import { sections } from "../../lib/sections";
 import { PlatformOverview } from "../../components/platform-overview";
 import { EvidenceVerifier } from "../../components/evidence-verifier";
 import { CompilerWorkbench } from "../../components/compiler-workbench";
+import {
+  DemoPresentation,
+  DemoScreen,
+} from "../../components/demo-presentation";
 import { ControlResources } from "../../components/control-resources";
 
 export function generateStaticParams() {
@@ -44,46 +48,15 @@ export default async function SectionPage({
   if (section === "judge")
     return (
       <>
-        <div className="eyebrow">PRESENTATION / READINESS</div>
         <h1>Judge Mode</h1>
-        <div className="notice">
-          <StatusBadge tone="warning">NOT READY</StatusBadge>
-          <p>
-            The compiler and local Agent slices are available. The end-to-end
-            distributed demonstration still requires control-plane enrollment,
-            dispatch, and durable evidence.
-          </p>
-        </div>
-        <section className="panel">
-          <h2>Available foundation walkthrough</h2>
-          <ol className="judge-steps">
-            <li>
-              <Link href="/workbench">
-                Validate a hunt and inspect native compiler output
-              </Link>
-            </li>
-            <li>
-              <Link href="/compiler">Walk through each compiler stage</Link>
-            </li>
-            <li>
-              <Link href="/architecture">
-                Inspect architecture and requirement coverage
-              </Link>
-            </li>
-            <li>
-              <Link href="/evidence">
-                Recompute a submitted observation’s integrity hash
-              </Link>
-            </li>
-            <li>
-              <Link href="/">Review platform availability</Link>
-            </li>
-          </ol>
-          <p>
-            The full 3–5 minute execution sequence is specified in
-            docs/DEMO_FLOW.md.
-          </p>
-        </section>
+        <DemoPresentation section="judge" />
+      </>
+    );
+  if (section === "drivers")
+    return (
+      <>
+        <h1>Driver Intelligence</h1>
+        <DemoPresentation section="drivers" />
       </>
     );
   const definition = sections.find((s) => s.slug === section);
@@ -116,7 +89,9 @@ export default async function SectionPage({
           </div>
           <StatusBadge tone="good">PERSISTED API</StatusBadge>
         </div>
-        <ControlResources key={section} section={section} />
+        <DemoScreen section={section}>
+          <ControlResources key={section} section={section} />
+        </DemoScreen>
         {section === "evidence" && <EvidenceVerifier />}
       </>
     );

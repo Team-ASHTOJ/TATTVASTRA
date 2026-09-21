@@ -83,11 +83,7 @@ def _orchestration_fixture(factory, org_id):
                         "duration_ms": 120000,
                     },
                 },
-                "jir": {
-                    "instructions": [
-                        {"opcode": "SYSTEM_INFO", "attributes": {"options": {}}}
-                    ]
-                },
+                "jir": {"instructions": [{"opcode": "SYSTEM_INFO", "attributes": {"options": {}}}]},
             },
         )
         db.add(compilation)

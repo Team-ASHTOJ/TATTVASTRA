@@ -65,17 +65,28 @@ export function ControlResources({ section }: { section: string }) {
   const write = user.data?.role === "ADMIN" || user.data?.role === "ANALYST";
   const feed = useControlEvents(!!user.data);
   const childPaths = selected
-    ? section === "endpoints" ? [`endpoints/${selected.id}/jobs`, `endpoints/${selected.id}/observations`]
-    : section === "jobs" ? [`hunts/${selected.id}/jobs`]
-    : section === "scripts" ? [`scripts/${selected.id}/versions`]
-    : section === "evidence" && selected.job_id ? [`manifests?job_id=${String(selected.job_id)}`]
-    : [] : [];
+    ? section === "endpoints"
+      ? [
+          `endpoints/${selected.id}/jobs`,
+          `endpoints/${selected.id}/observations`,
+        ]
+      : section === "jobs"
+        ? [`hunts/${selected.id}/jobs`]
+        : section === "scripts"
+          ? [`scripts/${selected.id}/versions`]
+          : section === "evidence" && selected.job_id
+            ? [`manifests?job_id=${String(selected.job_id)}`]
+            : []
+    : [];
   const children = useQuery({
     queryKey: ["children", section, selected?.id],
-    queryFn: () => Promise.all(childPaths.map((path) => api<RecordRow[]>(`domain/${path}`))),
+    queryFn: () =>
+      Promise.all(childPaths.map((path) => api<RecordRow[]>(`domain/${path}`))),
     enabled: !!user.data && childPaths.length > 0,
   });
-  const current = Array.isArray(records.data) ? records.data.find((row) => row.id === selected?.id) : undefined;
+  const current = Array.isArray(records.data)
+    ? records.data.find((row) => row.id === selected?.id)
+    : undefined;
   const inspected = current ?? selected;
   async function mutate(route: string, body?: unknown) {
     setBusy(true);
@@ -110,7 +121,20 @@ export function ControlResources({ section }: { section: string }) {
         </p>
       </section>
     );
-  if (section === "live") return <section className="panel"><h2>Live investigation events</h2><p role="status">{feed.status}</p><p>The latest 100 committed events are shown. Reconnects resume from the durable sequence cursor.</p><pre className="control-json">{JSON.stringify(feed.events, null, 2)}</pre></section>;
+  if (section === "live")
+    return (
+      <section className="panel">
+        <h2>Live investigation events</h2>
+        <p role="status">{feed.status}</p>
+        <p>
+          The latest 100 committed events are shown. Reconnects resume from the
+          durable sequence cursor.
+        </p>
+        <pre className="control-json">
+          {JSON.stringify(feed.events, null, 2)}
+        </pre>
+      </section>
+    );
   const rows = Array.isArray(records.data) ? records.data : [];
   return (
     <>
@@ -421,9 +445,27 @@ export function ControlResources({ section }: { section: string }) {
             {JSON.stringify(inspected, null, 2)}
           </pre>
           {children.error && <p role="alert">{children.error.message}</p>}
-          {children.data?.map((rows, index) => <div key={childPaths[index]}><h3>{childPaths[index]?.split("/").at(-1)?.split("?")[0]}</h3>
-            {section === "evidence" && rows.map((manifest) => <button key={manifest.id} className="button secondary" disabled={busy} onClick={() => void mutate(`manifests/${manifest.id}/verify`)}>Verify signed manifest</button>)}
-            <pre className="control-json">{JSON.stringify(rows, null, 2)}</pre></div>)}
+          {children.data?.map((rows, index) => (
+            <div key={childPaths[index]}>
+              <h3>{childPaths[index]?.split("/").at(-1)?.split("?")[0]}</h3>
+              {section === "evidence" &&
+                rows.map((manifest) => (
+                  <button
+                    key={manifest.id}
+                    className="button secondary"
+                    disabled={busy}
+                    onClick={() =>
+                      void mutate(`manifests/${manifest.id}/verify`)
+                    }
+                  >
+                    Verify signed manifest
+                  </button>
+                ))}
+              <pre className="control-json">
+                {JSON.stringify(rows, null, 2)}
+              </pre>
+            </div>
+          ))}
         </section>
       )}
     </>

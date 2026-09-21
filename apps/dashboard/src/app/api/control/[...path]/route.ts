@@ -8,6 +8,9 @@ const routes = new Map([
 ]);
 const domains = new Set([
   "auth",
+  "demo",
+  "observations",
+  "jobs",
   "cases",
   "scripts",
   "compilations",

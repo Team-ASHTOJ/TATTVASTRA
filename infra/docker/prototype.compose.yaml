@@ -1,0 +1,51 @@
+name: jocky-video
+services:
+  postgres:
+    image: postgres:17.6-bookworm
+    environment:
+      POSTGRES_USER: jocky
+      POSTGRES_DB: jocky
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run make configure-local}
+    volumes: ["video_database:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jocky -d jocky"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  control-plane:
+    build:
+      context: ../..
+      dockerfile: infra/docker/control-plane.Dockerfile
+    environment:
+      JOCKY_MODE: DEMO
+      JOCKY_DATABASE_URL: postgresql+psycopg://jocky:${POSTGRES_PASSWORD}@postgres:5432/jocky
+      JOCKY_BOOTSTRAP_PASSWORD: ${JOCKY_BOOTSTRAP_PASSWORD:?Run make configure-local}
+    volumes: ["video_objects:/app/.local"]
+    ports: ["127.0.0.1:18080:8000"]
+    mem_limit: 2g
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/app/.venv/bin/python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live')",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  dashboard:
+    build:
+      context: ../..
+      dockerfile: infra/docker/dashboard.Dockerfile
+    environment:
+      JOCKY_API_URL: http://control-plane:8000
+      NEXT_TELEMETRY_DISABLED: "1"
+    ports: ["127.0.0.1:13000:3000"]
+    depends_on:
+      control-plane: { condition: service_healthy }
+volumes:
+  video_database:
+  video_objects:

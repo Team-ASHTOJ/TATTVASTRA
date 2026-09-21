@@ -5,11 +5,22 @@ import { sections } from "../lib/sections";
 
 export function Navigation() {
   const pathname = usePathname();
+  const focused = sections.filter(
+    (section) =>
+      ![
+        "cases",
+        "scripts",
+        "jobs",
+        "forge",
+        "compatibility",
+        "reports",
+      ].includes(section.slug),
+  );
   return (
     <nav aria-label="Main navigation">
-      {sections.map((section, index) => (
+      {focused.map((section, index) => (
         <div key={section.slug}>
-          {sections[index - 1]?.group !== section.group && (
+          {focused[index - 1]?.group !== section.group && (
             <div className="nav-group">{section.group}</div>
           )}
           <Link
@@ -17,10 +28,18 @@ export function Navigation() {
             aria-current={pathname === `/${section.slug}` ? "page" : undefined}
           >
             <span className="nav-dot" aria-hidden="true" />
-            {section.name}
+            {section.slug === "architecture"
+              ? "Requirement Coverage"
+              : section.name}
           </Link>
         </div>
       ))}
+      <Link
+        href="/judge"
+        aria-current={pathname === "/judge" ? "page" : undefined}
+      >
+        Judge Mode
+      </Link>
     </nav>
   );
 }

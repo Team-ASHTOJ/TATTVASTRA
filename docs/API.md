@@ -1,5 +1,20 @@
 # API and engineering contracts
 
+## Idea-submission demo
+
+`POST /api/demo` requires ANALYST/ADMIN and a backend configured with
+`JOCKY_MODE=DEMO`. REAL mode rejects it with 409. It prepares the caller's tenant
+scenario through the real native compiler and ordinary persisted domain models;
+returns `case_id`, `simulation=true`, and `simulation_label=SIH_VIDEO_DEMO`.
+Repeated preparation reuses a ready case. Compilation failure is durable and
+returns 503; no prepared marker is written on failure. The separate video stack
+prevents synthetic resources from entering the REAL workspace.
+
+All presentation views consume existing cases, hunts/jobs, variants, observations,
+findings, graph, timeline, artifacts, manifests and benchmark routes. Verification
+and event streaming remain the existing authenticated services. Fixed demo seeds
+produce actual compiler artifacts, not example hash strings.
+
 ## Phase 4 backend contract checkpoint — 2026-09-20
 
 The historical foundation/design sections below predate the implemented persistent control plane. The authoritative current completion/verification boundary is the **Phase 4 backend contract checkpoint in [BUILD_STATUS.md](BUILD_STATUS.md)**. Remote Rust execution and three-endpoint hunt orchestration are verified within their documented bounded scopes.
@@ -55,17 +70,17 @@ Additive optional fields require compatible schema evolution; changing field mea
 
 ## Current persistent domain API
 
-| Area          | Current routes / behavior                                                                                                        |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Cases/scripts | `/cases`, `/cases/{id}`, `/scripts`, `/scripts/{id}/versions`; tenant-scoped cases and immutable source versions |
+| Area          | Current routes / behavior                                                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Cases/scripts | `/cases`, `/cases/{id}`, `/scripts`, `/scripts/{id}/versions`; tenant-scoped cases and immutable source versions                           |
 | Build Forge   | `/compilations/{id}`, `/compilations/{id}/{stage}`, `/compilations/{id}/variants`, `/variants/{id}`; real compiler artifacts and manifests |
-| Plans/jobs    | `/hunts`, `/hunts/{id}/start`, `/hunts/{id}/cancel`, `/hunts/{id}/jobs`; signed per-endpoint work and aggregate state |
-| Agents        | `/endpoints/enrollments`, `/endpoints`, `/endpoints/{id}`, `/endpoints/{id}/revoke`; one-time enrollment and identity-bound health |
-| Events        | `/events` SSE with `Last-Event-ID`, committed sequence IDs, keepalives and tenant/session validation |
-| Evidence      | `/observations`, `/artifacts`, `/artifacts/{id}/content`, `/artifacts/{id}/verify`, `/manifests/{id}/verify`; durable hash/seal checks |
-| Analysis      | `/graph`, `/timeline`, `/findings`; endpoint/collector/severity/type/time filters and evidence-linked relationships |
-| Lab           | `/compatibility-runs`, `/benchmarks`; persisted explicit provenance and benchmark events |
-| Reports       | `/reports`, `/reports/{id}`, authorized artifact download; persisted JSON report with audit verification |
+| Plans/jobs    | `/hunts`, `/hunts/{id}/start`, `/hunts/{id}/cancel`, `/hunts/{id}/jobs`; signed per-endpoint work and aggregate state                      |
+| Agents        | `/endpoints/enrollments`, `/endpoints`, `/endpoints/{id}`, `/endpoints/{id}/revoke`; one-time enrollment and identity-bound health         |
+| Events        | `/events` SSE with `Last-Event-ID`, committed sequence IDs, keepalives and tenant/session validation                                       |
+| Evidence      | `/observations`, `/artifacts`, `/artifacts/{id}/content`, `/artifacts/{id}/verify`, `/manifests/{id}/verify`; durable hash/seal checks     |
+| Analysis      | `/graph`, `/timeline`, `/findings`; endpoint/collector/severity/type/time filters and evidence-linked relationships                        |
+| Lab           | `/compatibility-runs`, `/benchmarks`; persisted explicit provenance and benchmark events                                                   |
+| Reports       | `/reports`, `/reports/{id}`, authorized artifact download; persisted JSON report with audit verification                                   |
 
 Collection routes are bounded to current API limits. Job transitions and
 durable evidence verification are enforced by the control-plane state machine;

@@ -62,6 +62,35 @@ export function CompilerWorkbench({
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  async function loadScenario() {
+    try {
+      const cases =
+        await api<{ id: string; description: string }[]>("domain/cases");
+      const scenario = cases.find(
+        (row) => row.description === "JOCKY_VIDEO_V1_READY",
+      );
+      if (!scenario)
+        throw new Error("Prepare the demo scenario in Judge Mode first.");
+      const scripts =
+        await api<{ id: string; case_id: string }[]>("domain/scripts");
+      const script = scripts.find((row) => row.case_id === scenario.id);
+      if (!script) throw new Error("Prepared scenario source is unavailable.");
+      const versions = await api<{ source: string; version: number }[]>(
+        `domain/scripts/${script.id}/versions`,
+      );
+      const latest = versions.sort((a, b) => b.version - a.version)[0];
+      if (!latest) throw new Error("No persisted source version.");
+      setSource(latest.source);
+      setCompleted([]);
+      setResult(null);
+      setError(null);
+    } catch (failure) {
+      setError(
+        failure instanceof Error ? failure.message : "Source loading failed",
+      );
+    }
+  }
+
   async function invoke(command: CompilerCommand) {
     setActive(command);
     setError(null);
@@ -112,9 +141,20 @@ export function CompilerWorkbench({
           className="code-editor"
           spellCheck={false}
           value={source}
-          onChange={(event) => setSource(event.target.value)}
+          onChange={(event) => {
+            setSource(event.target.value);
+            setCompleted([]);
+            setResult(null);
+          }}
         />
         <div className="compiler-options">
+          <button
+            className="button secondary"
+            disabled={active !== null}
+            onClick={() => void loadScenario()}
+          >
+            Load prepared demo source
+          </button>
           <label>
             Variant seed
             <input

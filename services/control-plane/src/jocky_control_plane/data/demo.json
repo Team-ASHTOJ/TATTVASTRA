@@ -1,10 +1,118 @@
 {
   "simulation": true,
-  "simulation_label": "CONTROL_PLANE_DEMO_FIXTURE",
-  "title": "Demo: unsigned process and external connection",
-  "source": "hunt \"control-plane-demo\" { targets { group \"DEMO\" os linux } runtime { backend llvm execution native } capabilities { process.read network.read } collect processes as procs collect connections as conns export report { format json include evidence } }",
-  "observations": [
-    {"collector": "processes", "data": {"pid": 4100, "name": "demo-benign-workload", "user": "demo-user", "signed": false}},
-    {"collector": "connections", "data": {"pid": 4100, "remote_address": "8.8.8.8", "remote_port": 443, "protocol": "TCP"}}
+  "simulation_label": "SIH_VIDEO_DEMO",
+  "title": "SIH demo \u2014 one hunt, three endpoints",
+  "source": "hunt \"sih-triage\" {\n    targets { group \"SIH-DEMO\" os windows | linux }\n    runtime { backend llvm execution memory }\n    capabilities { system.read process.read network.read drivers.read }\n    collect system as sys\n    collect processes as procs\n    collect connections as conns\n    collect drivers as drv\n}\n",
+  "seeds": [
+    "0000000000000001",
+    "0000000000000002",
+    "0000000000000003"
+  ],
+  "endpoints": [
+    {
+      "hostname": "WIN-01",
+      "os": "windows",
+      "arch": "x86_64",
+      "outcome": "SUCCESS",
+      "reason": "SIMULATED: inventory completed",
+      "observations": [
+        {
+          "collector": "processes",
+          "data": {
+            "pid": 4100,
+            "name": "unsigned-demo-worker",
+            "user": "lab-analyst",
+            "signed": false
+          }
+        },
+        {
+          "collector": "connections",
+          "data": {
+            "pid": 4100,
+            "remote_address": "8.8.8.8",
+            "remote_port": 443,
+            "protocol": "TCP"
+          }
+        },
+        {
+          "collector": "file_metadata",
+          "data": {
+            "pid": 4100,
+            "path": "C:/Lab/demo-note.txt",
+            "size": 128
+          }
+        },
+        {
+          "collector": "services",
+          "data": {
+            "pid": 4100,
+            "name": "DemoInventoryService",
+            "state": "running"
+          }
+        },
+        {
+          "collector": "drivers",
+          "data": {
+            "name": "demo-legacy-driver.sys",
+            "signed": false,
+            "risk": "REVIEW",
+            "risk_basis": "Synthetic unsigned-driver training scenario; no CVE or exploitation claim",
+            "path": "C:/Lab/demo-legacy-driver.sys"
+          }
+        }
+      ]
+    },
+    {
+      "hostname": "WIN-02",
+      "os": "windows",
+      "arch": "x86_64",
+      "outcome": "FAILED",
+      "reason": "SIMULATED: collector permission denied; other endpoints retain evidence",
+      "observations": [
+        {
+          "collector": "system",
+          "data": {
+            "hostname": "WIN-02",
+            "limitation": "Permission denied in scenario",
+            "severity": "MEDIUM"
+          }
+        }
+      ]
+    },
+    {
+      "hostname": "UBUNTU-01",
+      "os": "linux",
+      "arch": "x86_64",
+      "outcome": "SUCCESS",
+      "reason": "SIMULATED: inventory completed",
+      "observations": [
+        {
+          "collector": "processes",
+          "data": {
+            "pid": 7200,
+            "name": "demo-inventory",
+            "user": "lab",
+            "signed": true
+          }
+        },
+        {
+          "collector": "connections",
+          "data": {
+            "pid": 7200,
+            "remote_address": "10.0.0.8",
+            "remote_port": 443
+          }
+        },
+        {
+          "collector": "drivers",
+          "data": {
+            "name": "demo-net-module",
+            "signed": true,
+            "risk": "NOT_ASSESSED",
+            "risk_basis": "Synthetic module inventory; signature alone is not a security verdict"
+          }
+        }
+      ]
+    }
   ]
 }

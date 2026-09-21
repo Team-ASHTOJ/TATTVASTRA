@@ -112,6 +112,20 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
 
     Admin = Annotated[User, Depends(administrator)]
 
+    @router.post("/demo", status_code=201)
+    def prepare_demo(db: DB, user: Writer) -> Any:
+        if settings.mode != "DEMO":
+            raise HTTPException(409, "Start the separate DEMO stack to load simulated endpoints")
+        from jocky_control_plane.demo import load
+
+        user_id = user.id
+        db.commit()  # Compiler stages use the existing independent durable transactions.
+        try:
+            case_id = load(factory, settings, user_id)
+        except RuntimeError as error:
+            raise HTTPException(503, str(error)) from error
+        return {"case_id": case_id, "simulation": True, "simulation_label": "SIH_VIDEO_DEMO"}
+
     @router.get("/auth/me")
     def me(user: Reader) -> Any:
         return document(user)

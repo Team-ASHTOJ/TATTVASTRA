@@ -93,6 +93,7 @@ def build_variants(
     settings: Settings,
     *,
     execution_mode: str = "memory",
+    seed_values: list[str] | None = None,
 ) -> list[Variant]:
     if compilation.status != State.SUCCESS:
         raise HTTPException(409, "Compilation must succeed before generating variants")
@@ -105,8 +106,13 @@ def build_variants(
         directory = Path(temporary)
         source = directory / "source.jky"
         source.write_text(version.source, encoding="utf-8", newline="\n")
-        for _ in range(count):
-            seed = secrets.token_hex(8)
+        if seed_values is not None and (
+            len(seed_values) != count
+            or any(not re.fullmatch(r"[0-9a-f]{16}", seed) for seed in seed_values)
+        ):
+            raise ValueError("Expected one 64-bit hexadecimal seed per variant")
+        for index in range(count):
+            seed = seed_values[index] if seed_values is not None else secrets.token_hex(8)
             output = directory / "variant.o"
             try:
                 result = subprocess.run(

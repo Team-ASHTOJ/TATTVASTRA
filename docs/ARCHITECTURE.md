@@ -2,7 +2,19 @@
 
 ## Current versus target
 
-The repository contains the typed C++ frontend and LLVM backend plus a local standalone Rust endpoint runtime. The compiler has fixed runtime-ABI lowering, verified modules, host TargetMachine objects, own-process ORC execution against a deterministic SIMULATED fixture, seeded compiler structural diversity, manifests and AES-256-GCM literal pools. The Agent has stable local identity, signed collector-job admission, durable replay protection, an isolated child worker, real Windows/Linux collector adapters, normalized signed observations and an encrypted SQLite spool. The Agent does **not** yet load compiler AOT/ORC artifacts, enroll over mTLS, or deliver evidence to the control plane; those arrows in the diagram remain target architecture.
+The current repository includes the C++ frontend/JIR/LLVM compiler, Rust endpoint
+runtime and PostgreSQL control plane. Phase 4 records a verified Linux bounded
+inventory execution path, persisted observations, signed manifests and backend
+SSE. See BUILD_STATUS.md for exact tests and platform limitations. The diagram
+includes target components: local content-addressed storage is currently
+authoritative; MinIO, relay and production controls are not implied operational.
+
+For the idea-submission video, `infra/docker/prototype.compose.yaml` provides an
+isolated DEMO database/API/dashboard. It uses the same compiler, models,
+correlation, signing, storage and event contracts. Endpoint observations originate
+in the backend fixture file with `simulation=true`; no endpoint execution is
+claimed. The UI reads ordinary authenticated APIs and never synthesizes hashes,
+findings or progress. See PROTOTYPE_STATUS.md and DEMO_FLOW.md.
 
 ```mermaid
 flowchart LR
@@ -48,7 +60,7 @@ flowchart LR
 
 Organization owns users, cases, endpoint identities and scripts. Script has immutable ScriptVersions. Compilation links ScriptVersion and zero or more Variants. Variant stores a VariantManifest; ExecutionPlan binds approved source/JIR/capabilities/budget to endpoints. Each endpoint receives its own Job attempt and nonce. Observations, Artifacts and Findings belong to a case/job with immutable provenance. TimelineEvent references an observation. AuditEvent is append-only. Report references a generated artifact. BenchmarkRun and CompatibilityRun retain environment and variant identity.
 
-Core schemas exist in P0; database entities are not silently inferred from them. The initial Alembic revision is an explicitly empty migration baseline. Domain tables, tenancy constraints, foreign keys, optimistic transition checks and durable audit transactions belong to P5/P7.
+The shared schemas and existing SQLAlchemy model layer are implemented. Alembic revisions after the historical empty baseline create the domain tables, tenant relationships and PostgreSQL append-only protections. Fresh migrations are exercised by the integration suite and the separate video stack.
 
 ## Deployment and failure boundaries
 
@@ -62,10 +74,10 @@ Build reproducibility pins source bytes, JIR schema, target triple, compiler/LLV
 
 Ubuntu 24.04 and supported Windows versions are endpoint targets; the precise Windows release matrix must be measured in P6/P10. macOS arm64 is only a development host today. Linux arm64 container tests do not prove Windows or x86_64 support. Production enablement requires mTLS, RBAC, signature verification, nonce durability, encrypted spool, tenant isolation, governor tests and independent Windows acceptance.
 
-## Implemented endpoint runtime boundary
+## Historical standalone boundary and current scope
 
 Local standalone mode deliberately has no fake network peer. `jocky-agent init` creates an endpoint Ed25519 identity, a separate local-development signing authority, a bounded policy file and an AES-256-GCM spool key. Signed jobs are canonicalized with RFC 8785 rules, domain-separated, audience/expiry/capability/budget checked, and transactionally recorded in the nonce ledger before a child worker starts. Duplicate delivery returns its durable receipt without running again.
 
 The supervisor owns concurrency locking, monotonic timeout/cancellation, bounded stdout/stderr, result-size enforcement and child termination. The child receives only a versioned fixed-registry collector request; it cannot select a command, library or ABI symbol. File count/bytes and approved roots are enforced in collector wrappers. Linux child CPU time and peak RSS are sampled but not hard-limited; Windows CPU/memory controls and network-byte accounting are unsupported. Strict jobs requiring those hard controls fail admission. See `docs/AGENT_RUNTIME.md` for the CLI and exact limitations.
 
-This Rust collector worker is not the final JOCKY native worker. The existing LLVM ORC runtime still uses a SIMULATED C++ fixture host and no REAL job may consume that output. Closing the AOT/ORC-to-Agent ABI boundary requires compiler artifact identity in the signed job, signature/provenance verification, and collector callbacks backed by the Agent policy context.
+The standalone boundary above predates the Phase 4 remote bridge. The current bridge authenticates compiler artifacts and invokes bounded inventory collectors in the agent-owned worker; exact supported operations and platform acceptance are in BUILD_STATUS.md. The separate compiler CLI fixture remains SIMULATED and cannot substitute for REAL endpoint evidence.
