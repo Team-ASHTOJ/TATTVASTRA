@@ -1,7 +1,13 @@
 SHELL := /bin/sh
 .DEFAULT_GOAL := help
+ifeq ($(OS),Windows_NT)
+SHELL := C:/Program Files/Git/usr/bin/sh.exe
+PYTHON ?= python
+VENV_PY ?= .venv/Scripts/python.exe
+else
 PYTHON ?= python3.12
-VENV_PY := .venv/bin/python
+VENV_PY ?= .venv/bin/python
+endif
 COMPOSE := docker compose --env-file .env -f infra/docker/compose.yaml
 
 .PHONY: help doctor bootstrap contracts contracts-check coverage format format-check lint typecheck test build build-python proto-check verify-foundation verify verify-containers verify-native verify-agent verify-native-container verify-agent-container native-configure native-build dev-api dev-dashboard configure-local infra-check infra-up infra-down stack-up browser-install test-e2e
@@ -93,7 +99,7 @@ verify: verify-foundation verify-native verify-agent infra-check test-e2e
 verify-containers: verify-foundation verify-native-container verify-agent-container infra-check test-e2e
 
 dev-api:
-	.venv/bin/uvicorn jocky_control_plane.app:app --host 127.0.0.1 --port 8000 --log-level info
+	$(VENV_PY) -m uvicorn jocky_control_plane.app:app --host 127.0.0.1 --port 8000 --log-level info
 
 dev-dashboard:
 	JOCKY_API_URL=http://127.0.0.1:8000 npm run dev
@@ -120,11 +126,17 @@ test-e2e:
 	PLAYWRIGHT_BROWSERS_PATH=.cache/playwright npm run test:e2e
 
 .PHONY: demo-up demo-prepare demo-down
+.PHONY: demo-check demo-reset
 demo-up: configure-local
 	docker compose --env-file .env -f infra/docker/prototype.compose.yaml up -d --build --wait
 
 demo-prepare:
 	$(VENV_PY) scripts/prepare_demo.py
+
+demo-reset: demo-prepare
+
+demo-check:
+	$(VENV_PY) scripts/prepare_demo.py --check
 
 demo-down:
 	docker compose --env-file .env -f infra/docker/prototype.compose.yaml down

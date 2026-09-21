@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 
 const entries = Object.fromEntries(
   readFileSync(".env", "utf8")
-    .split("\n")
+    .split(/\r?\n/)
     .filter((line) => line.includes("=") && !line.startsWith("#"))
     .map((line) => {
       const split = line.indexOf("=");
@@ -34,6 +34,12 @@ const organization = /Organization: ([0-9a-f-]+)/.exec(init)?.[1] ?? "";
 test("recording walkthrough uses actual compiler and persisted simulated evidence", async ({
   page,
 }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error")
+      errors.push(`${message.text()} ${message.location().url}`);
+  });
   await page.goto("/login");
   await page.getByLabel("Organization UUID").fill(organization);
   await page.getByLabel("Username", { exact: true }).fill("admin");
@@ -48,14 +54,33 @@ test("recording walkthrough uses actual compiler and persisted simulated evidenc
   await expect(
     page.getByText("Scenario ready.", { exact: false }),
   ).toBeVisible();
-  await page.goto("/workbench");
+  const guide = page.getByRole("region", { name: "Judge walkthrough" });
+  await guide
+    .getByRole("button", { name: "Restart Demo", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/$/);
+  await guide.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page).toHaveURL(/\/workbench$/);
+  await page.reload();
+  await expect(guide).toContainText("2 / 13");
   await page.getByRole("button", { name: "Load prepared demo source" }).click();
   await expect(page.getByLabel("JOCKY source", { exact: true })).toHaveValue(
     /sih-triage/,
   );
   await page.getByRole("button", { name: /Check/ }).click();
   await expect(page.locator(".compiler-output")).toContainText("source_hash");
+  await page
+    .getByRole("button", { name: "Compile prepared source", exact: true })
+    .click();
+  await expect(page.locator(".compiler-output")).toContainText(
+    '"status": "SUCCESS"',
+  );
   await page.goto("/compiler");
+  await page.getByRole("button", { name: "Load prepared demo source" }).click();
+  for (const stage of ["AST", "Typed JIR"]) {
+    await page.getByRole("button", { name: stage, exact: false }).click();
+    await expect(page.locator(".compiler-output")).not.toBeEmpty();
+  }
   await page.getByRole("button", { name: /LLVM IR/ }).click();
   await expect(page.locator(".compiler-output")).toContainText("jocky_rt_");
   await page.goto("/variants");
@@ -82,6 +107,10 @@ test("recording walkthrough uses actual compiler and persisted simulated evidenc
   await expect(
     page.getByRole("heading", { name: "Evidence & provenance" }),
   ).toBeVisible();
+  await page.screenshot({
+    path: `.cache/prototype-graph-${test.info().project.name}.png`,
+    fullPage: true,
+  });
   await page.goto("/timeline");
   await page.getByLabel("Filter collector").fill("drivers");
   await expect(page.locator(".video-timeline li")).toHaveCount(2);
@@ -118,8 +147,44 @@ test("recording walkthrough uses actual compiler and persisted simulated evidenc
   ).toBeVisible();
   await page.goto("/");
   await page.reload();
+  await page.screenshot({
+    path: `.cache/prototype-home-${test.info().project.name}.png`,
+    fullPage: true,
+  });
   await expect(page.getByRole("heading", { name: "WIN-01" })).toBeVisible();
   await expect(
     page.getByText("DEMO / SIMULATED", { exact: true }).first(),
   ).toBeVisible();
+  await page.goto("/judge");
+  await guide
+    .getByRole("button", { name: "Restart Demo", exact: true })
+    .click();
+  const routes = [
+    "workbench",
+    "compiler",
+    "variants",
+    "endpoints",
+    "live",
+    "findings",
+    "graph",
+    "timeline",
+    "drivers",
+    "evidence",
+    "performance",
+    "architecture",
+  ];
+  for (const route of routes) {
+    await guide.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/${route}$`));
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth + 1,
+    );
+    expect(overflow, `Horizontal overflow on ${route}`).toBe(false);
+  }
+  await expect(
+    guide.getByRole("button", { name: "Next", exact: true }),
+  ).toBeDisabled();
+  await guide.getByRole("button", { name: "Back", exact: true }).click();
+  await expect(page).toHaveURL(/\/performance$/);
+  expect(errors).toEqual([]);
 });

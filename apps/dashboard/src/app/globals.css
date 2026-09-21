@@ -920,3 +920,26 @@ dd {
     gap: 10px;
   }
 }
+
+.judge-guide {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--panel, #101925);
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+.judge-guide p {
+  margin: 0.4rem 0;
+}
+.judge-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+@media (max-width: 600px) {
+  .judge-guide {
+    position: static;
+  }
+}

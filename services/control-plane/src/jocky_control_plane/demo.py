@@ -183,7 +183,7 @@ def load(factory: sessionmaker[Session], settings: Settings, user_id: UUID | Non
                     "job_id": str(job.id),
                     "collector_id": record["collector"],
                     "timestamp": timestamp,
-                    "source_time": None,
+                    "source_time": fixture["timestamp"],
                     "type": record["collector"],
                     "data": record["data"],
                     "variant_id": str(variant.id),

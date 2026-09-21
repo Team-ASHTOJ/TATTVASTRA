@@ -1,5 +1,61 @@
 # Build status
 
+## Prompt B recording stabilization - 2026-09-21 (Windows)
+
+Current acceptance: **READY within the documented recording scope**. This entry supersedes
+historical claims below about a currently running stack on another host.
+Base commit: `232eb3d4b1276bc942ade8ebefa9efd774fe6b37`.
+
+Scope: existing recording path only. Persistent Judge Mode now remembers its
+position, follows actual screens, gates navigation during transitions, and calls
+the existing seed/restore endpoint for Restart Demo. Workbench exposes persisted
+compilation of the prepared source. Fixture source times are fixed at
+2026-09-20T10:00:00Z; collection/signing/ingestion times remain actual. The critical
+checker verifies job/endpoint/variant/finding/graph/timeline relationships and
+requires all three evidence objects/manifests. Login commits its token before
+responding: repeated immediate seed calls exposed a real response/commit race.
+
+Validation on Windows / Docker Desktop Linux containers:
+
+- Clean `make demo-up`: PASS, real LLVM native image and fresh PostgreSQL/object
+  volumes; `make demo-down` and subsequent `make demo-up`: PASS, data retained.
+- `make demo-prepare`, `make demo-reset`, `make demo-check`: PASS. The checker
+  covers dashboard, control plane, actual compiler invocation, embedded fixture
+  service, hunt availability and real evidence verification; Redis/MinIO/gRPC
+  are deliberately not required by this existing simulated recording stack.
+- Python full suite: 75 passed, one Windows cp1252 documentation-decoding failure.
+  The unchanged failing test passed with `python -X utf8`; use UTF-8 on Windows.
+  After the login fix, focused tests passed: 3 demo/auth and 9 distributed checks,
+  including a new token-durability regression. All 77 distinct current tests have
+  passing evidence across the full run and targeted corrective reruns. Two
+  upstream Starlette/AnyIO deprecation warnings remain.
+- `npm.cmd run lint`: PASS; changed navigation/layout/test files rechecked after
+  fixes. Workspace `npm.cmd run typecheck`: PASS. `npm.cmd run build`: PASS,
+  23 generated pages. Final image production build also passed.
+- `npx.cmd playwright test -c playwright.config.ts`: 14 passed, desktop/mobile.
+- Prototype rehearsal: desktop PASS in the final combined run; affected mobile
+  PASS in `npx.cmd playwright test -c playwright.prototype.config.ts
+--project=video-mobile` (1 passed). Both validate actual compiler/evidence APIs,
+  guided navigation/reload, zero runtime/console errors and no horizontal overflow.
+  The mobile blocker was replay-triggered API request bursts: the demo now opens
+  the event feed only on Live Investigation and batches invalidations. Targeted
+  lint/typecheck and the affected production image build passed afterward.
+  Final mobile evidence: `.cache/video-mobile-final.log`.
+- Changed Python Ruff lint/format and frontend Prettier checks: PASS.
+- `make verify-foundation`: attempted once; contract/schema/coverage checks passed,
+  then blocked by pre-existing `.venv/bin/ruff` POSIX path on Windows. This is not
+  recorded as a passing aggregate. Individual submission checks above replace no
+  test assertion. Native/Rust final-production suites were not expanded or rerun.
+- Intermediate defects retained in the record: guide TypeScript bounds fixed;
+  missing favicon fixed; rapid mobile navigation gated; icon moved to public
+  metadata because the framework metadata loader mishandles the apostrophe in
+  this workspace's Windows path. No test assertion was weakened.
+
+Evidence logs/screenshots are ignored under `.cache/video-*` and
+`.cache/prototype-*`. Login traces/video remain disabled. The recording stack
+is `jocky-video`, http://localhost:13000/judge; sign in before the take.
+See VIDEO_RECORDING_GUIDE.md, PROTOTYPE_STATUS.md and PROTOTYPE_FREEZE.md.
+
 ## Idea-submission prototype freeze — 2026-09-21
 
 **READY.** Closure required no further application changes. `make test-e2e`

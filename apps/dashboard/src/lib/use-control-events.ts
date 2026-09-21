@@ -44,6 +44,7 @@ export function useControlEvents(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
     let sequence = -1;
+    let refresh: ReturnType<typeof setTimeout> | undefined;
     const stream = new EventSource("/api/control/domain/events");
     stream.onopen = () => setStatus("Connected — committed events only");
     stream.onerror = () =>
@@ -61,15 +62,25 @@ export function useControlEvents(enabled: boolean) {
         const record = JSON.parse(event.data) as Record<string, unknown>;
         sequence = next;
         setEvents((prior) => [record, ...prior].slice(0, 100));
-        void client.invalidateQueries({ queryKey: ["resources"] });
-        void client.invalidateQueries({ queryKey: ["cases"] });
-        void client.invalidateQueries({ queryKey: ["children"] });
+        // A replay batch can contain many committed events. Refresh once per
+        // batch instead of queuing competing API requests for every event.
+        if (refresh === undefined) {
+          refresh = setTimeout(() => {
+            refresh = undefined;
+            void client.invalidateQueries({ queryKey: ["resources"] });
+            void client.invalidateQueries({ queryKey: ["cases"] });
+            void client.invalidateQueries({ queryKey: ["children"] });
+          }, 100);
+        }
       } catch {
         setStatus("Invalid event payload rejected");
       }
     };
     for (const topic of topics) stream.addEventListener(topic, consume);
-    return () => stream.close();
+    return () => {
+      stream.close();
+      clearTimeout(refresh);
+    };
   }, [enabled, client, router]);
   return { events, status };
 }

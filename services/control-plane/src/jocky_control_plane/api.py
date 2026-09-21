@@ -217,6 +217,9 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
         expires = datetime.now(UTC) + timedelta(hours=1)
         db.add(SessionToken(user_id=user.id, token_hash=digest(token.encode()), expires_at=expires))
         publish(db, user, "auth.login", user.id)
+        # A caller may use the token before request-scoped dependency teardown.
+        # Persist it before sending the successful login response.
+        db.commit()
         return {
             "access_token": token,
             "token_type": "bearer",

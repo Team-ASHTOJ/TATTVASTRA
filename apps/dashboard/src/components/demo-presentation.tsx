@@ -22,76 +22,12 @@ const object = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 const text = (value: unknown) =>
   value == null ? "Unavailable" : String(value);
-const stages = [
-  [
-    "workbench",
-    "Write once",
-    "Validate JOCKY source with the real native compiler.",
-  ],
-  [
-    "compiler",
-    "Inspect the compiler",
-    "Show tokens, typed JIR and actual LLVM output.",
-  ],
-  [
-    "variants",
-    "Diversify builds",
-    "Compare three compiler-generated artifact hashes and fixed seeds.",
-  ],
-  [
-    "endpoints",
-    "Reach the fleet",
-    "Explain the three simulated Windows / Ubuntu endpoints.",
-  ],
-  [
-    "live",
-    "Keep partial evidence",
-    "One simulated failure leaves two successful endpoints intact.",
-  ],
-  [
-    "findings",
-    "Explain the finding",
-    "Correlation joins an unsigned process with an external connection.",
-  ],
-  [
-    "graph",
-    "Follow relationships",
-    "Select a node to inspect its observation provenance.",
-  ],
-  [
-    "timeline",
-    "Reconstruct the sequence",
-    "Inspect timestamps from stored observations.",
-  ],
-  [
-    "evidence",
-    "Verify integrity",
-    "Rehash stored bytes and verify the signed simulated manifest.",
-  ],
-  [
-    "drivers",
-    "Review driver posture",
-    "Read-only inventory with explicit synthetic risk labels.",
-  ],
-  [
-    "performance",
-    "Measure honestly",
-    "Run the existing compiler-fixture benchmark; no fleet performance claim.",
-  ],
-  [
-    "architecture",
-    "Close with coverage",
-    "Show implemented boundaries and the roadmap.",
-  ],
-];
-
 export function DemoPresentation({ section = "home" }: { section?: string }) {
   const client = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [selected, setSelected] = useState<unknown>(null);
   const [filter, setFilter] = useState("");
-  const [step, setStep] = useState(0);
   const mode = useQuery({
     queryKey: ["platform-status"],
     queryFn: () => api<{ mode: string }>("status"),
@@ -102,7 +38,7 @@ export function DemoPresentation({ section = "home" }: { section?: string }) {
     retry: false,
   });
   const demo = mode.data?.mode === "DEMO";
-  const feed = useControlEvents(demo && !!user.data);
+  const feed = useControlEvents(demo && !!user.data && section === "live");
   const data = useQuery({
     queryKey: ["resources", "video"],
     enabled: demo && !!user.data,
@@ -186,6 +122,8 @@ export function DemoPresentation({ section = "home" }: { section?: string }) {
   }
   if (mode.isPending)
     return <p role="status">Checking recording environment…</p>;
+  if (mode.error)
+    return <p role="alert">Environment unavailable: {mode.error.message}</p>;
   if (!demo)
     return section === "home" ? null : (
       <section className="panel">
@@ -257,6 +195,7 @@ export function DemoPresentation({ section = "home" }: { section?: string }) {
             </section>
           )}
           {notice && <p role="status">{notice}</p>}
+          {data.isFetching && <p role="status">Loading persisted scenario?</p>}
           {data.error && <p role="alert">{data.error.message}</p>}
           {d && (
             <>
@@ -276,31 +215,6 @@ export function DemoPresentation({ section = "home" }: { section?: string }) {
                     </div>
                   ))}
                 </div>
-              )}
-              {section === "judge" && (
-                <section className="panel">
-                  <div className="eyebrow">
-                    RECORDING GUIDE / {step + 1} OF {stages.length}
-                  </div>
-                  <h2>{stages[step]?.[1]}</h2>
-                  <p>{stages[step]?.[2]}</p>
-                  <Link className="button" href={`/${stages[step]?.[0]}`}>
-                    Open this screen →
-                  </Link>
-                  <div className="judge-chapters">
-                    {stages.map(([slug, title], index) => (
-                      <button
-                        className={
-                          step === index ? "button" : "button secondary"
-                        }
-                        key={slug}
-                        onClick={() => setStep(index)}
-                      >
-                        {index + 1}. {title}
-                      </button>
-                    ))}
-                  </div>
-                </section>
               )}
               {(section === "endpoints" ||
                 section === "live" ||

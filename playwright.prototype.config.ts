@@ -4,7 +4,12 @@ export default defineConfig({
   workers: 1,
   timeout: 120_000,
   reporter: "list",
-  use: { baseURL: "http://127.0.0.1:13000", trace: "off", screenshot: "off" },
+  use: {
+    baseURL: "http://127.0.0.1:13000",
+    trace: "off",
+    screenshot: "off",
+    ...(process.platform === "win32" ? { channel: "chrome" } : {}),
+  },
   projects: [
     { name: "video-desktop", use: { ...devices["Desktop Chrome"] } },
     {

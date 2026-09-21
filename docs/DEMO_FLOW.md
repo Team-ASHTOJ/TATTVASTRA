@@ -1,5 +1,9 @@
 # JOCKY idea-submission demo — 4–6 minutes
 
+Current recording instructions and the revised Judge Mode order are in
+[VIDEO_RECORDING_GUIDE.md](VIDEO_RECORDING_GUIDE.md). Historical acceptance below
+is retained as evidence, not a claim that another host's containers are running.
+
 ## Prepare once, record repeatedly
 
 ```sh

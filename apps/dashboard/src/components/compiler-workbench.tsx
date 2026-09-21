@@ -57,12 +57,19 @@ export function CompilerWorkbench({
 }) {
   const [source, setSource] = useState(starterSource);
   const [seed, setSeed] = useState("0000000000000000");
-  const [active, setActive] = useState<CompilerCommand | null>(null);
+  const [active, setActive] = useState<
+    CompilerCommand | "compile" | "load" | null
+  >(null);
+  const [prepared, setPrepared] = useState<{
+    id: string;
+    source: string;
+  } | null>(null);
   const [completed, setCompleted] = useState<CompilerCommand[]>([]);
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function loadScenario() {
+    setActive("load");
     try {
       const cases =
         await api<{ id: string; description: string }[]>("domain/cases");
@@ -81,6 +88,7 @@ export function CompilerWorkbench({
       const latest = versions.sort((a, b) => b.version - a.version)[0];
       if (!latest) throw new Error("No persisted source version.");
       setSource(latest.source);
+      setPrepared({ id: script.id, source: latest.source });
       setCompleted([]);
       setResult(null);
       setError(null);
@@ -88,6 +96,34 @@ export function CompilerWorkbench({
       setError(
         failure instanceof Error ? failure.message : "Source loading failed",
       );
+    } finally {
+      setActive(null);
+    }
+  }
+
+  async function compilePrepared() {
+    if (!prepared || source !== prepared.source) return;
+    setActive("compile");
+    setError(null);
+    setResult(null);
+    try {
+      const output = await api<Record<string, unknown>>(
+        `domain/scripts/${prepared.id}/compile`,
+        { method: "POST" },
+      );
+      setResult(output);
+      if (output.status !== "SUCCESS")
+        setError(
+          String(
+            output.error ?? "Compilation failed; inspect the persisted result.",
+          ),
+        );
+    } catch (failure) {
+      setError(
+        failure instanceof Error ? failure.message : "Compilation failed",
+      );
+    } finally {
+      setActive(null);
     }
   }
 
@@ -185,6 +221,15 @@ export function CompilerWorkbench({
           </StatusBadge>
         </div>
         <div className="compiler-actions" aria-label="Compiler stages">
+          <button
+            disabled={
+              active !== null || !prepared || source !== prepared.source
+            }
+            title="Load the prepared source first. Edited source can be checked with the individual stages."
+            onClick={() => void compilePrepared()}
+          >
+            Compile prepared source
+          </button>
           {commands.map(({ command, label }, index) => (
             <button
               key={command}

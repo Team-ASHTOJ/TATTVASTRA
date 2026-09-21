@@ -1,6 +1,7 @@
 {
   "simulation": true,
   "simulation_label": "SIH_VIDEO_DEMO",
+  "timestamp": "2026-09-20T10:00:00+00:00",
   "title": "SIH demo \u2014 one hunt, three endpoints",
   "source": "hunt \"sih-triage\" {\n    targets { group \"SIH-DEMO\" os windows | linux }\n    runtime { backend llvm execution memory }\n    capabilities { system.read process.read network.read drivers.read }\n    collect system as sys\n    collect processes as procs\n    collect connections as conns\n    collect drivers as drv\n}\n",
   "seeds": [

@@ -4,10 +4,12 @@ import { Navigation } from "../components/navigation";
 import { Providers } from "../components/providers";
 import "./globals.css";
 import { ModeIndicator } from "../components/demo-presentation";
+import { JudgeGuide } from "../components/judge-guide";
 
 export const metadata: Metadata = {
   title: "JOCKY | Forensic Operations",
   description: "One Language. Every Endpoint. No Noise.",
+  icons: { icon: "/icon.svg" },
 };
 
 export default function RootLayout({
@@ -41,7 +43,10 @@ export default function RootLayout({
                 Judge Mode ↗
               </Link>
             </header>
-            <main id="main">{children}</main>
+            <main id="main">
+              <JudgeGuide />
+              {children}
+            </main>
             <footer className="workspace-footer">
               JOCKY / ENGINEERING PREVIEW
               <span>
