@@ -35,7 +35,7 @@ export default function LoginPage() {
               method: "POST",
               body: JSON.stringify(payload),
             });
-            router.push("/cases");
+            router.push("/");
             router.refresh();
           } catch (failure) {
             setError(

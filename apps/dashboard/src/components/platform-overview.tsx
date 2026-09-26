@@ -25,10 +25,10 @@ export function PlatformOverview({
       </div>
       <div className="page-heading">
         <div>
-          <h1>{coverageOnly ? "Architecture & coverage" : "Command Center"}</h1>
+          <h1>{coverageOnly ? "Requirement Coverage" : "Command Center"}</h1>
           <p>From forensic intent to evidence you can verify.</p>
         </div>
-        <StatusBadge tone="warning">FOUNDATION RELEASE</StatusBadge>
+        <StatusBadge tone="warning">CAPABILITY STATUS</StatusBadge>
       </div>
       {query.isPending && (
         <div role="status" className="panel">
@@ -49,13 +49,13 @@ export function PlatformOverview({
             <div>
               <strong>
                 {query.data.mode === "DEMO"
-                  ? "DEMO mode — backend fixtures are explicitly simulated"
+                  ? "LOCAL SANDBOX — resources carry source provenance"
                   : "REAL mode — persisted endpoint execution is available"}
               </strong>
               <p>
                 Cases, endpoints, hunts, jobs, observations, findings,
                 timelines, evidence, and reports are read from the control
-                plane. Live updates appear in Live Investigation.
+                plane. Live updates appear in Investigations.
               </p>
             </div>
             <StatusBadge>API CONNECTED</StatusBadge>
@@ -73,7 +73,7 @@ export function PlatformOverview({
                       Review persisted cases, jobs, evidence, and live committed
                       events from the control-plane sections.
                     </p>
-                    <Link href="/cases" className="text-link">
+                    <Link href="/investigations" className="text-link">
                       Open cases →
                     </Link>
                   </EmptyState>

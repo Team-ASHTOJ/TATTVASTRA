@@ -14,62 +14,62 @@ const chapters = [
   [
     "/",
     "Command Center",
-    "A persisted three-endpoint DEMO scenario. Real compilation and verification surround explicitly simulated observations.",
+    "Start with the persisted lab workspace, then follow one JOCKY program across endpoints, analysis, and evidence.",
   ],
   [
     "/workbench",
     "Workbench",
-    "Load the prepared .jky source and press Check. One typed source describes the investigation.",
+    "Load an example or write a .jky program, then check and compile it with the native compiler.",
   ],
   [
     "/compiler",
     "Compile and inspect AST / JIR / LLVM",
-    "Load the prepared source here, then inspect AST, Typed JIR and LLVM IR. Each action invokes the native compiler; prepared native builds appear next.",
+    "Inspect a persisted compilation: source, tokens, AST, typed JIR, LLVM, and execution plan.",
   ],
   [
     "/variants",
     "Variants",
-    "Three stored host-built artifacts have real SHA-256 identities. Different hashes alone do not establish semantic equivalence.",
+    "Compare compiler-generated variants and their durable build identity.",
   ],
   [
     "/endpoints",
     "Endpoints",
-    "WIN-01, WIN-02 and UBUNTU-01 are synthetic inventory. Their independent outcomes explain the partial-success story.",
+    "See how real agents enroll and how this workspace labels its deterministic lab endpoints.",
   ],
   [
-    "/live",
-    "Live Investigation",
-    "The saved hunt is PARTIAL: two successes and one permission failure. Persisted events preserve the successful evidence.",
+    "/investigations",
+    "Investigation",
+    "The saved investigation is PARTIAL: two successes and one permission failure. Successful endpoint evidence is preserved.",
   ],
   [
     "/findings",
     "Finding",
-    "Open the correlated finding to inspect its source observations. An unsigned process and external connection share the same PID and endpoint.",
+    "Open the correlated finding. An unsigned process and external connection share a process identity and endpoint.",
   ],
   [
     "/graph",
     "Forensic Graph",
-    "Select a process node to inspect provenance. Relationships come from the same stored observations as the finding.",
+    "Select a graph node to inspect the same observation-derived relationships that support the finding.",
   ],
   [
     "/timeline",
     "Timeline",
-    "Filter by drivers to inspect the scenario sequence. Fixture source timestamps are fixed; ingestion times remain actual backend times.",
+    "Filter the normalized investigation story by endpoint, event type, or severity.",
   ],
   [
     "/drivers",
     "Driver Intelligence",
-    "Read-only synthetic driver inventory carries explicit risk explanations. This does not assess a live Windows host or exploit a driver.",
+    "Review real inventory when collected and the separate, safe lab-risk metadata in this workspace.",
   ],
   [
     "/evidence",
     "Evidence Verify",
-    "Verify stored bytes, then a signed manifest. SHA-256 and Ed25519 checks are real, while the evidence contents are simulated.",
+    "Recompute stored hashes and verify signed manifests. Lab evidence content remains labeled as simulated.",
   ],
   [
     "/performance",
     "Performance",
-    "Run three measured compiler-fixture samples. These are actual local timings, not endpoint or fleet benchmarks.",
+    "Run measured native compiler samples. Values unavailable from the backend stay unavailable.",
   ],
   [
     "/architecture",
@@ -109,6 +109,11 @@ export function JudgeGuide() {
   }
   const screenStep = chapters.findIndex((chapter) => chapter[0] === pathname);
   useEffect(() => {
+    if (pathname === "/judge") move(0);
+    // `move` intentionally uses current router and transition state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+  useEffect(() => {
     if (step >= 0 && screenStep >= 0 && step !== screenStep && !navigating) {
       sessionStorage.setItem(key, String(screenStep));
       window.dispatchEvent(new Event("jocky-judge-change"));
@@ -140,10 +145,10 @@ export function JudgeGuide() {
   const current = Math.max(0, screenStep >= 0 && step >= 0 ? screenStep : step);
   const chapter = chapters[current] ?? chapters[0];
   return (
-    <section className="judge-guide panel" aria-label="Judge walkthrough">
+    <section className="judge-guide panel" aria-label="Guided workflow">
       <div className="eyebrow">
-        JUDGE MODE · {current + 1} / {chapters.length} · GUIDE POSITION, NOT
-        COMPLETION
+        GUIDED WORKFLOW · {current + 1} / {chapters.length} · GUIDE POSITION,
+        NOT COMPLETION
       </div>
       <strong>{chapter[1]}</strong>
       <p>{chapter[2]}</p>
@@ -166,7 +171,7 @@ export function JudgeGuide() {
           Next
         </button>
         <button disabled={busy || navigating} onClick={() => void restart()}>
-          {busy ? "Restoring scenario…" : "Restart Demo"}
+          {busy ? "Restoring scenario…" : "Reset sandbox"}
         </button>
         <button
           disabled={busy || navigating}

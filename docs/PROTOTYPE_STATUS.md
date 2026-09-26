@@ -1,57 +1,38 @@
-# Idea-submission prototype - recording freeze
-
-Current acceptance: **READY** (2026-09-21, Windows host).
-This status supersedes prior host-specific running-stack claims. Historical
-acceptance remains in BUILD_STATUS.md.
+# JOCKY operator product status
 
 ## WORKING NOW
 
-- Existing isolated `jocky-video` PostgreSQL / native-compiler API / dashboard
-  startup, persistent scenario preparation, stop/start and evidence storage.
-- Real Check, persisted Compile prepared source, AST, typed JIR and LLVM output;
-  three fixed-seed host artifacts with actual SHA-256 hashes.
-- Three backend-fixture endpoints, two successful outcomes and one explicit
-  permission failure, PARTIAL hunt, one correlated finding, shared graph/timeline
-  provenance, driver inventory and real byte/signature verification.
-- Fixed fixture source time with actual collection/ingestion/signing times.
-  Repeat reset restores the same persisted IDs, evidence and scenario relationships.
-- Judge Mode Next/Back, session-persisted position, actual-screen navigation,
-  truthful guidance, backend Restart Demo and normal-navigation escape.
-- Login commits the issued token before responding, removing an immediate-use
-  authentication race. Dedicated durability regression test passes.
-- Existing frontend language and visual design retained. Environment/loading
-  errors are explicit; favicon console error fixed. No fake progress introduced.
+The product follows **Connect → Write → Compile → Diversify → Run → Investigate → Verify**.
 
-- Desktop and mobile prototype rehearsals passed: guided flow, compiler, evidence,
-  reload, no runtime/console errors and no horizontal overflow. Replay invalidations
-  are batched and the demo event feed is limited to Live Investigation.
+- Login returns to Command Center. Primary routes are covered by the operator browser test.
+- Connect Endpoint issues a real one-time token, exposes CA download and the actual Rust CLI commands, and tracks the token-bound endpoint. Enrollment remains WAITING until authenticated heartbeat; expired tokens and stale heartbeats are distinct states.
+- Endpoint inventory and detail tabs use persisted observations, jobs and evidence. Missing collector data has an explicit empty state.
+- Workbench starts empty. Five shared language examples load on demand; CHECK, compile, stages and variant generation use the native compiler and persisted APIs.
+- JOCKY Language documents implemented grammar and execution limitations. Examples offer Copy and Open in Workbench and are compiler-checked by acceptance testing.
+- Investigations list persisted hunts. The creation wizard selects compilation, endpoints, memory/native mode and reviews capability/provenance constraints before creating and starting real jobs.
+- Investigation detail shows endpoint jobs, variants, progress, observations, evidence and committed events. Seeded partial failure is labeled Failure Isolation Scenario, not the default workflow.
+- Findings provide supporting observations, endpoint/process/network context, timeline and evidence links. Raw data is collapsed.
+- Timeline has chronological presentation, endpoint/type/severity/time/search filters and event detail.
+- Graph retains backend-derived relationships with human labels, selection, search, type filtering and fit-to-view.
+- Driver inventory uses stored observations with truthful signature/risk fields and SANDBOX provenance.
+- Performance exposes actual compiler profiles, variant profiles, benchmark samples, job counts and endpoint last-seen state. Unavailable CPU/memory/duration metrics say Not measured.
+- Evidence recomputes actual stored bytes. VALID requires accessible matching hashes; absent content cannot produce a valid result. Manifest signature verification remains separate.
 
 ## PARTIAL
 
-- Endpoint observation contents and read-only driver risk annotations are
-  synthetic, visibly labeled. They do not establish Windows live acceptance.
-- Compiler output is a readable textarea/JSON inspector; a full Monaco/profiling
-  product is deferred. Host artifact diversity does not prove semantic equivalence.
-- Restart restores the original persisted scenario, retaining genuine history,
-  run-specific UUIDs/signatures/collection times and prior measured samples.
-  It does not clear records or pretend another hunt executed.
-- No live fleet-performance, production-security or accessibility certification.
-- The POSIX `make verify-foundation` aggregate stops at `.venv/bin/ruff` on this
-  Windows host; individual submission gates are run directly. See BUILD_STATUS.
+- Windows endpoints and richer forensic findings can be demonstrated with backend SANDBOX fixtures; this pass verifies actual Linux Rust-agent execution, not Windows runtime acceptance.
+- The remote compiler/agent bridge supports bounded inventory programs. Filters, rich correlation and timeline/export syntax may compile but are not supported in that remote bridge; documentation states this restriction.
+- Endpoint health currently reports heartbeat state/last seen. CPU, memory, dispatch latency and collector duration are unavailable unless reported by existing contracts.
+- Inventory risk is UNKNOWN unless actual collected metadata provides a supported risk state. No vulnerability or exploitation claim is made.
 
 ## MISSING FOR VIDEO
 
-NONE. Desktop and mobile recording acceptance is complete.
+No missing product screen. A real agent requires the existing runtime image and trusted CA; browsers cannot launch host containers. The enrollment drawer provides commands rather than a fake launch action.
 
 ## DEFERRED UNTIL FINAL BUILD
 
-Full Build Forge, Compatibility Lab, external forensic adapters, SIEM/cloud
-infrastructure, Windows live acceptance, certificate rotation, strict CPU/memory
-budgets, external audit checkpoints, fleet load/fault trials and PDF reports.
-Driver exploitation, kernel tampering and evasion are excluded, not backlog.
+Physical Windows acceptance, expanded remote execution beyond bounded collectors, certificate lifecycle, fleet-scale trials, external audit checkpoints, external adapters and production deployment remain outside this product pass. Driver exploitation and evasion are excluded.
 
-## Recording
+## Verification
 
-Use [VIDEO_RECORDING_GUIDE.md](VIDEO_RECORDING_GUIDE.md) for exact startup,
-reset/check commands, the 5:40 screen order, narration and recovery. No video file
-is generated by this work. No manual database edits are needed between screens.
+See BUILD_STATUS.md for executed check results and VIDEO_RECORDING_GUIDE.md for the operator journey. Backend fixtures retain simulation=true; presentation uses SANDBOX without changing evidence data.

@@ -92,3 +92,18 @@ and object-upload expiry remain later hardening work.
 `proto/jocky/v1/agent.proto` defines `AgentControl.Enroll` and bidirectional `AgentControl.Exchange`. AgentFrame carries version, endpoint ID, monotonic sequence, presence-aware simulation flag and heartbeat/observation/manifest/progress. ControlFrame carries signed job/cancellation or durable acknowledgement. CanonicalDocument carries schema-normalized RFC 8785 JSON bytes. The gRPC server and Rust connection loop are active for the verified bounded REAL execution path; generated wire types and replay tests remain the transport contract authority.
 
 Schema validation, frame size limits, certificate identity binding, sequence replay handling, signature verification and simulation agreement between frame/document are required before exposing transport. The runtime C ABI is independently versioned and returns explicit status codes. JIR and native artifact compatibility cannot be inferred from protobuf version alone.
+
+## Operator enrollment state
+
+`POST /api/endpoints/enrollments` remains the administrator-only issuance route.
+The token is returned once. `GET /api/endpoints/enrollments/{id}` is an
+administrator/tenant-scoped status adapter: WAITING before enrollment, EXPIRED
+for an unused expired token, ONLINE only for its bound endpoint with an
+unrevoked authenticated heartbeat within 90 seconds, otherwise STALE.
+`GET /api/endpoints/enrollments/{id}/ca` downloads the public transport CA for
+that enrollment; it never exposes a private key or stored token hash.
+
+Artifact verification returns `available`, `expected_hash`, `computed_hash`,
+and `integrity_valid`. Missing stored content returns unavailable/false with a
+null computed hash. Matching metadata alone is not content verification.
+Manifest signature verification remains a separate operation.

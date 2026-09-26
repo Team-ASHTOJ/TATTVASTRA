@@ -1,20 +1,17 @@
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import { EmptyState, StatusBadge } from "@jocky/ui";
+import { notFound, redirect } from "next/navigation";
+import { StatusBadge } from "@jocky/ui";
 import { sections } from "../../lib/sections";
 import { PlatformOverview } from "../../components/platform-overview";
 import { EvidenceVerifier } from "../../components/evidence-verifier";
 import { CompilerWorkbench } from "../../components/compiler-workbench";
-import {
-  DemoPresentation,
-  DemoScreen,
-} from "../../components/demo-presentation";
-import { ControlResources } from "../../components/control-resources";
+import { LanguageDocumentation } from "../../components/language-documentation";
+import { DemoScreen } from "../../components/demo-presentation";
 
 export function generateStaticParams() {
   return [
     ...sections.filter((s) => s.slug).map((s) => ({ section: s.slug })),
     { section: "judge" },
+    { section: "live" },
   ];
 }
 
@@ -24,6 +21,8 @@ export default async function SectionPage({
   params: Promise<{ section: string }>;
 }) {
   const { section } = await params;
+  if (section === "language") return <LanguageDocumentation />;
+  if (section === "live") redirect("/investigations");
   if (section === "architecture") return <PlatformOverview coverageOnly />;
   if (section === "workbench" || section === "compiler") {
     const explorer = section === "compiler";
@@ -35,8 +34,8 @@ export default async function SectionPage({
             <h1>{explorer ? "Compiler Explorer" : "JOCKY Workbench"}</h1>
             <p>
               {explorer
-                ? "Inspect each real frontend, JIR, LLVM, and fixture-execution stage."
-                : "Edit a hunt, validate it, inspect its representations, and run the deterministic compiler fixture."}
+                ? "Inspect persisted frontend, JIR, LLVM, and execution-plan outputs."
+                : "Write a program, validate and compile it, generate variants, then investigate."}
             </p>
           </div>
           <StatusBadge tone="good">IMPLEMENTED</StatusBadge>
@@ -45,38 +44,20 @@ export default async function SectionPage({
       </>
     );
   }
-  if (section === "judge")
-    return (
-      <>
-        <h1>Judge Mode</h1>
-        <DemoPresentation section="judge" />
-      </>
-    );
-  if (section === "drivers")
-    return (
-      <>
-        <h1>Driver Intelligence</h1>
-        <DemoPresentation section="drivers" />
-      </>
-    );
+  if (section === "judge") redirect("/");
   const definition = sections.find((s) => s.slug === section);
   if (!definition) notFound();
   if (
     [
-      "cases",
-      "scripts",
       "endpoints",
-      "jobs",
+      "investigations",
       "findings",
       "timeline",
       "evidence",
-      "reports",
       "variants",
-      "forge",
-      "compatibility",
       "performance",
       "graph",
-      "live",
+      "drivers",
     ].includes(section)
   )
     return (
@@ -90,41 +71,9 @@ export default async function SectionPage({
           <StatusBadge tone="good">PERSISTED API</StatusBadge>
         </div>
         <DemoScreen section={section}>
-          <ControlResources key={section} section={section} />
+          {section === "evidence" && <EvidenceVerifier />}
         </DemoScreen>
-        {section === "evidence" && <EvidenceVerifier />}
       </>
     );
-  return (
-    <>
-      <div className="eyebrow">
-        {definition.group} / {definition.phase}
-      </div>
-      <div className="page-heading">
-        <div>
-          <h1>{definition.name}</h1>
-          <p>{definition.description}</p>
-        </div>
-        <StatusBadge tone="warning">
-          {section === "evidence" ? "PARTIAL FOUNDATION" : "PLANNED"}
-        </StatusBadge>
-      </div>
-      {section === "evidence" ? (
-        <EvidenceVerifier />
-      ) : (
-        <section className="panel">
-          <EmptyState title="Implementation pending">
-            <p>{definition.description}</p>
-            <p>
-              Acceptance is tracked in phase {definition.phase}. No operational
-              data is available.
-            </p>
-            <Link href="/architecture" className="text-link">
-              View requirement coverage →
-            </Link>
-          </EmptyState>
-        </section>
-      )}
-    </>
-  );
+  return notFound();
 }

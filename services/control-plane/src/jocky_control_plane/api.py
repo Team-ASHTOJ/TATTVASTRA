@@ -431,6 +431,40 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
                 row["status"] = State.OFFLINE
         return rows
 
+    @router.get("/endpoints/enrollments/{identifier}")
+    def enrollment_status(identifier: UUID, db: DB, user: Admin) -> Any:
+        row = owned(db, EndpointEnrollment, identifier, user)
+        state = "WAITING"
+        endpoint = db.get(Endpoint, row.endpoint_id) if row.endpoint_id else None
+        if endpoint is not None:
+            state = (
+                "ONLINE"
+                if endpoint.last_seen
+                and datetime.now(UTC) - aware(endpoint.last_seen) <= timedelta(seconds=90)
+                and endpoint.status != State.REVOKED
+                else "STALE"
+            )
+        elif aware(row.expires_at) <= datetime.now(UTC):
+            state = "EXPIRED"
+        return {
+            "id": row.id,
+            "state": state,
+            "endpoint_id": row.endpoint_id,
+            "expires_at": row.expires_at,
+        }
+
+    @router.get("/endpoints/enrollments/{identifier}/ca")
+    def enrollment_ca(identifier: UUID, db: DB, user: Admin) -> Response:
+        owned(db, EndpointEnrollment, identifier, user)
+        return Response(
+            settings.tls_ca_path.read_bytes(),
+            media_type="application/x-pem-file",
+            headers={
+                "Content-Disposition": "attachment; filename=control-plane-ca.pem",
+                "Cache-Control": "no-store",
+            },
+        )
+
     @router.get("/endpoints/{identifier}")
     def endpoint(identifier: UUID, db: DB, user: Reader) -> Any:
         return document(owned(db, Endpoint, identifier, user))
@@ -567,7 +601,12 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
                 "computed_hash": hashed,
             }
         except FileNotFoundError:
-            result = {"available": False, "integrity_valid": False, "computed_hash": None}
+            result = {
+                "available": False,
+                "integrity_valid": False,
+                "expected_hash": row.content_hash,
+                "computed_hash": None,
+            }
         publish(
             db,
             user,

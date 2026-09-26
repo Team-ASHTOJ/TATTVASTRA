@@ -5,17 +5,7 @@ import { sections } from "../lib/sections";
 
 export function Navigation() {
   const pathname = usePathname();
-  const focused = sections.filter(
-    (section) =>
-      ![
-        "cases",
-        "scripts",
-        "jobs",
-        "forge",
-        "compatibility",
-        "reports",
-      ].includes(section.slug),
-  );
+  const focused = sections;
   return (
     <nav aria-label="Main navigation">
       {focused.map((section, index) => (
@@ -34,12 +24,6 @@ export function Navigation() {
           </Link>
         </div>
       ))}
-      <Link
-        href="/judge"
-        aria-current={pathname === "/judge" ? "page" : undefined}
-      >
-        Judge Mode
-      </Link>
     </nav>
   );
 }

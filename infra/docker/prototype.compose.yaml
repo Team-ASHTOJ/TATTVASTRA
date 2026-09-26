@@ -36,6 +36,20 @@ services:
       interval: 3s
       timeout: 3s
       retries: 30
+  agent-control:
+    build:
+      context: ../..
+      dockerfile: infra/docker/control-plane.Dockerfile
+    command: ["/app/.venv/bin/python", "-m", "jocky_control_plane.cli", "grpc"]
+    environment:
+      JOCKY_MODE: DEMO
+      JOCKY_DATABASE_URL: postgresql+psycopg://jocky:${POSTGRES_PASSWORD}@postgres:5432/jocky
+      JOCKY_GRPC_BIND: 0.0.0.0:50051
+      JOCKY_GRPC_ENROLLMENT_BIND: 0.0.0.0:50052
+    volumes: ["video_objects:/app/.local"]
+    ports: ["127.0.0.1:15051:50051", "127.0.0.1:15052:50052"]
+    depends_on:
+      control-plane: { condition: service_healthy }
   dashboard:
     build:
       context: ../..

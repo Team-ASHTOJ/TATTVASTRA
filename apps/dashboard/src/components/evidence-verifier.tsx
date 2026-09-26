@@ -55,9 +55,7 @@ export function EvidenceVerifier() {
           <StatusBadge
             tone={mutation.data.integrity_valid ? "good" : "warning"}
           >
-            {mutation.data.simulation
-              ? "SIMULATED / DEMO"
-              : "REAL-LABELED SUBMISSION"}
+            {mutation.data.simulation ? "SANDBOX" : "REAL-LABELED SUBMISSION"}
           </StatusBadge>
           <h3>
             {mutation.data.integrity_valid

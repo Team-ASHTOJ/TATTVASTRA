@@ -1,123 +1,144 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { languageExamples } from "../lib/language-examples";
 import { StatusBadge } from "@jocky/ui";
 import { api } from "../lib/api";
 
-type CompilerCommand =
-  "check" | "tokens" | "ast" | "jir" | "plan" | "llvm" | "run";
+type Stage = "check" | "tokens" | "ast" | "jir" | "llvm" | "plan";
+type Compilation = {
+  id: string;
+  status: string;
+  created_at?: string;
+  outputs?: Record<string, unknown>;
+  error?: string;
+};
+type Row = { id: string; [key: string]: unknown };
 
-const commands: { command: CompilerCommand; label: string }[] = [
-  { command: "check", label: "Check" },
-  { command: "tokens", label: "Tokens" },
-  { command: "ast", label: "AST" },
-  { command: "jir", label: "Typed JIR" },
-  { command: "plan", label: "Plan" },
-  { command: "llvm", label: "LLVM IR" },
-  { command: "run", label: "Run fixture" },
+const examples = Object.fromEntries(
+  languageExamples.map((example) => [example.name, example.source]),
+);
+
+const stages: { id: Stage; label: string; detail: string }[] = [
+  { id: "check", label: "Lexer", detail: "Source validity" },
+  { id: "tokens", label: "Tokens", detail: "Lexical stream" },
+  { id: "ast", label: "Parser", detail: "Syntax tree" },
+  { id: "jir", label: "Types / JIR", detail: "Typed capabilities" },
+  { id: "llvm", label: "LLVM", detail: "Native lowering" },
+  { id: "plan", label: "Ready", detail: "Execution plan" },
 ];
 
-const starterSource = `hunt "system-baseline" {
-    targets {
-        group "SIH-LAB"
-        os windows | linux
-    }
-    runtime {
-        backend llvm
-        execution memory
-        variant {
-            enabled true
-            seed auto
-            profile balanced
-        }
-    }
-    capabilities {
-        system.read
-    }
-    budget {
-        cpu <= 20%
-        memory <= 256MB
-        io <= 150MB
-        duration <= 120s
-    }
-    collect system as sys
-    timeline {
-        source sys
-    }
-    export report {
-        format json
-        include evidence
-    }
-}`;
+function asText(value: unknown) {
+  return value == null
+    ? "Not available"
+    : typeof value === "string"
+      ? value
+      : JSON.stringify(value, null, 2);
+}
 
 export function CompilerWorkbench({
   explorer = false,
 }: {
   explorer?: boolean;
 }) {
-  const [source, setSource] = useState(starterSource);
-  const [seed, setSeed] = useState("0000000000000000");
-  const [active, setActive] = useState<
-    CompilerCommand | "compile" | "load" | null
-  >(null);
-  const [prepared, setPrepared] = useState<{
-    id: string;
-    source: string;
-  } | null>(null);
-  const [completed, setCompleted] = useState<CompilerCommand[]>([]);
+  const router = useRouter();
+  const client = useQueryClient();
+  const [source, setSource] = useState("");
+  const [active, setActive] = useState<string | null>(null);
+  const [tab, setTab] = useState<Stage | "diagnostics">("diagnostics");
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Compilation | null>(null);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const compilations = useQuery({
+    queryKey: ["compilations"],
+    queryFn: () => api<Compilation[]>("domain/compilations"),
+  });
 
-  async function loadScenario() {
-    setActive("load");
+  useEffect(() => {
+    const transferred = sessionStorage.getItem("jocky-source-transfer");
+    if (transferred) {
+      queueMicrotask(() => setSource(transferred));
+      sessionStorage.removeItem("jocky-source-transfer");
+    }
+  }, []);
+
+  async function check() {
+    if (!source.trim()) return;
+    setActive("check");
+    setError("");
+    setMessage("");
+    setTab("diagnostics");
     try {
-      const cases =
-        await api<{ id: string; description: string }[]>("domain/cases");
-      const scenario = cases.find(
-        (row) => row.description === "JOCKY_VIDEO_V2_READY",
+      const output = await api<Record<string, unknown>>("compilations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          schema_version: "1.0.0",
+          simulation: false,
+          command: "check",
+          source,
+          target: { os: "linux", arch: "x86_64" },
+          execution_mode: "native",
+          variant_seed: "0000000000000000",
+          profile: "balanced",
+        }),
+      });
+      setResult(output);
+      setMessage(
+        output.valid === false
+          ? "Validation found diagnostics."
+          : "Source validated by the native JOCKY frontend.",
       );
-      if (!scenario)
-        throw new Error("Prepare the demo scenario in Judge Mode first.");
-      const scripts =
-        await api<{ id: string; case_id: string }[]>("domain/scripts");
-      const script = scripts.find((row) => row.case_id === scenario.id);
-      if (!script) throw new Error("Prepared scenario source is unavailable.");
-      const versions = await api<{ source: string; version: number }[]>(
-        `domain/scripts/${script.id}/versions`,
-      );
-      const latest = versions.sort((a, b) => b.version - a.version)[0];
-      if (!latest) throw new Error("No persisted source version.");
-      setSource(latest.source);
-      setPrepared({ id: script.id, source: latest.source });
-      setCompleted([]);
-      setResult(null);
-      setError(null);
     } catch (failure) {
-      setError(
-        failure instanceof Error ? failure.message : "Source loading failed",
-      );
+      setError(failure instanceof Error ? failure.message : "Check failed");
     } finally {
       setActive(null);
     }
   }
-
-  async function compilePrepared() {
-    if (!prepared || source !== prepared.source) return;
+  async function compile() {
+    if (!source.trim()) return;
     setActive("compile");
-    setError(null);
-    setResult(null);
+    setError("");
+    setMessage("");
     try {
-      const output = await api<Record<string, unknown>>(
-        `domain/scripts/${prepared.id}/compile`,
+      const cases = await api<Row[]>("domain/cases");
+      const scenario =
+        cases.find(
+          (row) => !row.simulation && row.title === "Operator Programs",
+        ) ??
+        (await api<Row>("domain/cases", {
+          method: "POST",
+          body: JSON.stringify({
+            simulation: false,
+            title: "Operator Programs",
+            description: "Authorized operator programs",
+          }),
+        }));
+      const script = await api<Row>("domain/scripts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          case_id: scenario.id,
+          name: source.match(/hunt\s+"([^"]+)"/)?.[1] ?? "Forensic Program",
+          source,
+        }),
+      });
+      const output = await api<Compilation>(
+        `domain/scripts/${script.id}/compile`,
         { method: "POST" },
       );
-      setResult(output);
+      setSelected(output);
+      sessionStorage.setItem("jocky-compilation", output.id);
+      setResult(output.outputs ?? {});
+      setTab("diagnostics");
       if (output.status !== "SUCCESS")
-        setError(
-          String(
-            output.error ?? "Compilation failed; inspect the persisted result.",
-          ),
-        );
+        throw new Error(output.error ?? "Native compilation did not complete.");
+      setMessage(`Compilation complete · ${output.id}`);
+      await client.invalidateQueries({ queryKey: ["compilations"] });
     } catch (failure) {
       setError(
         failure instanceof Error ? failure.message : "Compilation failed",
@@ -126,146 +147,368 @@ export function CompilerWorkbench({
       setActive(null);
     }
   }
-
-  async function invoke(command: CompilerCommand) {
-    setActive(command);
-    setError(null);
+  async function output(stage: Stage) {
+    const current = selected ?? (explorer ? compilations.data?.[0] : undefined);
+    if (!current) return;
+    setActive(stage);
+    setError("");
+    setTab(stage);
     try {
-      const output = await api<Record<string, unknown>>("compilations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          schema_version: "1.0.0",
-          simulation: command === "run",
-          ...(command === "run"
-            ? { simulation_label: "DETERMINISTIC_COMPILER_FIXTURE" }
-            : {}),
-          command,
-          source,
-          target: { os: "linux", arch: "x86_64" },
-          execution_mode: command === "run" ? "memory" : "native",
-          variant_seed: seed,
-          profile: "balanced",
-        }),
-      });
-      setResult(output);
-      setCompleted((previous) =>
-        previous.includes(command) ? previous : [...previous, command],
+      const stageOutput = await api<Record<string, unknown>>(
+        `domain/compilations/${current.id}/${stage}`,
       );
-    } catch (caught) {
-      setResult(null);
+      const outputs = { ...current.outputs, [stage]: stageOutput };
+      setSelected({ ...current, outputs });
+      setResult(outputs);
+    } catch (failure) {
       setError(
-        caught instanceof Error ? caught.message : "Compiler request failed",
+        failure instanceof Error ? failure.message : "Stage output unavailable",
       );
     } finally {
       setActive(null);
     }
   }
-
+  async function variants() {
+    if (!selected) return;
+    setActive("variants");
+    setError("");
+    try {
+      const built = await api<Row[]>(
+        `domain/compilations/${selected.id}/variants`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ count: 3 }),
+        },
+      );
+      setMessage(
+        `${built.length} compiler-generated variants are ready to compare.`,
+      );
+      await client.invalidateQueries({ queryKey: ["resources"] });
+      router.push("/variants");
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Variant generation failed",
+      );
+    } finally {
+      setActive(null);
+    }
+  }
+  if (explorer)
+    return (
+      <Explorer
+        compilations={compilations.data ?? []}
+        selected={selected}
+        onSelect={(item) => {
+          setSelected(item);
+          setResult(item.outputs ?? {});
+          setTab("diagnostics");
+        }}
+        tab={tab}
+        onTab={setTab}
+        onOutput={output}
+        result={result}
+        active={active}
+        error={error}
+      />
+    );
   return (
-    <div className="compiler-grid">
-      <section className="panel source-panel">
-        <div className="panel-heading">
-          <h2>JOCKY source</h2>
-          <StatusBadge>{source.length.toLocaleString()} BYTES</StatusBadge>
+    <div className="workbench-shell">
+      <section className="panel workbench-hero">
+        <div>
+          <div className="eyebrow">WRITE / COMPILE / RUN</div>
+          <h2>Start with a JOCKY forensic program</h2>
+          <p>
+            Choose an example or write a .jky program. Nothing is compiled until
+            you ask JOCKY to do it.
+          </p>
         </div>
-        <label className="sr-only" htmlFor="jocky-source">
-          JOCKY source
-        </label>
-        <textarea
-          id="jocky-source"
-          className="code-editor"
-          spellCheck={false}
-          value={source}
-          onChange={(event) => {
-            setSource(event.target.value);
-            setCompleted([]);
-            setResult(null);
-          }}
-        />
-        <div className="compiler-options">
+        <div className="workbench-actions">
           <button
-            className="button secondary"
-            disabled={active !== null}
-            onClick={() => void loadScenario()}
+            className="secondary"
+            onClick={() => {
+              setSource("");
+              setSelected(null);
+              setResult(null);
+            }}
           >
-            Load prepared demo source
+            New Program
           </button>
-          <label>
-            Variant seed
-            <input
-              aria-label="Variant seed"
-              value={seed}
-              pattern="[0-9a-f]{16}"
-              maxLength={16}
-              onChange={(event) => setSeed(event.target.value.toLowerCase())}
-            />
-          </label>
-          <span>Target: host · Profile: balanced</span>
+          <Link className="button secondary" href="/language">
+            Documentation
+          </Link>
+          <details>
+            <summary className="button secondary">Load Example</summary>
+            <div className="example-menu">
+              {Object.entries(examples).map(([name, value]) => (
+                <button
+                  key={name}
+                  onClick={() => {
+                    setSource(value);
+                    setSelected(null);
+                    setResult(null);
+                    setMessage("");
+                  }}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          </details>
         </div>
       </section>
-
-      <section className="panel output-panel">
-        <div className="panel-heading">
-          <h2>{explorer ? "Compiler pipeline" : "Build output"}</h2>
-          <StatusBadge
-            tone={error ? "warning" : completed.length ? "good" : "muted"}
-          >
-            {active
-              ? "RUNNING"
-              : error
-                ? "ERROR"
-                : completed.length
-                  ? "RESULT"
-                  : "READY"}
-          </StatusBadge>
-        </div>
-        <div className="compiler-actions" aria-label="Compiler stages">
-          <button
-            disabled={
-              active !== null || !prepared || source !== prepared.source
+      <div className="compiler-grid">
+        <section className="panel source-panel">
+          <div className="panel-heading">
+            <h2>Program.jky</h2>
+            <StatusBadge tone={source ? "good" : "muted"}>
+              {source ? `${source.length} BYTES` : "NEW PROGRAM"}
+            </StatusBadge>
+          </div>
+          <textarea
+            aria-label="JOCKY source"
+            className="code-editor"
+            spellCheck={false}
+            value={source}
+            placeholder={
+              'hunt "endpoint-triage" {\n    targets { group "LAB" os windows | linux }\n    …\n}'
             }
-            title="Load the prepared source first. Edited source can be checked with the individual stages."
-            onClick={() => void compilePrepared()}
-          >
-            Compile prepared source
-          </button>
-          {commands.map(({ command, label }, index) => (
+            onChange={(event) => {
+              setSource(event.target.value);
+              setSelected(null);
+              setResult(null);
+            }}
+          />
+          <div className="workbench-actions">
             <button
-              key={command}
-              className={
-                completed.includes(command) ? "stage-complete" : "secondary"
-              }
-              disabled={
-                active !== null ||
-                !source.trim() ||
-                !/^[0-9a-f]{16}$/.test(seed)
-              }
-              onClick={() => void invoke(command)}
+              disabled={!source.trim() || active !== null}
+              onClick={() => void check()}
             >
-              <small>{String(index + 1).padStart(2, "0")}</small>
-              {label}
+              {active === "check" ? "Checking…" : "CHECK"}
+            </button>
+            <button
+              disabled={!source.trim() || active !== null}
+              onClick={() => void compile()}
+            >
+              {active === "compile" ? "Compiling…" : "COMPILE"}
+            </button>
+            <button
+              className="secondary"
+              disabled={!selected || active !== null}
+              onClick={() => void output("plan")}
+            >
+              PLAN
+            </button>
+            <button
+              className="secondary"
+              disabled={!selected || active !== null}
+              onClick={() => void variants()}
+            >
+              BUILD VARIANTS
+            </button>
+            <Link
+              className={`button ${selected ? "" : "secondary"}`}
+              href="/investigations?new=1"
+            >
+              RUN INVESTIGATION
+            </Link>
+          </div>
+        </section>
+        <section className="panel output-panel">
+          <div className="panel-heading">
+            <div>
+              <h2>Compilation lifecycle</h2>
+              <small>
+                {selected
+                  ? `Persisted compilation ${selected.id}`
+                  : "Check or compile a program to see compiler output."}
+              </small>
+            </div>
+            <StatusBadge
+              tone={
+                error
+                  ? "warning"
+                  : selected?.status === "SUCCESS"
+                    ? "good"
+                    : "muted"
+              }
+            >
+              {active ? "WORKING" : (selected?.status ?? "READY")}
+            </StatusBadge>
+          </div>
+          <div className="build-pipeline">
+            {stages.map((stage) => (
+              <button
+                key={stage.id}
+                className={
+                  tab === stage.id
+                    ? "pipeline-stage active"
+                    : selected
+                      ? "pipeline-stage complete"
+                      : "pipeline-stage"
+                }
+                disabled={!selected || active !== null}
+                onClick={() => void output(stage.id)}
+              >
+                <strong>{stage.label}</strong>
+                <small>{stage.detail}</small>
+              </button>
+            ))}
+          </div>
+          {message && (
+            <p className="success-note" role="status">
+              {message}
+            </p>
+          )}
+          {error && (
+            <p className="compiler-error" role="alert">
+              {error}
+            </p>
+          )}
+          <OutputTabs tab={tab} setTab={setTab} result={result} />
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function OutputTabs({
+  tab,
+  setTab,
+  result,
+}: {
+  tab: Stage | "diagnostics";
+  setTab: (value: Stage | "diagnostics") => void;
+  result: Record<string, unknown> | null;
+}) {
+  const labels: [Stage | "diagnostics", string][] = [
+    ["diagnostics", "Diagnostics"],
+    ["tokens", "Tokens"],
+    ["ast", "AST"],
+    ["jir", "Typed JIR"],
+    ["llvm", "LLVM IR"],
+    ["plan", "Execution Plan"],
+  ];
+  const nested = result?.outputs as Record<string, unknown> | undefined;
+  const value = result?.[tab] ?? nested?.[tab] ?? result;
+  return (
+    <>
+      <div className="output-tabs">
+        {labels.map(([id, label]) => (
+          <button
+            key={id}
+            className={tab === id ? "active" : "secondary"}
+            onClick={() => setTab(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <pre className="compiler-output" aria-label="Compiler output">
+        {result
+          ? asText(value)
+          : "Compiler output will appear here after a real check or compilation."}
+      </pre>
+    </>
+  );
+}
+
+function Explorer({
+  compilations,
+  selected,
+  onSelect,
+  tab,
+  onTab,
+  onOutput,
+  result,
+  active,
+  error,
+}: {
+  compilations: Compilation[];
+  selected: Compilation | null;
+  onSelect: (item: Compilation) => void;
+  tab: Stage | "diagnostics";
+  onTab: (stage: Stage | "diagnostics") => void;
+  onOutput: (stage: Stage) => Promise<void>;
+  result: Record<string, unknown> | null;
+  active: string | null;
+  error: string;
+}) {
+  const current = selected ?? compilations[0];
+  return (
+    <div className="explorer-shell">
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <h2>Persisted compilations</h2>
+            <p>
+              Choose a durable compilation record to inspect its actual outputs.
+            </p>
+          </div>
+          <Link className="button secondary" href="/workbench">
+            Open in Workbench
+          </Link>
+        </div>
+        <div className="compilation-list">
+          {compilations.slice(0, 12).map((item) => (
+            <button
+              key={item.id}
+              className={current?.id === item.id ? "active" : "secondary"}
+              onClick={() => onSelect(item)}
+            >
+              <strong>{item.status}</strong>
+              <small>{item.id}</small>
             </button>
           ))}
         </div>
-        {error && (
-          <div role="alert" className="compiler-error">
-            <strong>Compiler unavailable</strong>
-            <p>{error}</p>
-          </div>
-        )}
-        {!result && !error && (
-          <div className="compiler-empty">
-            Select a stage to run the native JOCKY compiler. Results shown here
-            come from jockyc; the dashboard does not invent compiler output.
-          </div>
-        )}
-        {result && (
-          <pre className="compiler-output" aria-label="Compiler output">
-            {JSON.stringify(result, null, 2)}
-          </pre>
-        )}
       </section>
+      {current ? (
+        <section className="panel explorer-detail">
+          <div className="panel-heading">
+            <div>
+              <h2>Compiler Explorer</h2>
+              <small>Compilation ID · {current.id}</small>
+            </div>
+            <StatusBadge
+              tone={current.status === "SUCCESS" ? "good" : "warning"}
+            >
+              {current.status}
+            </StatusBadge>
+          </div>
+          <div className="build-pipeline">
+            {stages.map((stage) => (
+              <button
+                key={stage.id}
+                className={
+                  tab === stage.id
+                    ? "pipeline-stage active"
+                    : "pipeline-stage complete"
+                }
+                disabled={active !== null}
+                onClick={() => void onOutput(stage.id)}
+              >
+                <strong>{stage.label}</strong>
+                <small>{stage.detail}</small>
+              </button>
+            ))}
+          </div>
+          {error && <p className="compiler-error">{error}</p>}
+          <OutputTabs
+            tab={tab}
+            setTab={onTab}
+            result={result ?? current.outputs ?? null}
+          />
+        </section>
+      ) : (
+        <section className="panel">
+          <p>
+            No persisted compilations are available yet.{" "}
+            <Link href="/workbench">Compile a program in the Workbench.</Link>
+          </p>
+        </section>
+      )}
     </div>
   );
 }

@@ -4,7 +4,6 @@ import { Navigation } from "../components/navigation";
 import { Providers } from "../components/providers";
 import "./globals.css";
 import { ModeIndicator } from "../components/demo-presentation";
-import { JudgeGuide } from "../components/judge-guide";
 
 export const metadata: Metadata = {
   title: "JOCKY | Forensic Operations",
@@ -31,7 +30,7 @@ export default function RootLayout({
             </Link>
             <Navigation />
             <div className="sidebar-footer">
-              v0.1.0 <span>IDEA PROTOTYPE</span>
+              v0.1.0 <span>OPERATOR CONSOLE</span>
             </div>
           </aside>
           <div className="workspace">
@@ -39,16 +38,10 @@ export default function RootLayout({
               <span>One Language. Every Endpoint. No Noise.</span>
               <ModeIndicator />
               <Link href="/login">Operator sign in</Link>
-              <Link href="/judge" className="button secondary">
-                Judge Mode ↗
-              </Link>
             </header>
-            <main id="main">
-              <JudgeGuide />
-              {children}
-            </main>
+            <main id="main">{children}</main>
             <footer className="workspace-footer">
-              JOCKY / ENGINEERING PREVIEW
+              JOCKY / FORENSIC OPERATIONS
               <span>
                 Capability status is explicit. Measurements require execution.
               </span>

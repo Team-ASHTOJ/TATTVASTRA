@@ -1,5 +1,21 @@
 # Build status
 
+## Operator product workflow — 2026-09-27 (macOS development host)
+
+Status: **VERIFIED within the existing prototype capabilities**. This entry supersedes earlier product UI descriptions; it does not declare final Phase 4 or physical Windows acceptance complete.
+
+Implemented endpoint enrollment/status and detail, persisted investigation wizard/detail, analyst findings, interactive timeline, driver inventory, measured compiler/variant observability, graph controls, language documentation and Workbench example transfer. Existing compiler, Rust agent, evidence design and domain models were reused. Small backend additions provide tenant/admin-scoped enrollment status and public CA download; unavailable artifact content retains its expected hash while remaining unverified. The existing prototype Compose stack now runs the real gRPC control service.
+
+Executed verification:
+
+- `make verify-foundation`: PASS, including Ruff/Prettier, ESLint, mypy, workspace typecheck, **79 pytest tests**, generated contract/protobuf drift checks, Python packaging and dashboard production build. Initial sandbox run passed 78 tests but denied the TLS socket bind; the unchanged aggregate passed with local socket permission.
+- `.venv/bin/python scripts/test_postgres.py services/control-plane/tests/test_operator_product.py`: **19 passed** against a temporary fresh PostgreSQL 17.6 container. Fresh schemas/migrations, tenant/RBAC, real TLS, replay, hunt isolation/cancellation, evidence tampering/sealing, timeline and enrollment/content regressions passed. The temporary container was removed. An earlier attempt used an unpublished host port and failed to connect; it was not counted as passing.
+- `make demo-up`, `make demo-prepare`, `make demo-check`: PASS. PostgreSQL, FastAPI, gRPC agent control and dashboard healthy; persisted sandbox compiler/evidence/audit invariants passed.
+- `npx playwright test -c playwright.prototype.config.ts`: **2 passed**, desktop and mobile. Actual one-time enrollment, authenticated Rust-agent heartbeat, native compilation/variants, successful real Linux agent job and persisted artifact verification; findings/graph/timeline/driver observations retain sandbox provenance. All five language examples passed actual LLVM generation. Primary routes, empty editor, documentation transfer, zero console/runtime errors and viewport overflow checks passed.
+- `git diff --check`: PASS. Focused regression coverage verifies enrollment waits for its bound heartbeat and unavailable content cannot report valid integrity; browser coverage preserves login redirect to `/` and checks all primary routes.
+
+Remaining limitations: physical Windows execution is unverified; remote execution is the existing bounded inventory bridge, not the full rich DSL; CPU/memory/collector duration/dispatch metrics absent from contracts remain Not measured. A browser cannot launch host containers; exact native-agent instructions and the existing container runtime path are provided. Driver risk remains UNKNOWN without supporting metadata. No synthetic state, hashes, timings or frontend jobs were introduced. Broader final-build capabilities remain outside this product pass.
+
 ## Persistent demo scenario compatibility — 2026-09-21 (macOS development host)
 
 Status: **VERIFIED**. `make demo-prepare` previously reused an older persisted
