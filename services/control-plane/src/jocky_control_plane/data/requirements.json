@@ -140,7 +140,7 @@
     "demo_evidence": "Same semantic JIR on Windows and Ubuntu",
     "status": "IMPLEMENTED",
     "phase": "P1",
-    "safety_environment_note": "Typed JIR, schema and deterministic byte tests pass on Ubuntu arm64 for both OS target constraints. A native Windows compiler run remains unexecuted; no endpoint execution."
+    "safety_environment_note": "One semantic JIR lowers to real ELF (x86_64-unknown-linux-gnu) and real COFF (x86_64-pc-windows-msvc) objects under the same jir_hash, with distinct datalayouts, llvm_ir hashes and object bytes, verified by the Linux LLVM 18 container suite and by the prototype target-build API. Windows linking and Windows runtime execution remain unexecuted on this host."
   },
   {
     "schema_version": "1.0.0",
@@ -166,7 +166,7 @@
     "demo_evidence": "Executable command acceptance with machine-readable errors",
     "status": "IMPLEMENTED",
     "phase": "P1",
-    "safety_environment_note": "check/tokens/ast/jir/plan/llvm/compile/run/variants/variant-info/benchmark are implemented for host AOT and compiler-owned simulated ORC fixtures. Cross-compilation and endpoint dispatch remain unavailable."
+    "safety_environment_note": "check/tokens/ast/jir/llvm/plan/compile/variants/benchmark run for the host target; compile and llvm additionally accept --target linux-x86_64, linux-aarch64 and windows-x86_64, and a cross-target run/benchmark is rejected rather than silently mis-executed. Endpoint dispatch is demonstrated by the three-enrolled-endpoint local fleet."
   },
   {
     "schema_version": "1.0.0",
@@ -218,7 +218,7 @@
     "demo_evidence": "Signed generated program executes on each target OS",
     "status": "IMPLEMENTED",
     "phase": "P2\u2013P3",
-    "safety_environment_note": "LLVM remains a P0 product priority; phase numbers represent implementation order."
+    "safety_environment_note": "An AOT object plus a generated host entry point is linked inside the JOCKY worker into a standalone executable (artifact_format native-worker, link_status LINKED) and executed on a real enrolled Linux endpoint, returning observations and a signed evidence manifest. A Windows target object is emitted but cannot be linked on this host: link_status ENVIRONMENT DEPENDENT."
   },
   {
     "schema_version": "1.0.0",
@@ -231,7 +231,7 @@
     "demo_evidence": "Actual JIT result with no unrelated-process access",
     "status": "IMPLEMENTED",
     "phase": "P2\u2013P3",
-    "safety_environment_note": "LLVM remains a P0 product priority; phase numbers represent implementation order."
+    "safety_environment_note": "LLVM ORC LLJIT runs compiler-generated IR inside JOCKY's own agent-owned worker process; no foreign-process execution, injection or process hollowing is used. Verified end-to-end with execution_engine LLVM_ORC_JIT and real worker_pid > 0 and execution_duration_ms > 0 on three enrolled endpoints."
   },
   {
     "schema_version": "1.0.0",
@@ -244,7 +244,7 @@
     "demo_evidence": "Equivalent results across native/memory; VM explicitly unavailable until built",
     "status": "IMPLEMENTED",
     "phase": "P2\u2013P3",
-    "safety_environment_note": "LLVM remains a P0 product priority; phase numbers represent implementation order."
+    "safety_environment_note": "Both required backends completed a real job over the same program: memory (LLVM_ORC_JIT) and native (NATIVE_AOT) each returned observations and evidence. The VM backend remains explicitly unavailable until built."
   },
   {
     "schema_version": "1.0.0",
@@ -387,7 +387,7 @@
     "demo_evidence": "Ubuntu CI plus authorized Ubuntu lab endpoint",
     "status": "IMPLEMENTED",
     "phase": "P5",
-    "safety_environment_note": "Local standalone Ubuntu/WSL collection is tested; cgroup hard limits and remote transport remain open."
+    "safety_environment_note": "Local standalone Ubuntu/WSL collection is tested, and remote mTLS transport is now demonstrated by the enrolled local Linux fleet (enrollment, heartbeat, job dispatch, evidence). cgroup hard limits remain open."
   },
   {
     "schema_version": "1.0.0",
@@ -398,9 +398,9 @@
     "implementation": "One-time enrollment, CSR, short-lived certificates and inventory",
     "subsystem": "Agent / Control plane",
     "demo_evidence": "Expired/duplicate/untrusted enrollments rejected",
-    "status": "SCAFFOLDED",
+    "status": "PARTIAL",
     "phase": "P5",
-    "safety_environment_note": "Stable local Ed25519 identity exists; one-time token, CSR, certificate rotation/revocation and OS credential storage remain open."
+    "safety_environment_note": "One-time enrollment tokens, CSR-based issuance, revocation and short-lived certificates are implemented and covered by acceptance, which rejects token reuse, unauthenticated transport and mismatched endpoint identity. Certificate rotation and OS credential storage are not implemented."
   },
   {
     "schema_version": "1.0.0",
@@ -411,9 +411,9 @@
     "implementation": "ONLINE/IDLE/BUSY/OFFLINE/DEGRADED/QUARANTINED/UNTRUSTED/VERSION_MISMATCH",
     "subsystem": "Agent / Control plane",
     "demo_evidence": "Real heartbeat aging and state transitions",
-    "status": "SCAFFOLDED",
+    "status": "PARTIAL",
     "phase": "P5",
-    "safety_environment_note": "Local heartbeat is real and explicitly undelivered; remote aging and fleet state transitions remain open."
+    "safety_environment_note": "Remote heartbeat over mTLS and the relay is real: endpoints age from persisted last_seen and transition through ONLINE/STALE/OFFLINE/WAITING_FOR_HEARTBEAT in the enrolled local fleet. QUARANTINED/UNTRUSTED/DEGRADED/VERSION_MISMATCH remain specified only."
   },
   {
     "schema_version": "1.0.0",
@@ -515,9 +515,9 @@
     "implementation": "Tenant-scoped entities and immutable script versions",
     "subsystem": "Agent / Control plane",
     "demo_evidence": "Create case, update source, retain reproducible history",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "Tenant-scoped cases and immutable script versions are persisted and exercised by the control-plane and prototype suites. The gating checks named here (mTLS, endpoint identity, policy, signing, replay) are implemented and covered by the enrollment/heartbeat/replay/wrong-identity acceptance test."
   },
   {
     "schema_version": "1.0.0",
@@ -541,9 +541,9 @@
     "implementation": "API adapter to real jockyc with capability/cost explanations",
     "subsystem": "Agent / Control plane",
     "demo_evidence": "Compiler unavailable returns error; valid source produces actual plan",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "The API adapter invokes the real jockyc binary; an unavailable compiler returns an explicit error and valid source yields a real plan. Cross-target builds additionally return a per-target manifest."
   },
   {
     "schema_version": "1.0.0",
@@ -554,9 +554,9 @@
     "implementation": "Parent hunt with per-endpoint child jobs and assigned variants",
     "subsystem": "Agent / Control plane",
     "demo_evidence": "Concurrent Windows and Ubuntu collection with independent outcomes",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "One hunt dispatches independent child jobs with per-endpoint variants to three enrolled Linux endpoints concurrently, each carrying its own status, variant_id, transport and evidence. A concurrent Windows endpoint is not demonstrated: no Windows host is enrolled."
   },
   {
     "schema_version": "1.0.0",
@@ -827,9 +827,9 @@
     "implementation": "DIRECT and legitimate TRUSTED_RELAY through configured API gateway/reverse proxy",
     "subsystem": "Transport / Security",
     "demo_evidence": "TLS chain/hostname tests in direct and relay modes",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P5 / P10",
-    "safety_environment_note": "No cloud concealment, global credentials, privilege escalation or operational attack routing."
+    "safety_environment_note": "No cloud concealment, global credentials, privilege escalation or operational attack routing. TRUSTED_RELAY is a fixed-destination TLS byte pass-through, so the endpoint still terminates end-to-end mTLS with the control plane; it does not terminate TLS, re-originate traffic or present a gateway hostname, and is therefore not an HTTP API gateway or reverse proxy."
   },
   {
     "schema_version": "1.0.0",
@@ -840,9 +840,9 @@
     "implementation": "Mutual TLS, certificate rotation/revocation, audience-bound jobs",
     "subsystem": "Transport / Security",
     "demo_evidence": "Reject invalid certificates and mismatched endpoint identities",
-    "status": "PLANNED",
+    "status": "PARTIAL",
     "phase": "P5 / P10",
-    "safety_environment_note": "No cloud concealment, global credentials, privilege escalation or operational attack routing."
+    "safety_environment_note": "Mutual TLS and one-time-token CSR enrollment are implemented, and acceptance covers enrollment-token reuse, unauthenticated transport, wrong-endpoint-identity and replay receipts under both DIRECT and TRUSTED_RELAY. Certificate rotation and OS credential storage are not implemented."
   },
   {
     "schema_version": "1.0.0",
@@ -1243,9 +1243,9 @@
     "implementation": "Authenticated direct/legitimate relay transport only",
     "subsystem": "Safe requirement mapping",
     "demo_evidence": "Trace declared gateway identity and routing configuration",
-    "status": "PLANNED",
+    "status": "IMPLEMENTED",
     "phase": "P3 / P8 / P10",
-    "safety_environment_note": "Restricted attack capability is intentionally excluded. Only the stated safe mapped demonstration may be implemented."
+    "safety_environment_note": "Only the mapped safe behaviour exists: authenticated DIRECT transport plus a legitimate fixed-destination relay. No SOCKS proxying, covert channel or attack routing is implemented."
   },
   {
     "schema_version": "1.0.0",
@@ -1256,9 +1256,9 @@
     "implementation": "TLS gateway with consistent public hostname and configured upstream",
     "subsystem": "Safe requirement mapping",
     "demo_evidence": "Certificate/hostname verification through legitimate reverse proxy",
-    "status": "PLANNED",
+    "status": "PARTIAL",
     "phase": "P3 / P8 / P10",
-    "safety_environment_note": "Restricted attack capability is intentionally excluded. Only the stated safe mapped demonstration may be implemented."
+    "safety_environment_note": "A fixed-upstream TLS byte pass-through relay is implemented and covered by acceptance. It does not terminate TLS or present a consistent gateway hostname, so it is not a domain-fronting gateway; domain fronting itself remains intentionally unimplemented."
   },
   {
     "schema_version": "1.0.0",
@@ -1414,7 +1414,7 @@
     "demo_evidence": "Actual Windows/Ubuntu endpoint observations",
     "status": "IMPLEMENTED",
     "phase": "P7\u2013P9",
-    "safety_environment_note": "Idea-submission prototype: desktop/mobile recording walkthrough verified on 2026-09-20; DEMO endpoints/driver risk are simulated, compiler artifacts and integrity checks are real. Full production acceptance remains scoped by BUILD_STATUS.md."
+    "safety_environment_note": "Prototype: compiler artifacts, integrity checks and the enrolled local Linux fleet are real, and the console reports each endpoint's true platform, status, transport, execution mode, worker PID and duration. Pre-existing OFFLINE Windows fixture rows are labelled as such and no Windows endpoint is reported ONLINE. Full production acceptance remains scoped by BUILD_STATUS.md."
   },
   {
     "schema_version": "1.0.0",

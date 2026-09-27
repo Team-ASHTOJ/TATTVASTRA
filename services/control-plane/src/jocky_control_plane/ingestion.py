@@ -162,6 +162,8 @@ def verify_manifest_document(
             for field in ("source_hash", "jir_hash", "artifact_hash", "execution_mode")
         },
     }
+    if (job.envelope or {}).get("transport_mode") in {"DIRECT", "TRUSTED_RELAY"}:
+        expected["transport_mode"] = (job.envelope or {})["transport_mode"]
     provenance_valid = all(document.get(field) == value for field, value in expected.items())
     provenance_valid = provenance_valid and expected["llvm_ir_hash"] is not None
     compilation: Compilation = owned(db, Compilation, hunt.compilation_id, user)

@@ -128,6 +128,15 @@ pub fn run_child(path: &Path) -> Result<Vec<Value>> {
         .stdout
         .take()
         .ok_or_else(|| AgentError::rejected("WORKER_PIPE", "ABI output missing"))?;
+    let worker_pid = child.id();
+    let measured_start = Instant::now();
+    let execution_engine = if job["execution_mode"] == "native" {
+        "NATIVE_AOT"
+    } else if job["build_manifest"]["artifact_format"] == "llvm-ir" {
+        "LLVM_ORC_JIT"
+    } else {
+        "LLVM_ORC_OBJECT"
+    };
     let started = Utc::now().to_rfc3339();
     let mut context = CollectorContext::new(budget(job)?, &state.config.allowed_roots);
     let mut frames = Vec::new();
@@ -193,6 +202,7 @@ pub fn run_child(path: &Path) -> Result<Vec<Value>> {
     drop(input);
     let status = child.wait()?;
     failed |= !status.success();
+    let execution_duration_ms = measured_start.elapsed().as_secs_f64() * 1000.0;
     // Store actual collector output/limitations in bounded JSON artifacts. These
     // remain useful evidence even when another collector/endpoint fails.
     let mut artifact_hashes = Vec::new();
@@ -222,7 +232,9 @@ pub fn run_child(path: &Path) -> Result<Vec<Value>> {
         "agent_identity":hash(&public), "source_hash":job["source_hash"], "jir_hash":job["jir_hash"],
         "llvm_ir_hash":job["build_manifest"]["llvm_ir_hash"], "variant_id":job["variant_id"],
         "variant_seed":job["build_manifest"]["variant_seed"], "artifact_hash":job["artifact_hash"],
-        "execution_mode":job["execution_mode"], "started_at":started, "completed_at":Utc::now().to_rfc3339(),
+        "execution_mode":job["execution_mode"], "worker_pid":worker_pid,
+        "execution_engine":execution_engine,"execution_duration_ms":execution_duration_ms,
+        "transport_mode":job["transport_mode"], "started_at":started, "completed_at":Utc::now().to_rfc3339(),
         "observation_hashes":observations,"artifact_hashes":artifact_hashes,
     });
     manifest["signature"] = serde_json::to_value(state.sign_identity(&domain_bytes(
@@ -234,7 +246,9 @@ pub fn run_child(path: &Path) -> Result<Vec<Value>> {
     frames.push(json!({"kind":"progress", "document":{
         "schema_version":"1.0.0", "job_id":job["job_id"], "state":if failed {"FAILED"} else {"SUCCESS"},
         "detail":if failed {"Collector limitations or worker failure; collected evidence retained"} else {"Compiler artifact execution completed"},
-        "measurements":{"bytes_read":context.bytes_read,"files_examined":context.files_examined,"enforcement":"MONITORED"}
+        "measurements":{"worker_pid":worker_pid,"execution_engine":execution_engine,
+            "execution_duration_ms":execution_duration_ms,"transport_mode":job["transport_mode"],
+            "bytes_read":context.bytes_read,"files_examined":context.files_examined,"enforcement":"MONITORED"}
     }}));
     Ok(frames)
 }

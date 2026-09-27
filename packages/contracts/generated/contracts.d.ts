@@ -269,6 +269,8 @@ export type ArtifactHashes = string[];
 export type CaseId4 = string;
 export type CompletedAt = string;
 export type EndpointId5 = string;
+export type ExecutionDurationMs = number | null;
+export type ExecutionEngine = ("NATIVE_AOT" | "LLVM_ORC_JIT" | "LLVM_ORC_OBJECT") | null;
 export type JirHash = string;
 export type JobId4 = string;
 export type LlvmIrHash = string;
@@ -278,8 +280,10 @@ export type Simulation15 = boolean;
 export type SimulationLabel15 = string | null;
 export type SourceHash1 = string;
 export type StartedAt = string;
+export type TransportMode = ("DIRECT" | "TRUSTED_RELAY" | "UNKNOWN") | null;
 export type VariantId4 = string;
 export type VariantSeed1 = string;
+export type WorkerPid = number | null;
 export type CaseId5 = string;
 /**
  * @minItems 1
@@ -530,6 +534,7 @@ export type SchemaVersion49 = "1.0.0";
 export type Simulation26 = boolean;
 export type SimulationLabel26 = string | null;
 export type SourceHash7 = string;
+export type TransportMode1 = "DIRECT" | "TRUSTED_RELAY" | "UNKNOWN";
 export type VariantId6 = string;
 export type ArtifactId1 = string;
 export type CaseId11 = string;
@@ -577,46 +582,55 @@ export type Simulation30 = boolean;
 export type SimulationLabel30 = string | null;
 export type SourceHash9 = string;
 export type VariantId7 = string;
+export type SchemaVersion56 = "1.0.0";
+/**
+ * @minItems 1
+ * @maxItems 3
+ */
+export type Targets2 = [
+  "linux-x86_64" | "linux-aarch64" | "windows-x86_64",
+  ...("linux-x86_64" | "linux-aarch64" | "windows-x86_64")[]
+];
 export type CaseId15 = string;
 export type EndpointId10 = string;
 export type EventId = string;
 export type ObservationId3 = string;
-export type SchemaVersion56 = "1.0.0";
+export type SchemaVersion57 = "1.0.0";
 export type Simulation31 = boolean;
 export type SimulationLabel31 = string | null;
 export type Summary = string;
 export type TimeBasis = "source" | "collection";
 export type Timestamp4 = string;
-export type SchemaVersion57 = "1.0.0";
+export type SchemaVersion58 = "1.0.0";
 export type Simulation32 = boolean;
 export type SimulationLabel32 = string | null;
 export type Timestamp5 = string;
 export type OrganizationId9 = string;
 export type Role = "viewer" | "analyst" | "operator" | "administrator";
-export type SchemaVersion58 = "1.0.0";
+export type SchemaVersion59 = "1.0.0";
 export type Simulation33 = boolean;
 export type SimulationLabel33 = string | null;
 export type Subject = string;
 export type UserId = string;
 export type Password1 = string;
 export type Role1 = "ADMIN" | "ANALYST" | "VIEWER";
-export type SchemaVersion59 = "1.0.0";
-export type Username1 = string;
 export type SchemaVersion60 = "1.0.0";
+export type Username1 = string;
+export type SchemaVersion61 = "1.0.0";
 /**
  * @minItems 2
  * @maxItems 16
  */
 export type VariantIds1 = [string, string, ...string[]];
 export type Count1 = number;
-export type SchemaVersion61 = "1.0.0";
+export type SchemaVersion62 = "1.0.0";
 export type ArtifactHash3 = string;
 export type CompilerVersion1 = string;
 export type CreatedAt2 = string;
 export type JirHash7 = string;
 export type LlvmIrHash1 = string;
 export type LlvmVersion = string;
-export type SchemaVersion62 = "1.0.0";
+export type SchemaVersion63 = "1.0.0";
 export type SemanticTestHash = string | null;
 export type SemanticTestStatus = "NOT_RUN" | "PASS" | "FAIL";
 export type Simulation34 = boolean;
@@ -626,7 +640,7 @@ export type TargetArch = "x86_64" | "aarch64";
 export type TargetOs3 = "windows" | "linux";
 export type VariantId8 = string;
 export type VariantSeed2 = string;
-export type SchemaVersion63 = "1.0.0";
+export type SchemaVersion64 = "1.0.0";
 export type Source3 = string;
 
 /**
@@ -689,6 +703,7 @@ export interface JockyContracts {
   Signature?: Signature;
   SignedJob?: SignedJob;
   Target?: Target1;
+  TargetBuildCreate?: TargetBuildCreate;
   TimelineEvent?: TimelineEvent;
   Timestamped?: Timestamped;
   User?: User;
@@ -1139,6 +1154,8 @@ export interface EvidenceManifest {
   case_id: CaseId4;
   completed_at: CompletedAt;
   endpoint_id: EndpointId5;
+  execution_duration_ms?: ExecutionDurationMs;
+  execution_engine?: ExecutionEngine;
   execution_mode: ExecutionMode;
   jir_hash: JirHash;
   job_id: JobId4;
@@ -1150,8 +1167,10 @@ export interface EvidenceManifest {
   simulation_label?: SimulationLabel15;
   source_hash: SourceHash1;
   started_at: StartedAt;
+  transport_mode?: TransportMode;
   variant_id: VariantId4;
   variant_seed: VariantSeed1;
+  worker_pid?: WorkerPid;
 }
 /**
  * This interface was referenced by `JockyContracts`'s JSON-Schema
@@ -1574,6 +1593,7 @@ export interface RemoteJobEnvelope {
   simulation: Simulation26;
   simulation_label?: SimulationLabel26;
   source_hash: SourceHash7;
+  transport_mode?: TransportMode1;
   variant_id: VariantId6;
 }
 export interface BuildManifest {
@@ -1666,6 +1686,14 @@ export interface SignedJob {
 }
 /**
  * This interface was referenced by `JockyContracts`'s JSON-Schema
+ * via the `definition` "TargetBuildCreate".
+ */
+export interface TargetBuildCreate {
+  schema_version?: SchemaVersion56;
+  targets: Targets2;
+}
+/**
+ * This interface was referenced by `JockyContracts`'s JSON-Schema
  * via the `definition` "TimelineEvent".
  */
 export interface TimelineEvent {
@@ -1673,7 +1701,7 @@ export interface TimelineEvent {
   endpoint_id: EndpointId10;
   event_id: EventId;
   observation_id: ObservationId3;
-  schema_version?: SchemaVersion56;
+  schema_version?: SchemaVersion57;
   severity: Severity1;
   simulation: Simulation31;
   simulation_label?: SimulationLabel31;
@@ -1686,7 +1714,7 @@ export interface TimelineEvent {
  * via the `definition` "Timestamped".
  */
 export interface Timestamped {
-  schema_version?: SchemaVersion57;
+  schema_version?: SchemaVersion58;
   simulation: Simulation32;
   simulation_label?: SimulationLabel32;
   timestamp: Timestamp5;
@@ -1698,7 +1726,7 @@ export interface Timestamped {
 export interface User {
   organization_id: OrganizationId9;
   role: Role;
-  schema_version?: SchemaVersion58;
+  schema_version?: SchemaVersion59;
   simulation: Simulation33;
   simulation_label?: SimulationLabel33;
   subject: Subject;
@@ -1711,7 +1739,7 @@ export interface User {
 export interface UserCreate {
   password: Password1;
   role: Role1;
-  schema_version?: SchemaVersion59;
+  schema_version?: SchemaVersion60;
   username: Username1;
 }
 /**
@@ -1719,7 +1747,7 @@ export interface UserCreate {
  * via the `definition` "VariantCompare".
  */
 export interface VariantCompare {
-  schema_version?: SchemaVersion60;
+  schema_version?: SchemaVersion61;
   variant_ids: VariantIds1;
 }
 /**
@@ -1728,7 +1756,7 @@ export interface VariantCompare {
  */
 export interface VariantCreate {
   count?: Count1;
-  schema_version?: SchemaVersion61;
+  schema_version?: SchemaVersion62;
 }
 /**
  * This interface was referenced by `JockyContracts`'s JSON-Schema
@@ -1743,7 +1771,7 @@ export interface VariantManifest {
   literal_encryption: LiteralEncryption;
   llvm_ir_hash: LlvmIrHash1;
   llvm_version: LlvmVersion;
-  schema_version?: SchemaVersion62;
+  schema_version?: SchemaVersion63;
   semantic_test_hash: SemanticTestHash;
   semantic_test_status: SemanticTestStatus;
   signature: Signature;
@@ -1760,6 +1788,6 @@ export interface VariantManifest {
  * via the `definition` "VersionCreate".
  */
 export interface VersionCreate {
-  schema_version?: SchemaVersion63;
+  schema_version?: SchemaVersion64;
   source: Source3;
 }

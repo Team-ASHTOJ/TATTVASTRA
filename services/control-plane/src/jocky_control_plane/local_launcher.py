@@ -132,9 +132,11 @@ class Supervisor:
                     [
                         "enroll",
                         "--enrollment-server",
-                        "https://agent-control:50052",
+                        os.environ.get(
+                            "JOCKY_LOCAL_ENROLLMENT_SERVER", "https://agent-control:50052"
+                        ),
                         "--server",
-                        "https://agent-control:50051",
+                        os.environ.get("JOCKY_LOCAL_CONTROL_SERVER", "https://agent-control:50051"),
                         "--ca",
                         str(ca),
                         "--token-file",
@@ -143,6 +145,19 @@ class Supervisor:
                         self.worker,
                     ]
                 )
+            # Operator-controlled routing; preserve the enrolled identity and state.
+            binding_path = self.root / "remote.json"
+            binding = json.loads(binding_path.read_text())
+            binding["server"] = os.environ.get(
+                "JOCKY_LOCAL_CONTROL_SERVER", "https://agent-control:50051"
+            )
+            # status() reads this file from other threads, so replace it atomically:
+            # a plain write_text() truncates first and a concurrent read would parse
+            # an empty file.
+            staging = self.root / "remote.tmp"
+            staging.write_text(json.dumps(binding))
+            staging.chmod(0o600)
+            staging.replace(binding_path)
             with self.lock:
                 self.process = subprocess.Popen(
                     [self.agent, "--state-dir", str(self.root), "connect"],

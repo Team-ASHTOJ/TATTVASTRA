@@ -125,7 +125,8 @@ pub async fn enroll(
             target_os: std::env::consts::OS.into(),
             target_arch: std::env::consts::ARCH.into(),
             simulation: Some(false),
-            hostname: fs::read_to_string("/etc/hostname")
+            hostname: std::env::var("COMPUTERNAME")
+                .or_else(|_| fs::read_to_string("/etc/hostname"))
                 .unwrap_or_else(|_| "jocky-agent".into())
                 .trim()
                 .to_owned(),
@@ -228,7 +229,7 @@ fn admit(state: &AgentState, binding: &Binding, job: &Value) -> Result<()> {
             job["execution_mode"].as_str(),
             manifest["artifact_format"].as_str()
         ),
-        (Some("memory"), Some("llvm-object")) | (Some("native"), Some("native-worker"))
+        (Some("memory"), Some("llvm-object" | "llvm-ir")) | (Some("native"), Some("native-worker"))
     ) {
         return Err(failure("Unsupported execution artifact format"));
     }

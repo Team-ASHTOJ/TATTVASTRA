@@ -51,6 +51,12 @@ class BuildCreate(Contract):
     expected_semantic_hash: Hash | None = None
 
 
+class TargetBuildCreate(Contract):
+    targets: list[Literal["linux-x86_64", "linux-aarch64", "windows-x86_64"]] = Field(
+        min_length=1, max_length=3
+    )
+
+
 class VariantCreate(Contract):
     count: int = Field(default=3, ge=1, le=16)
 
@@ -110,6 +116,7 @@ class ArtifactUpload(Provenance):
 
 
 class RemoteJobEnvelope(Provenance):
+    transport_mode: Literal["DIRECT", "TRUSTED_RELAY", "UNKNOWN"] = "UNKNOWN"
     job_id: UUID
     case_id: UUID
     organization_id: UUID

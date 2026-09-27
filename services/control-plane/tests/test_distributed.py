@@ -1,9 +1,11 @@
 """Database and wire invariants. Synthetic records exist only inside tests."""
 
+import asyncio
 import base64
 import copy
 import json
 import os
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
@@ -504,12 +506,53 @@ def test_objects_reports_audit_and_modified_bytes(runtime):
             assert not verify_audit(db, user)["integrity_valid"]
 
 
-def test_grpc_tls_enrollment_heartbeat_replay_and_wrong_identity(runtime):
+@pytest.fixture
+def tls_relay(monkeypatch):
+    """Exercise the production byte relay, preserving the real TLS handshake."""
+    from jocky_control_plane import relay
+
+    monkeypatch.setattr(relay, "UPSTREAM", "127.0.0.1")
+    loop = asyncio.new_event_loop()
+    thread = threading.Thread(target=loop.run_forever, daemon=True)
+    thread.start()
+    listeners = []
+
+    async def listen(port):
+        listener = await asyncio.start_server(
+            lambda r, w: relay.connection(r, w, port), "127.0.0.1", 0
+        )
+        listeners.append(listener)
+        return listener.sockets[0].getsockname()[1]
+
+    def open_port(port):
+        return asyncio.run_coroutine_threadsafe(listen(port), loop).result(5)
+
+    yield open_port
+
+    async def close():
+        for listener in listeners:
+            listener.close()
+            await listener.wait_closed()
+        for task in asyncio.all_tasks():
+            if task != asyncio.current_task():
+                task.cancel()
+        await asyncio.sleep(0)
+
+    asyncio.run_coroutine_threadsafe(close(), loop).result(5)
+    loop.call_soon_threadsafe(loop.stop)
+    thread.join(5)
+    loop.close()
+
+
+@pytest.mark.parametrize("transport_mode", ["DIRECT", "TRUSTED_RELAY"])
+def test_grpc_tls_enrollment_heartbeat_replay_and_wrong_identity(
+    runtime, tls_relay, transport_mode
+):
     factory, settings, client, org_id, admin_id = runtime
     token = client.post(
         "/api/endpoints/enrollments", json={"simulation": False, "capabilities": ["system.read"]}
     ).json()["one_time_token"]
-    authority = AgentControl(factory, settings)
+    authority = AgentControl(factory, settings, transport_mode=transport_mode)
     servers = []
     for mutual in (False, True):
         server = grpc.server(ThreadPoolExecutor(max_workers=4))
@@ -523,7 +566,7 @@ def test_grpc_tls_enrollment_heartbeat_replay_and_wrong_identity(runtime):
             ),
         )
         server.start()
-        servers.append((server, port))
+        servers.append((server, tls_relay(port) if transport_mode == "TRUSTED_RELAY" else port))
     key = ec.generate_private_key(ec.SECP256R1())
     evidence_key = Ed25519PrivateKey.generate()
     csr = (
@@ -575,6 +618,10 @@ def test_grpc_tls_enrollment_heartbeat_replay_and_wrong_identity(runtime):
                 heartbeat=wire.Heartbeat(timestamp=datetime.now(UTC).isoformat(), state="IDLE"),
             )
             first = list(peer.Exchange(iter([frame]), timeout=5))[0]
+            with factory() as db:
+                endpoint = db.get(Endpoint, UUID(response.endpoint_id))
+                assert endpoint.transport_mode == transport_mode
+                assert endpoint.last_seen is not None
             replay = list(peer.Exchange(iter([frame]), timeout=5))[0]
             assert first.acknowledgement.receipt_id == replay.acknowledgement.receipt_id
             frame.endpoint_id = str(uuid4())

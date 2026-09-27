@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     tls_ca_key_path: Path = Path(".local/tls/ca.key")
     tls_cert_path: Path = Path(".local/tls/server.pem")
     tls_key_path: Path = Path(".local/tls/server.key")
+    grpc_relay_bind: str | None = None
+    grpc_relay_enrollment_bind: str | None = None
     grpc_bind: str = "127.0.0.1:50051"
     grpc_enrollment_bind: str = "127.0.0.1:50052"
     local_launcher_url: str | None = None

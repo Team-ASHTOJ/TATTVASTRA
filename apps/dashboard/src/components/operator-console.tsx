@@ -1,13 +1,14 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import {
   connectionState,
   sortedEndpoints,
   aggregateConnections,
+  executionLabel,
   shortHash,
   stageTotal,
 } from "../lib/product-data";
@@ -51,6 +52,9 @@ const submit = <T,>(path: string, body?: unknown) =>
 
 export function OperatorConsole({ section }: { section: string }) {
   const client = useQueryClient();
+  const refresh = useCallback(async () => {
+    await client.invalidateQueries({ queryKey: ["resources"] });
+  }, [client]);
   const user = useQuery({
     queryKey: ["operator"],
     queryFn: () => api<Row>("domain/auth/me"),
@@ -164,9 +168,6 @@ export function OperatorConsole({ section }: { section: string }) {
         local.data?.find((r) => r.endpoint_id === e.id),
       ),
     })),
-  };
-  const refresh = async () => {
-    await client.invalidateQueries({ queryKey: ["resources"] });
   };
   const host = (id: unknown) =>
     str(d.endpoints.find((e) => e.id === id)?.hostname);
@@ -334,6 +335,8 @@ export function OperatorConsole({ section }: { section: string }) {
               "Hostname",
               "Platform",
               "Architecture",
+              "Execution capability",
+              "Transport",
               "Connection",
               "Last seen",
               "Current investigation",
@@ -352,6 +355,12 @@ export function OperatorConsole({ section }: { section: string }) {
                 </button>,
                 str(e.target_os),
                 str(e.target_arch),
+                items(e.execution_modes)
+                  .map((m) =>
+                    m === "memory" ? "MEMORY / JIT" : "NATIVE / AOT",
+                  )
+                  .join(" · ") || "Not reported",
+                str(e.transport_mode ?? "UNKNOWN").replaceAll("_", " "),
                 <span
                   key="connection"
                   className={e.status === "ONLINE" ? "connection-online" : ""}
@@ -980,6 +989,11 @@ function EndpointDetail({
             hostname: endpoint.hostname,
             OS: endpoint.target_os,
             architecture: endpoint.target_arch,
+            transport: str(endpoint.transport_mode ?? "UNKNOWN").replaceAll(
+              "_",
+              " ",
+            ),
+            execution_capability: items(endpoint.execution_modes).join(" / "),
             status: endpoint.status,
             last_seen: date(endpoint.last_seen),
             trust: endpoint.simulation
@@ -1115,30 +1129,44 @@ function InvestigationWizard({
       {step === 2 && (
         <>
           <h3>Choose endpoints</h3>
-          {sortedEndpoints(d.endpoints).map((e) => (
-            <label className="endpoint-choice" key={e.id}>
-              <input
-                type="checkbox"
-                checked={endpoints.includes(e.id)}
-                onChange={(ev) =>
-                  setEndpoints(
-                    ev.target.checked
-                      ? [...endpoints, e.id]
-                      : endpoints.filter((id) => id !== e.id),
-                  )
-                }
-              />
-              <span>
+          {sortedEndpoints(d.endpoints).map((e) => {
+            // Only an endpoint that is currently ONLINE can accept a job. The rest
+            // stay listed so the limitation is visible, but they are not selectable:
+            // dispatching to a lapsed heartbeat just produces a failed job.
+            const label = (
+              <>
                 {str(e.hostname)} · {str(e.target_os)} ·{" "}
                 {e.simulation
                   ? "SANDBOX"
                   : localIds.includes(e.id)
                     ? "LOCAL"
                     : "EXTERNAL"}{" "}
-                · {str(e.status)} · Last seen {date(e.last_seen)}
-              </span>
-            </label>
-          ))}
+                · {str(e.status)} ·{" "}
+                {str(e.transport_mode ?? "UNKNOWN").replaceAll("_", " ")} · Last
+                seen {date(e.last_seen)}
+              </>
+            );
+            return e.status === "ONLINE" ? (
+              <label className="endpoint-choice" key={e.id}>
+                <input
+                  type="checkbox"
+                  checked={endpoints.includes(e.id)}
+                  onChange={(ev) =>
+                    setEndpoints(
+                      ev.target.checked
+                        ? [...endpoints, e.id]
+                        : endpoints.filter((id) => id !== e.id),
+                    )
+                  }
+                />
+                <span>{label}</span>
+              </label>
+            ) : (
+              <p className="endpoint-choice muted" key={e.id}>
+                <span>{label} · Not selectable while not ONLINE</span>
+              </p>
+            );
+          })}
         </>
       )}
       {step === 3 && (
@@ -1149,8 +1177,10 @@ function InvestigationWizard({
             value={mode}
             onChange={(e) => setMode(e.target.value)}
           >
-            <option value="memory">Memory · dedicated LLVM worker</option>
-            <option value="native">Native · compiler executable</option>
+            <option value="memory">
+              MEMORY / JIT · JOCKY-owned LLVM worker
+            </option>
+            <option value="native">NATIVE / AOT · compiler executable</option>
           </select>
           <p>
             MONITORED resource budgets. Endpoint-specific compiler variants are
@@ -1284,6 +1314,8 @@ function InvestigationDetail({
           "Endpoint",
           "Variant",
           "Mode",
+          "Transport",
+          "Worker / duration",
           "Status",
           "Progress",
           "Observations",
@@ -1293,7 +1325,9 @@ function InvestigationDetail({
         rows={jobs.map((j) => [
           str(d.endpoints.find((e) => e.id === j.endpoint_id)?.hostname),
           str(j.variant_id),
-          str(obj(j.envelope).execution_mode ?? hunt.execution_mode),
+          `${str(obj(j.envelope).execution_mode ?? hunt.execution_mode)} · ${executionLabel(obj(j.progress).execution_engine)}`,
+          str(obj(j.envelope).transport_mode ?? "UNKNOWN").replaceAll("_", " "),
+          `${str(obj(j.progress).execution_engine ?? "Not reported")} · PID ${str(obj(j.progress).worker_pid ?? "Not reported")} · ${typeof obj(j.progress).execution_duration_ms === "number" ? Number(obj(j.progress).execution_duration_ms).toFixed(2) + " ms" : "Not measured"}`,
           str(j.status),
           Object.entries(obj(j.progress))
             .map(([k, v]) => `${k}: ${str(v)}`)
@@ -2193,6 +2227,12 @@ function EvidenceView({ d }: { d: Data }) {
                       : "INVALID",
                   "Signing agent": endpoint?.hostname,
                   "Signing identity": obj(row.document).agent_identity,
+                  "Execution mode": obj(row.document).execution_mode,
+                  "Execution engine": obj(row.document).execution_engine,
+                  "Worker PID": obj(row.document).worker_pid,
+                  "Worker duration (ms)": obj(row.document)
+                    .execution_duration_ms,
+                  Transport: obj(row.document).transport_mode,
                   Endpoint: endpoint?.hostname,
                   Job: row.job_id,
                   "Artifact count": d.artifacts.filter(
@@ -2229,11 +2269,20 @@ function EvidenceView({ d }: { d: Data }) {
     </>
   );
 }
-function VariantView({ d }: { d: Data; refresh: () => Promise<void> }) {
+function VariantView({
+  d,
+  refresh,
+}: {
+  d: Data;
+  refresh: () => Promise<void>;
+}) {
+  // Read deep links from the router, not from window.location: a client-side
+  // navigation commits the address bar after this component can first render,
+  // so the window would still report the URL we navigated away from.
+  const params = useSearchParams();
   const [comp, setComp] = useState(
-    (typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("compilation")
-      : null) ??
+    () =>
+      (typeof window === "undefined" ? null : params.get("compilation")) ??
       d.compilations.filter((c) => c.status === "SUCCESS").at(-1)?.id ??
       "",
   );
@@ -2244,10 +2293,14 @@ function VariantView({ d }: { d: Data; refresh: () => Promise<void> }) {
     null,
   );
   const router = useRouter();
+  // The console resources are a single shared snapshot, cached for ten seconds.
+  // A build can finish inside that window, so entering this view would otherwise
+  // render "no collected records" for variants that already exist.
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
   const buildFilter =
-    typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("build")
-      : null;
+    typeof window === "undefined" ? null : params.get("build");
   const variants = d.variants.filter(
     (v) =>
       v.compilation_id === comp &&
@@ -2324,6 +2377,8 @@ function VariantView({ d }: { d: Data; refresh: () => Promise<void> }) {
               aot_ms: obj(obj(v.manifest).profile).aot_ms ?? "Not measured",
               bytes: obj(v.manifest).artifact_size_bytes ?? "Not measured",
               equivalence: obj(v.manifest).equivalence_status ?? "NOT TESTED",
+              artifact_format: obj(v.manifest).artifact_format,
+              link_status: obj(v.manifest).link_status ?? "Not reported",
               structural_fingerprint: obj(v.manifest).structural_fingerprint,
               jir_identity: obj(v.manifest).jir_hash,
               ...obj(obj(v.manifest).structural_metrics),

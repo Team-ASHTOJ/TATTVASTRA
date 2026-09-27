@@ -5,6 +5,17 @@ export const shortHash = (value: unknown) =>
   typeof value === "string" && value.length > 20
     ? `${value.slice(0, 8)}…${value.slice(-4)}`
     : String(value ?? "Not measured");
+/**
+ * Human label for a job's real execution engine. It never upgrades or invents a
+ * mode: an unreported engine stays "Not reported" and the raw engine string is
+ * always shown next to this label.
+ */
+export function executionLabel(engine: unknown) {
+  if (engine === "LLVM_ORC_JIT") return "MEMORY / JIT";
+  if (engine === "LLVM_ORC_OBJECT") return "MEMORY / LLVM object";
+  if (engine === "NATIVE_AOT") return "NATIVE / AOT";
+  return "Not reported";
+}
 export function sortedEndpoints<T extends RecordData>(rows: T[]) {
   const rank = (r: T) =>
     r.simulation

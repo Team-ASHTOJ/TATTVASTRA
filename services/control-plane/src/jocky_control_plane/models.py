@@ -90,6 +90,7 @@ class Case(Scoped, Base):
 
 class Endpoint(Scoped, Base):
     __tablename__ = "endpoints"
+    transport_mode: Mapped[str] = mapped_column(String(32), default="UNKNOWN")
     hostname: Mapped[str] = mapped_column(String(255))
     target_os: Mapped[str] = mapped_column(String(16))
     target_arch: Mapped[str] = mapped_column(String(16))

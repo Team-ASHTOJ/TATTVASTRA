@@ -46,7 +46,10 @@ service: Any = importlib.import_module("jocky_control_plane.generated.jocky.v1.a
 
 
 class AgentControl:
-    def __init__(self, factory: sessionmaker[Session], settings: Settings) -> None:
+    def __init__(
+        self, factory: sessionmaker[Session], settings: Settings, transport_mode: str = "DIRECT"
+    ) -> None:
+        self.transport_mode = transport_mode
         self.factory = factory
         self.settings = settings
 
@@ -162,6 +165,7 @@ class AgentControl:
                         or abs((datetime.now(UTC) - timestamp).total_seconds()) > 300
                     ):
                         raise HTTPException(422, "Heartbeat timestamp exceeds clock skew")
+                    endpoint.transport_mode = self.transport_mode
                     endpoint.last_seen = datetime.now(UTC)
                     endpoint.status = State.ONLINE
                     publish(
@@ -368,13 +372,26 @@ def serve(factory: sessionmaker[Session], settings: Settings) -> None:
     key = settings.tls_key_path.read_bytes()
     ca = settings.tls_ca_path.read_bytes()
     servers = []
-    for address, mutual in ((settings.grpc_enrollment_bind, False), (settings.grpc_bind, True)):
+    listeners = [
+        (settings.grpc_enrollment_bind, False, "DIRECT"),
+        (settings.grpc_bind, True, "DIRECT"),
+    ]
+    if settings.grpc_relay_bind and settings.grpc_relay_enrollment_bind:
+        listeners.extend(
+            [
+                (settings.grpc_relay_enrollment_bind, False, "TRUSTED_RELAY"),
+                (settings.grpc_relay_bind, True, "TRUSTED_RELAY"),
+            ]
+        )
+    for address, mutual, transport_mode in listeners:
         server = grpc.server(
             ThreadPoolExecutor(max_workers=32),
             maximum_concurrent_rpcs=32,
             options=[("grpc.max_receive_message_length", 1048576)],
         )
-        service.add_AgentControlServicer_to_server(AgentControl(factory, settings), server)
+        service.add_AgentControlServicer_to_server(
+            AgentControl(factory, settings, transport_mode), server
+        )
         credentials = grpc.ssl_server_credentials(
             [(key, certificate)],
             root_certificates=ca if mutual else None,

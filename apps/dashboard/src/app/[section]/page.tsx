@@ -1,5 +1,6 @@
 import { BuildForge } from "../../components/build-forge";
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 import { StatusBadge } from "@jocky/ui";
 import { sections } from "../../lib/sections";
 import { PlatformOverview } from "../../components/platform-overview";
@@ -22,7 +23,14 @@ export default async function SectionPage({
   params: Promise<{ section: string }>;
 }) {
   const { section } = await params;
-  if (section === "forge") return <BuildForge />;
+  // Deep links are read with useSearchParams(), which opts these views out of
+  // static prerendering, so each needs a boundary above it.
+  if (section === "forge")
+    return (
+      <Suspense fallback={null}>
+        <BuildForge />
+      </Suspense>
+    );
   if (section === "language") return <LanguageDocumentation />;
   if (section === "live") redirect("/investigations");
   if (section === "architecture") return <PlatformOverview coverageOnly />;
@@ -72,9 +80,11 @@ export default async function SectionPage({
           </div>
           <StatusBadge tone="good">PERSISTED API</StatusBadge>
         </div>
-        <DemoScreen section={section}>
-          {section === "evidence" && <EvidenceVerifier />}
-        </DemoScreen>
+        <Suspense fallback={null}>
+          <DemoScreen section={section}>
+            {section === "evidence" && <EvidenceVerifier />}
+          </DemoScreen>
+        </Suspense>
       </>
     );
   return notFound();

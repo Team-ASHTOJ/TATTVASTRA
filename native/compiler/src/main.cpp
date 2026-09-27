@@ -130,10 +130,11 @@ bool protect_literals(const jocky::FrontendModule &module) {
   return module.runtime.getBoolean("protect_literals").value_or(false);
 }
 
-jocky::VariantOptions variant_options(const FrontendResult &compiled, const CommandLine &,
+jocky::VariantOptions variant_options(const FrontendResult &compiled, const CommandLine &cli,
                                       uint64_t seed, const std::string &mode) {
   jocky::VariantOptions options;
   options.seed = seed;
+  options.target_triple = cli.options.contains("--target") ? cli.options.at("--target") : "host";
   options.execution_mode = mode;
   if (auto *variant = compiled.module.runtime.getObject("variant"))
     options.profile = variant->getString("profile").value_or("balanced").str();
@@ -201,8 +202,12 @@ std::string object_suffix() {
 
 void validate_target_mode(const CommandLine &cli, const std::string &required_mode) {
   auto target = cli.options.contains("--target") ? cli.options.at("--target") : "host";
-  if (target != "host")
-    jocky::fail("E263", "Only --target host is supported; cross-compilation is unavailable.", {});
+  if (target != "host" && target != "linux-x86_64" && target != "linux-aarch64" &&
+      target != "windows-x86_64")
+    jocky::fail("E263",
+                "Unsupported target. Use host, linux-x86_64, linux-aarch64 or windows-x86_64.", {});
+  if (target != "host" && cli.command != "compile" && cli.command != "llvm")
+    jocky::fail("E263", "Cross-target fixture/JIT execution requires that target host.", {});
   auto mode = cli.options.contains("--execution") ? cli.options.at("--execution") : required_mode;
   if (mode != required_mode)
     jocky::fail("E263", "This command requires --execution " + required_mode + ".", {});
@@ -316,6 +321,7 @@ int main(int argc, char **argv) {
         return 0;
       }
     } else if (cli.command == "llvm") {
+      validate_target_mode(cli, "memory");
       auto options = variant_options(compiled, cli, selected_seed(compiled, cli), "memory");
       auto variant = jocky::lower_to_llvm(compiled.module, options);
       merge_frontend_profile(variant.profile, compiled.profile);

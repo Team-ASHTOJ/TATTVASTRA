@@ -419,6 +419,30 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
             raise HTTPException(409, "Stage has not completed")
         return row.outputs[stage]
 
+    @router.post("/compilations/{identifier}/target-builds", status_code=201)
+    def target_builds(
+        identifier: UUID, payload: contracts.TargetBuildCreate, db: DB, user: Writer
+    ) -> Any:
+        row = owned(db, Compilation, identifier, user)
+        version = owned(db, ScriptVersion, row.script_version_id, user)
+        output = []
+        for target in dict.fromkeys(payload.targets):
+            output.extend(
+                build_variants(
+                    db,
+                    row,
+                    version,
+                    1,
+                    user,
+                    settings,
+                    execution_mode="native",
+                    target=target,
+                    object_only=True,
+                    seed_values=["0000000000000001"],
+                )
+            )
+        return [document(item) for item in output]
+
     @router.post("/compilations/{identifier}/variants", status_code=201)
     def variants(identifier: UUID, payload: contracts.VariantCreate, db: DB, user: Writer) -> Any:
         row = owned(db, Compilation, identifier, user)

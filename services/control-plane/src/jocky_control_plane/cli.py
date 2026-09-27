@@ -35,6 +35,7 @@ def initialize_keys(settings: Settings) -> None:
         for path in (settings.tls_ca_key_path, settings.tls_key_path, settings.tls_cert_path):
             if not path.exists():
                 raise RuntimeError("Incomplete TLS provisioning; restore the original key material")
+        ensure_relay_name(settings)
         return
     now = datetime.now(UTC)
     ca_key = ec.generate_private_key(ec.SECP256R1())
@@ -66,6 +67,7 @@ def initialize_keys(settings: Settings) -> None:
                     x509.DNSName("localhost"),
                     x509.DNSName("control-plane"),
                     x509.DNSName("agent-control"),
+                    x509.DNSName("trusted-relay"),
                     x509.IPAddress(ipaddress.ip_address("127.0.0.1")),
                 ]
             ),
@@ -92,6 +94,41 @@ def initialize_keys(settings: Settings) -> None:
     )
     secret(settings.tls_cert_path, certificate.public_bytes(serialization.Encoding.PEM))
     secret(settings.tls_ca_path, ca.public_bytes(serialization.Encoding.PEM))
+
+
+def ensure_relay_name(settings: Settings) -> None:
+    """Renew only the server certificate; keep the CA and all endpoint identities."""
+    old = x509.load_pem_x509_certificate(settings.tls_cert_path.read_bytes())
+    san = old.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
+    if "trusted-relay" in san.get_values_for_type(x509.DNSName):
+        return
+    ca = x509.load_pem_x509_certificate(settings.tls_ca_path.read_bytes())
+    key = serialization.load_pem_private_key(settings.tls_ca_key_path.read_bytes(), None)
+    if not isinstance(key, ec.EllipticCurvePrivateKey):
+        raise RuntimeError("Expected the provisioned ECDSA CA")
+    now = datetime.now(UTC)
+    builder = (
+        x509.CertificateBuilder()
+        .subject_name(old.subject)
+        .issuer_name(ca.subject)
+        .public_key(old.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - timedelta(minutes=1))
+        .not_valid_after(now + timedelta(days=90))
+    )
+    for extension in old.extensions:
+        value = (
+            x509.SubjectAlternativeName([*san, x509.DNSName("trusted-relay")])
+            if isinstance(extension.value, x509.SubjectAlternativeName)
+            else extension.value
+        )
+        builder = builder.add_extension(value, extension.critical)
+    replacement = settings.tls_cert_path.with_suffix(".renewed")
+    replacement.write_bytes(
+        builder.sign(key, hashes.SHA256()).public_bytes(serialization.Encoding.PEM)
+    )
+    replacement.chmod(0o600)
+    replacement.replace(settings.tls_cert_path)
 
 
 def main() -> None:

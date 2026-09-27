@@ -35,6 +35,10 @@ class EvidenceManifest(Provenance):
     variant_seed: str = Field(pattern=r"^[0-9a-f]{16}$")
     artifact_hash: Hash
     execution_mode: ExecutionMode
+    worker_pid: int | None = Field(default=None, gt=0)
+    execution_duration_ms: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    execution_engine: Literal["NATIVE_AOT", "LLVM_ORC_JIT", "LLVM_ORC_OBJECT"] | None = None
+    transport_mode: Literal["DIRECT", "TRUSTED_RELAY", "UNKNOWN"] | None = None
     started_at: AwareDatetime
     completed_at: AwareDatetime
     observation_hashes: list[Hash]

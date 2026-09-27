@@ -56,20 +56,37 @@ std::string bytes_hex(const uint8_t *data, size_t size) {
   return output;
 }
 
-std::unique_ptr<llvm::TargetMachine> target_machine(std::string &error) {
-  if (llvm::InitializeNativeTarget() || llvm::InitializeNativeTargetAsmPrinter() ||
-      llvm::InitializeNativeTargetAsmParser()) {
-    error = "Native LLVM target initialization failed";
-    return nullptr;
-  }
-  llvm::Triple triple(llvm::sys::getDefaultTargetTriple());
+std::unique_ptr<llvm::TargetMachine> target_machine(std::string &error,
+                                                    const std::string &requested = "host") {
+  static const bool initialized = [] {
+    LLVMInitializeX86TargetInfo();
+    LLVMInitializeX86Target();
+    LLVMInitializeX86TargetMC();
+    LLVMInitializeX86AsmPrinter();
+    LLVMInitializeX86AsmParser();
+    LLVMInitializeAArch64TargetInfo();
+    LLVMInitializeAArch64Target();
+    LLVMInitializeAArch64TargetMC();
+    LLVMInitializeAArch64AsmPrinter();
+    LLVMInitializeAArch64AsmParser();
+    return true;
+  }();
+  (void)initialized;
+  auto name = requested == "host" ? llvm::sys::getDefaultTargetTriple() : requested;
+  if (name == "linux-x86_64")
+    name = "x86_64-unknown-linux-gnu";
+  if (name == "linux-aarch64")
+    name = "aarch64-unknown-linux-gnu";
+  if (name == "windows-x86_64")
+    name = "x86_64-pc-windows-msvc";
+  llvm::Triple triple(name);
   const auto *target = llvm::TargetRegistry::lookupTarget(triple.str(), error);
   if (target == nullptr)
     return nullptr;
   llvm::TargetOptions options;
   return std::unique_ptr<llvm::TargetMachine>(
-      target->createTargetMachine(triple.str(), llvm::sys::getHostCPUName(), "", options,
-                                  std::nullopt, std::nullopt, llvm::CodeGenOptLevel::Default));
+      target->createTargetMachine(triple.str(), "generic", "", options, llvm::Reloc::PIC_,
+                                  std::nullopt, llvm::CodeGenOptLevel::Default));
 }
 
 llvm::GlobalVariable *byte_global(llvm::Module &module, llvm::StringRef name, const uint8_t *data,
@@ -290,8 +307,13 @@ LoweredVariant lower_to_llvm(const FrontendModule &frontend, const VariantOption
   auto jir_bytes = canonical_json(jir_json(frontend));
   auto jir_hash = sha256(jir_bytes);
   auto seed = seed_hex(options.seed);
+  std::string target_error;
+  auto machine = target_machine(target_error, options.target_triple);
+  if (machine == nullptr)
+    fail("E263", "LLVM target is unavailable: " + target_error, {});
   auto identity = frontend.source_hash + ":" + jir_hash + ":" + compiler_version + ":" + seed +
-                  ":" + options.profile + ":" + options.execution_mode;
+                  ":" + options.profile + ":" + options.execution_mode + ":" +
+                  machine->getTargetTriple().str();
   auto variant_id = sha256(identity);
   result.profile.variant_ms = elapsed_ms(variant_start);
 
@@ -299,10 +321,6 @@ LoweredVariant lower_to_llvm(const FrontendModule &frontend, const VariantOption
   result.context = std::make_unique<llvm::LLVMContext>();
   result.module =
       std::make_unique<llvm::Module>("jocky_variant_" + variant_id.substr(0, 16), *result.context);
-  std::string target_error;
-  auto machine = target_machine(target_error);
-  if (machine == nullptr)
-    fail("E263", "Host LLVM target is unavailable: " + target_error, {});
   result.module->setTargetTriple(machine->getTargetTriple().str());
   result.module->setDataLayout(machine->createDataLayout());
   string_global(*result.module, "jocky_variant_identity_" + variant_id.substr(0, 16), identity,
@@ -443,7 +461,7 @@ std::string render_llvm_ir(const LoweredVariant &variant) {
 void emit_aot_object(LoweredVariant &variant, const std::string &path) {
   auto start = Clock::now();
   std::string error;
-  auto machine = target_machine(error);
+  auto machine = target_machine(error, variant.manifest.target_triple);
   if (machine == nullptr || machine->getTargetTriple().str() != variant.manifest.target_triple)
     fail("E263", "Requested host TargetMachine is unavailable: " + error, {});
   std::error_code file_error;

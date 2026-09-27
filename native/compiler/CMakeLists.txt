@@ -1,5 +1,5 @@
 llvm_map_components_to_libnames(JOCKY_LLVM_LIBS
-  Core Support OrcJIT ExecutionEngine native Target Passes Analysis TransformUtils CodeGen MC)
+  Core Support OrcJIT ExecutionEngine native X86 AArch64 IRReader Target Passes Analysis TransformUtils CodeGen MC)
 add_library(jocky_llvm_probe STATIC src/llvm_probe.cpp)
 target_include_directories(jocky_llvm_probe PUBLIC include)
 target_include_directories(jocky_llvm_probe SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
@@ -41,6 +41,9 @@ if(BUILD_TESTING)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
   add_test(NAME frontend_examples_and_goldens
     COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/test_frontend.py
+            --compiler $<TARGET_FILE:jockyc>)
+  add_test(NAME cross_target_objects_and_rejections
+    COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/test_cross_target.py
             --compiler $<TARGET_FILE:jockyc>)
   add_test(NAME compiler_rejects_missing_source COMMAND jockyc check missing.jky)
   set_tests_properties(compiler_rejects_missing_source PROPERTIES WILL_FAIL TRUE)

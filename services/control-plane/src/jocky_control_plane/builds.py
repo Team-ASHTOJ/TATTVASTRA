@@ -94,6 +94,8 @@ def build_variants(
     *,
     execution_mode: str = "memory",
     seed_values: list[str] | None = None,
+    target: str = "host",
+    object_only: bool = False,
 ) -> list[Variant]:
     if compilation.status != State.SUCCESS:
         raise HTTPException(409, "Compilation must succeed before generating variants")
@@ -118,13 +120,13 @@ def build_variants(
                 result = subprocess.run(
                     [
                         str(settings.compiler_path.resolve()),
-                        "compile",
+                        "llvm" if execution_mode == "memory" and not object_only else "compile",
                         str(source),
                         "--json",
                         "--target",
-                        "host",
+                        target,
                         "--execution",
-                        "native",
+                        "memory" if execution_mode == "memory" and not object_only else "native",
                         "--seed",
                         seed,
                         "--output",
@@ -143,11 +145,22 @@ def build_variants(
                 # execution mode selected by the hunt.
                 manifest["execution_mode"] = execution_mode
                 content = output.read_bytes()
+                if execution_mode == "memory" and not object_only:
+                    manifest["artifact_hash"] = digest(content)
                 if digest(content) != manifest["artifact_hash"]:
                     raise HTTPException(422, "Compiler artifact does not match its manifest")
                 manifest["entry_symbol"] = "jocky_entry_" + manifest["variant_id"][:16]
-                manifest["artifact_format"] = "llvm-object"
-                if execution_mode == "native":
+                manifest["artifact_format"] = (
+                    "llvm-ir" if execution_mode == "memory" and not object_only else "llvm-object"
+                )
+                manifest["link_status"] = (
+                    "ENVIRONMENT DEPENDENT"
+                    if object_only
+                    else "NOT REQUIRED"
+                    if execution_mode == "memory"
+                    else "LINKED"
+                )
+                if execution_mode == "native" and not object_only:
                     sdk = settings.worker_sdk_path
                     if sdk is None:
                         raise HTTPException(503, "Native execution worker SDK unavailable")

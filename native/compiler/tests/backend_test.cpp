@@ -158,3 +158,36 @@ TEST(LiteralPool, AesGcmHidesPlaintextAndRejectsTampering) {
   EXPECT_EQ(std::string(error.code, error.code_size), "LITERAL_AUTHENTICATION_FAILED");
   jocky_rt_context_destroy(runtime);
 }
+
+TEST(Backend, TargetObjectsShareJirButHaveRealDistinctMachineFormats) {
+  auto module = compile("capabilities { system.read } collect system as inventory");
+  VariantOptions linux_options;
+  linux_options.seed = 7;
+  linux_options.target_triple = "linux-x86_64";
+  auto linux_variant = lower_to_llvm(module, linux_options);
+  auto windows_options = linux_options;
+  windows_options.target_triple = "windows-x86_64";
+  auto windows_variant = lower_to_llvm(module, windows_options);
+  EXPECT_EQ(linux_variant.manifest.jir_hash, windows_variant.manifest.jir_hash);
+  EXPECT_NE(linux_variant.manifest.variant_id, windows_variant.manifest.variant_id);
+  EXPECT_NE(linux_variant.manifest.llvm_ir_hash, windows_variant.manifest.llvm_ir_hash);
+  EXPECT_EQ(windows_variant.manifest.target_triple, "x86_64-pc-windows-msvc");
+  for (auto *variant : {&linux_variant, &windows_variant}) {
+    auto path =
+        std::filesystem::temp_directory_path() / (variant->manifest.variant_id + ".target.o");
+    emit_aot_object(*variant, path.string());
+    std::ifstream input(path, std::ios::binary);
+    char magic[4]{};
+    input.read(magic, 4);
+    if (variant == &linux_variant) {
+      EXPECT_EQ(std::string(magic, 4), std::string("\x7f"
+                                                   "ELF",
+                                                   4));
+    } else {
+      EXPECT_EQ(static_cast<unsigned char>(magic[0]), 0x64);
+      EXPECT_EQ(static_cast<unsigned char>(magic[1]), 0x86);
+    }
+    std::filesystem::remove(path);
+  }
+  EXPECT_NE(linux_variant.manifest.artifact_hash, windows_variant.manifest.artifact_hash);
+}

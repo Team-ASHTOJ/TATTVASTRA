@@ -2159,6 +2159,36 @@
           "title": "Endpoint Id",
           "type": "string"
         },
+        "execution_duration_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Execution Duration Ms"
+        },
+        "execution_engine": {
+          "anyOf": [
+            {
+              "enum": [
+                "NATIVE_AOT",
+                "LLVM_ORC_JIT",
+                "LLVM_ORC_OBJECT"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Execution Engine"
+        },
         "execution_mode": {
           "$ref": "#/$defs/ExecutionMode"
         },
@@ -2222,6 +2252,23 @@
           "title": "Started At",
           "type": "string"
         },
+        "transport_mode": {
+          "anyOf": [
+            {
+              "enum": [
+                "DIRECT",
+                "TRUSTED_RELAY",
+                "UNKNOWN"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transport Mode"
+        },
         "variant_id": {
           "maxLength": 128,
           "minLength": 1,
@@ -2233,6 +2280,19 @@
           "pattern": "^[0-9a-f]{16}$",
           "title": "Variant Seed",
           "type": "string"
+        },
+        "worker_pid": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Worker Pid"
         }
       },
       "required": [
@@ -4091,6 +4151,16 @@
           "title": "Source Hash",
           "type": "string"
         },
+        "transport_mode": {
+          "default": "UNKNOWN",
+          "enum": [
+            "DIRECT",
+            "TRUSTED_RELAY",
+            "UNKNOWN"
+          ],
+          "title": "Transport Mode",
+          "type": "string"
+        },
         "variant_id": {
           "format": "uuid",
           "title": "Variant Id",
@@ -4687,6 +4757,36 @@
         "arch"
       ],
       "title": "Target",
+      "type": "object"
+    },
+    "TargetBuildCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "targets": {
+          "items": {
+            "enum": [
+              "linux-x86_64",
+              "linux-aarch64",
+              "windows-x86_64"
+            ],
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 1,
+          "title": "Targets",
+          "type": "array"
+        }
+      },
+      "required": [
+        "targets"
+      ],
+      "title": "TargetBuildCreate",
       "type": "object"
     },
     "TimelineEvent": {
@@ -5298,6 +5398,9 @@
     },
     "Target": {
       "$ref": "#/$defs/Target"
+    },
+    "TargetBuildCreate": {
+      "$ref": "#/$defs/TargetBuildCreate"
     },
     "TimelineEvent": {
       "$ref": "#/$defs/TimelineEvent"

@@ -57,7 +57,12 @@ def summarize(db: Session, hunt: Hunt) -> None:
 
 
 def envelope(
-    job: Job, hunt: Hunt, plan: ExecutionPlan, variant: Variant, settings: Settings
+    job: Job,
+    hunt: Hunt,
+    plan: ExecutionPlan,
+    variant: Variant,
+    settings: Settings,
+    transport_mode: str = "UNKNOWN",
 ) -> dict[str, Any]:
     now = datetime.now(UTC)
     signed = sign(
@@ -78,6 +83,7 @@ def envelope(
             "execution_mode": (hunt.endpoint_modes or {}).get(
                 str(job.endpoint_id), hunt.execution_mode
             ),
+            "transport_mode": transport_mode or "UNKNOWN",
             "enforcement_mode": hunt.enforcement_mode,
             "build_manifest": variant.manifest,
             "required_capabilities": plan.document["required_capabilities"],
@@ -202,7 +208,7 @@ def start(db: Session, hunt: Hunt, user: User, settings: Settings) -> None:
                 job.reason = "Host compiler artifact target does not match endpoint"
             else:
                 job.variant_id = variant.id
-                job.envelope = envelope(job, hunt, plan, variant, settings)
+                job.envelope = envelope(job, hunt, plan, variant, settings, endpoint.transport_mode)
                 job.deadline = datetime.now(UTC) + timedelta(minutes=10)
         publish(
             db,
@@ -281,7 +287,14 @@ def transition(
         assert job.plan_id is not None and job.variant_id is not None
         plan = owned(db, ExecutionPlan, job.plan_id, user)
         variant = owned(db, Variant, job.variant_id, user)
-        retry.envelope = envelope(retry, hunt, plan, variant, settings)
+        retry.envelope = envelope(
+            retry,
+            hunt,
+            plan,
+            variant,
+            settings,
+            (job.envelope or {}).get("transport_mode", "UNKNOWN"),
+        )
         publish(
             db,
             user,

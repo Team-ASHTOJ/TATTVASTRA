@@ -1,5 +1,33 @@
 # Build status
 
+## PS-coverage sprint 2 — cross-target compilation, real execution and relay transport — 2026-09-28
+
+Status: **IMPLEMENTED and verified within the bounded scope below. Windows linking and Windows runtime execution remain ENVIRONMENT DEPENDENT.**
+
+- One program and one semantic JIR now lower to genuinely different machine targets. `jockyc compile --target linux-x86_64` emits ELF for `x86_64-unknown-linux-gnu` (datalayout `e-m:e`) and `--target windows-x86_64` emits COFF for `x86_64-pc-windows-msvc` (datalayout `e-m:w`). The two variants share `source_hash` and `jir_hash` and differ in `llvm_ir_hash`, `variant_id` and object bytes; the object bytes are real ELF (`7f 45 4c 46`) and real COFF (machine `0x8664`), not stubs.
+- `POST /compilations/{id}/target-builds` persists a per-target manifest carrying the real triple, LLVM version, object size and hashes. Final linking needs a toolchain for the target, which this host does not have, so every variant honestly reports `link_status = ENVIRONMENT DEPENDENT`. No Windows link and no Windows runtime execution is claimed anywhere in the product.
+- MEMORY execution runs LLVM ORC LLJIT over the compiler's IR inside JOCKY's own agent-owned worker process. NATIVE execution runs a linked standalone executable (`artifact_format = native-worker`, `link_status = LINKED`) produced by the same worker. Neither mode injects into, hollows, or executes in a foreign process, and both re-verify the artifact hash before running, rejecting a mismatch as `ARTIFACT_HASH`.
+- A real investigation across three enrolled Linux endpoints returns `SUCCESS` for all three memory jobs with `execution_engine = LLVM_ORC_JIT`, real `worker_pid > 0`, real `execution_duration_ms > 0`, and one distinct compiler-generated `variant_id` per endpoint. A separate native job returns `SUCCESS` with `execution_engine = NATIVE_AOT`.
+- Transport provenance is authoritative rather than inferred. `endpoints.transport_mode` is written from the authenticated connection and flows into the job envelope, the agent manifest, the signed evidence manifest and the operator console. In the prototype stack `LOCAL-LINUX-02` reaches the control plane through the trusted relay while `LOCAL-LINUX-01` and `-03` connect directly, so the same memory investigation completes one relayed job and two direct jobs.
+- TRUSTED_RELAY is a fixed-destination TLS byte pass-through (`relay.py`). It does not terminate, re-originate or inspect TLS, so the endpoint still authenticates end-to-end with the control plane and endpoint identity is unaffected. It is explicitly not an HTTP gateway, reverse proxy, or domain-fronting front.
+- Evidence separates cleanly: artifact bytes verify through `POST /artifacts/{id}/verify`, and each job's manifest verifies separately through `POST /manifests/{id}/verify` with `signature_valid`, `integrity_valid` and `provenance_valid`. Manifests carry `execution_engine`, `worker_pid`, `execution_duration_ms` and `transport_mode` matching the job they describe.
+- The console labels canonical values without replacing them: `MEMORY / JIT`, `NATIVE / AOT`, `DIRECT`, `TRUSTED RELAY`. An unreported engine stays "Not reported".
+- The prototype Compose stack runs the same control-plane deadline sweeper as the development stack (`sweeper`, `jocky_control_plane.cli sweep`); previously it was the only stack without one, so a job dispatched to an endpoint that then stopped stayed `RUNNING` past its deadline forever and its hunt never reached a terminal state. With the sweeper the job is reclaimed as `FAILED` at the 10-minute deadline and lapsed heartbeats are persisted `OFFLINE`.
+
+Executed checks:
+
+- `make verify-foundation`: EXIT 0 — generated contract/coverage drift, formatting, Ruff/ESLint, mypy, workspace typecheck, the host Python suite (87 passed, 4 native-only cases skipped) and the dashboard production build.
+- Linux LLVM 18 container (`make verify-native-container` to build the image, then `ctest` executed inside it): 37/37 ctest passed, including `cross_target_objects_and_rejections` — one JIR to both triples with distinct datalayouts, real ELF (`7f 45 4c 46`) versus real COFF (machine `0x8664`) bytes, `artifact_hash` equal to the SHA-256 of the actual content, and rejection of a cross-target `run` — plus the LLVM ORC toolchain and runtime ABI probe.
+- Rust workspace in the container: 18 and 6 tests passed, `cargo fmt --all --check` clean, `cargo clippy --all-targets -- -D warnings` clean, and `jocky-agent doctor` reporting actual host, policy and collector state.
+- PostgreSQL integration (`scripts/test_postgres.py` against PostgreSQL 17.6 with isolated schemas): 18 passed, covering every migration through `0007_execution_transport`, TLS enrollment/heartbeat/replay/wrong-identity under both DIRECT and TRUSTED_RELAY, evidence and audit.
+- Targeted Sprint-2 Playwright acceptance (`tests/prototype/execution.spec.ts`, desktop project): PASS — three enrolled endpoints, both compiler targets, both transports, MEMORY/JIT and NATIVE/AOT provenance, separate artifact and manifest verification, and no browser errors.
+- Prototype Playwright regressions from a freshly recreated stack: `tests/prototype/coherence.spec.ts` PASS three consecutive runs in isolation (each a full operator journey: three real agents, compile, three-target build, investigation, findings, graph, timeline, evidence and performance), and `tests/prototype/local-endpoint.spec.ts` PASS. Every coherence journey reached `SUCCESS` for all three child jobs; the persisted jobs carry `LLVM_ORC_JIT` with a real `worker_pid` and duration, one of them per journey carried over `TRUSTED_RELAY`, alongside a `NATIVE_AOT` job from the acceptance run.
+- `docker compose --config` validation, generated-coverage `--check` and `git diff --check`: PASS.
+
+Useful verification: `make verify-native-container` then an explicit `ctest` inside it; `.venv/bin/python scripts/test_postgres.py` with the dev Compose PostgreSQL up; `npx playwright test -c playwright.prototype.config.ts tests/prototype/execution.spec.ts`.
+
+Known limitations: Windows target objects are emitted but cannot be linked or executed on this macOS host, so Windows remains a compilation-target claim only — **ENVIRONMENT DEPENDENT**. Certificate rotation and production OS credential storage remain open, so `SEC-02`/`AGT-03` are PARTIAL, and the endpoint state set beyond ONLINE/STALE/OFFLINE/WAITING_FOR_HEARTBEAT remains specified only (`AGT-04` PARTIAL). The relay is a byte pass-through, not a domain-fronting gateway, so `SAFE-11` is PARTIAL. cgroup hard limits are still unavailable.
+
 ## PS-coverage sprint 1 — Build Forge delivery — 2026-09-27
 
 Status: **IMPLEMENTED and verified within the bounded delivery scope below**.

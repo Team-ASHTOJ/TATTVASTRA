@@ -9,7 +9,7 @@
 #include <optional>
 
 namespace jocky {
-inline constexpr const char *compiler_version = "0.3.0";
+inline constexpr const char *compiler_version = "0.4.0";
 
 struct StageProfile {
   std::optional<double> lex_ms;
@@ -33,6 +33,7 @@ struct StructuralMetrics {
 };
 
 struct VariantOptions {
+  std::string target_triple = "host";
   uint64_t seed = 0;
   std::string profile = "balanced";
   std::string execution_mode = "memory";

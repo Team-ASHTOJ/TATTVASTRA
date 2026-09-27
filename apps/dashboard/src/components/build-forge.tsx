@@ -1,8 +1,10 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
+import { TargetBuilds } from "./target-builds";
 import { object, shortHash } from "../lib/product-data";
 
 type Row = Record<string, unknown> & { id: string };
@@ -27,17 +29,17 @@ function Hash({ value }: { value: unknown }) {
 }
 export function BuildForge() {
   const client = useQueryClient();
+  // Read deep links from the router, not from window.location: a client-side
+  // navigation commits the address bar after this component can first render,
+  // so the window would still report the URL we navigated away from.
+  const params = useSearchParams();
   const [compilation, setCompilation] = useState(() =>
-    typeof window === "undefined"
-      ? ""
-      : (new URLSearchParams(window.location.search).get("compilation") ?? ""),
+    typeof window === "undefined" ? "" : (params.get("compilation") ?? ""),
   );
   const [count, setCount] = useState(3);
   const [seed, setSeed] = useState("");
   const [selected, setSelected] = useState(() =>
-    typeof window === "undefined"
-      ? ""
-      : (new URLSearchParams(window.location.search).get("build") ?? ""),
+    typeof window === "undefined" ? "" : (params.get("build") ?? ""),
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -371,6 +373,7 @@ export function BuildForge() {
           )}
         </section>
       )}
+      <TargetBuilds compilation={chosen} />
       <section className="panel">
         <h2>Protected configuration</h2>
         <p>

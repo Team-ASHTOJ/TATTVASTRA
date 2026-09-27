@@ -1,7 +1,10 @@
 #include "jocky/worker.h"
+#include <llvm/BinaryFormat/Magic.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 #include <llvm/ExecutionEngine/Orc/Mangling.h>
+#include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/MemoryBuffer.h>
+#include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_ostream.h>
 #include <string>
@@ -50,7 +53,18 @@ int main(int argc, char **argv) {
   auto object = llvm::MemoryBuffer::getFile(argv[1]);
   if (!object)
     return 66;
-  if (auto error = (*jit)->addObjectFile(std::move(*object))) {
+  if (llvm::identify_magic((*object)->getBuffer()) == llvm::file_magic::unknown) {
+    auto context = std::make_unique<llvm::LLVMContext>();
+    llvm::SMDiagnostic diagnostic;
+    auto module = llvm::parseIR((*object)->getMemBufferRef(), diagnostic, *context);
+    if (!module || module->getTargetTriple() != (*jit)->getTargetTriple().str())
+      return 65;
+    if (auto error = (*jit)->addIRModule(
+            llvm::orc::ThreadSafeModule(std::move(module), std::move(context)))) {
+      llvm::consumeError(std::move(error));
+      return 70;
+    }
+  } else if (auto error = (*jit)->addObjectFile(std::move(*object))) {
     llvm::consumeError(std::move(error));
     return 70;
   }

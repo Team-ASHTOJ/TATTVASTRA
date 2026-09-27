@@ -39,6 +39,21 @@ services:
       interval: 3s
       timeout: 3s
       retries: 30
+  # Reclaims jobs past their deadline and retires lapsed heartbeats, as the dev
+  # stack does (infra/docker/compose.yaml). Without this service nothing ever
+  # transitions an orphaned job out of RUNNING, so a hunt whose endpoint stops
+  # mid-dispatch never reaches a terminal state.
+  sweeper:
+    build:
+      context: ../..
+      dockerfile: infra/docker/control-plane.Dockerfile
+    command: ["/app/.venv/bin/python", "-m", "jocky_control_plane.cli", "sweep"]
+    environment:
+      JOCKY_MODE: DEMO
+      JOCKY_DATABASE_URL: postgresql+psycopg://jocky:${POSTGRES_PASSWORD}@postgres:5432/jocky
+    volumes: ["video_objects:/app/.local"]
+    depends_on:
+      control-plane: { condition: service_healthy }
   agent-control:
     build:
       context: ../..
@@ -49,10 +64,39 @@ services:
       JOCKY_DATABASE_URL: postgresql+psycopg://jocky:${POSTGRES_PASSWORD}@postgres:5432/jocky
       JOCKY_GRPC_BIND: 0.0.0.0:50051
       JOCKY_GRPC_ENROLLMENT_BIND: 0.0.0.0:50052
+      JOCKY_GRPC_RELAY_BIND: agent-control-relay:50053
+      JOCKY_GRPC_RELAY_ENROLLMENT_BIND: agent-control-relay:50054
+    networks:
+      default: {}
+      relay_backend:
+        aliases: ["agent-control-relay"]
     volumes: ["video_objects:/app/.local"]
     ports: ["127.0.0.1:15051:50051", "127.0.0.1:15052:50052"]
     depends_on:
       control-plane: { condition: service_healthy }
+  trusted-relay:
+    build:
+      context: ../..
+      dockerfile: infra/docker/control-plane.Dockerfile
+    command: ["/app/.venv/bin/python", "-m", "jocky_control_plane.relay"]
+    networks: [default, relay_backend]
+    ports: ["127.0.0.1:15061:50051", "127.0.0.1:15062:50052"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      agent-control: { condition: service_started }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/app/.venv/bin/python",
+          "-c",
+          "import socket; socket.create_connection(('localhost',50051),3).close()",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
   local-agent-launcher:
     build:
       context: ../..
@@ -96,6 +140,8 @@ services:
       ["/app/.venv/bin/python", "-m", "jocky_control_plane.local_launcher"]
     environment:
       JOCKY_LOCAL_AGENT_SLOT: "2"
+      JOCKY_LOCAL_ENROLLMENT_SERVER: https://trusted-relay:50052
+      JOCKY_LOCAL_CONTROL_SERVER: https://trusted-relay:50051
       JOCKY_LOCAL_LAUNCHER_TOKEN: ${JOCKY_LOCAL_LAUNCHER_TOKEN:?Run make configure-local}
     volumes: ["local_agent_state_2:/endpoint"]
     init: true
@@ -103,6 +149,7 @@ services:
     stop_grace_period: 10s
     depends_on:
       agent-control: { condition: service_started }
+      trusted-relay: { condition: service_healthy }
     healthcheck:
       test:
         [
@@ -161,3 +208,7 @@ volumes:
   local_agent_state_3:
   video_database:
   video_objects:
+
+networks:
+  relay_backend:
+    internal: true
