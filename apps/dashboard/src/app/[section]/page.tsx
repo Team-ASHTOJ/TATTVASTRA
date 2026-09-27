@@ -1,3 +1,4 @@
+import { BuildForge } from "../../components/build-forge";
 import { notFound, redirect } from "next/navigation";
 import { StatusBadge } from "@jocky/ui";
 import { sections } from "../../lib/sections";
@@ -21,6 +22,7 @@ export default async function SectionPage({
   params: Promise<{ section: string }>;
 }) {
   const { section } = await params;
+  if (section === "forge") return <BuildForge />;
   if (section === "language") return <LanguageDocumentation />;
   if (section === "live") redirect("/investigations");
   if (section === "architecture") return <PlatformOverview coverageOnly />;

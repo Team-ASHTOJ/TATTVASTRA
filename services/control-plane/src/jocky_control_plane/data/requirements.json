@@ -319,7 +319,7 @@
     "title": "Variant manifest and provenance",
     "implementation": "Source/JIR/LLVM hashes, seed, versions, target, mode, actual artifact, semantic result, timestamps and signature",
     "subsystem": "Build Diversity / Forge",
-    "demo_evidence": "Trace each executed variant to exact source and artifact",
+    "demo_evidence": "Signed Build Forge manifest binds source/JIR/LLVM, selected seed, object bytes, fixture result and target; byte/provenance verification fails on tampering",
     "status": "IMPLEMENTED",
     "phase": "P4",
     "safety_environment_note": "Only JOCKY-generated benign wrappers. Never arbitrary payloads or AV-directed optimization."
@@ -330,12 +330,12 @@
     "simulation_label": null,
     "id": "DIV-06",
     "title": "Encrypted sensitive literals/configuration",
-    "implementation": "AEAD encrypted literal pool, external key IDs, runtime-only tokens",
+    "implementation": "Existing AES-256-GCM literal pools with external key IDs, surfaced key-configuration availability",
     "subsystem": "Build Diversity / Forge",
-    "demo_evidence": "Artifact plaintext scan; wrong key/tampering rejected",
-    "status": "IMPLEMENTED",
+    "demo_evidence": "Native tests: plaintext absent, wrong key/tampered pool rejected; protected Build Forge fixture checks with a provisioned test key",
+    "status": "PARTIAL",
     "phase": "P4",
-    "safety_environment_note": "Only JOCKY-generated benign wrappers. Never arbitrary payloads or AV-directed optimization."
+    "safety_environment_note": "Compiler protection is implemented. Endpoint key provisioning/distribution is not delivered in this sprint; no AV-directed string hiding."
   },
   {
     "schema_version": "1.0.0",
@@ -343,12 +343,12 @@
     "simulation_label": null,
     "id": "DIV-07",
     "title": "First-class Build Forge",
-    "implementation": "Domain/API/UI compile-to-registry workflow with equivalence and signing gates",
+    "implementation": "Persistent BuildRun stages, bounded seeded native pipeline, real fixture equivalence and Ed25519 signed registry manifest",
     "subsystem": "Build Diversity / Forge",
-    "demo_evidence": "Replay a build and inspect state transitions",
-    "status": "PLANNED",
+    "demo_evidence": "Build Forge: compile one source, select three structurally distinct real artifacts, verify hashes/manifest and refresh persisted status",
+    "status": "IMPLEMENTED",
     "phase": "P4",
-    "safety_environment_note": "Only JOCKY-generated benign wrappers. Never arbitrary payloads or AV-directed optimization."
+    "safety_environment_note": "Bounded deterministic compiler fixtures, not universal or endpoint equivalence. Host-target memory worker objects only."
   },
   {
     "schema_version": "1.0.0",
@@ -356,12 +356,12 @@
     "simulation_label": null,
     "id": "DIV-08",
     "title": "Continuous build and deployment",
-    "implementation": "Build Forge registry plus CI quality gates and operator deployment policy",
+    "implementation": "Repeatable source \u2192 validate \u2192 JIR \u2192 diversify \u2192 LLVM \u2192 object \u2192 fixture \u2192 equivalence \u2192 signed manifest \u2192 READY delivery",
     "subsystem": "Build Diversity / Forge",
-    "demo_evidence": "Verified artifact publication and rollback by immutable digest",
-    "status": "PLANNED",
+    "demo_evidence": "Repeat with the same base seed to reproduce actual hashes; stage failure remains FAILED and blocks READY",
+    "status": "IMPLEMENTED",
     "phase": "P4",
-    "safety_environment_note": "Only JOCKY-generated benign wrappers. Never arbitrary payloads or AV-directed optimization."
+    "safety_environment_note": "Continuous delivery to the existing artifact registry; production rollout, cross-compilation and native packaging are not certified."
   },
   {
     "schema_version": "1.0.0",

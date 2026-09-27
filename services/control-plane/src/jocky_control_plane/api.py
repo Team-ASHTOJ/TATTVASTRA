@@ -9,19 +9,20 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import Response, StreamingResponse
 from jocky_contracts import control as contracts
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from jocky_control_plane import hunts, investigation, local_agent
+from jocky_control_plane import forge, hunts, investigation, local_agent
 from jocky_control_plane.builds import build_variants, compile_version
 from jocky_control_plane.config import Settings
 from jocky_control_plane.models import (
     Artifact,
     BenchmarkRun,
+    BuildRun,
     Case,
     CompatibilityRun,
     Compilation,
@@ -195,6 +196,53 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
     @router.get("/compilations")
     def compilations(db: DB, user: Reader) -> Any:
         return collection(db, user, Compilation)
+
+    @router.get("/build-capabilities")
+    def build_capabilities(user: Reader) -> Any:
+        return forge.capabilities(settings)
+
+    @router.get("/build-runs")
+    def build_runs(db: DB, user: Reader) -> Any:
+        return collection(db, user, BuildRun)
+
+    @router.post("/build-runs", status_code=202)
+    def create_build(
+        payload: contracts.BuildCreate, background: BackgroundTasks, db: DB, user: Writer
+    ) -> Any:
+        compilation = owned(db, Compilation, payload.compilation_id, user)
+        if not forge.capabilities(settings)["available"]:
+            raise HTTPException(503, "Native compiler unavailable")
+        run = forge.start_run(db, compilation, payload.count, payload.seed)
+        publish(
+            db,
+            user,
+            "build.created",
+            run.id,
+            {"compilation_id": str(compilation.id)},
+            simulation=run.simulation,
+            simulation_label=run.simulation_label,
+        )
+        db.commit()
+        background.add_task(
+            forge.execute, factory, settings, run.id, user.id, payload.expected_semantic_hash
+        )
+        return document(run)
+
+    @router.get("/build-runs/{identifier}")
+    def build_run(identifier: UUID, db: DB, user: Reader) -> Any:
+        return document(owned(db, BuildRun, identifier, user))
+
+    @router.get("/build-runs/{identifier}/manifest")
+    def build_manifest(identifier: UUID, db: DB, user: Reader) -> Any:
+        run = owned(db, BuildRun, identifier, user)
+        if run.manifest is None:
+            raise HTTPException(409, "Signed build manifest is not ready")
+        return run.manifest
+
+    @router.post("/build-runs/{identifier}/verify")
+    def verify_build(identifier: UUID, db: DB, user: Reader) -> Any:
+        run = owned(db, BuildRun, identifier, user)
+        return forge.verify(db, run, settings)
 
     @router.get("/variants")
     def variant_list(db: DB, user: Reader) -> Any:
@@ -385,11 +433,27 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
         from jocky_control_plane.models import Variant
 
         rows = [owned(db, Variant, identifier, user) for identifier in payload.variant_ids]
+        run_ids = {row.build_run_id for row in rows}
+        runs = [db.get(BuildRun, identifier) for identifier in run_ids if identifier]
+        trusted = (
+            bool(rows)
+            and None not in run_ids
+            and all(
+                run and run.status.value == "READY" and forge.verify(db, run, settings)["valid"]
+                for run in runs
+            )
+        )
         return {
             "variants": [document(row) for row in rows],
             "same_source": len({row.manifest["source_hash"] for row in rows}) == 1,
             "distinct_artifacts": len({row.content_hash for row in rows}),
-            "semantic_equivalence": "NOT_TESTED",
+            "semantic_equivalence": "VERIFIED"
+            if trusted
+            and all(row.manifest.get("equivalence_status") == "VERIFIED" for row in rows)
+            and len({row.manifest.get("semantic_result_hash") for row in rows}) == 1
+            and len({row.manifest.get("jir_hash") for row in rows}) == 1
+            else "NOT_TESTED",
+            "equivalence_scope": "Deterministic compiler fixture only",
         }
 
     @router.get("/variants/{identifier}")

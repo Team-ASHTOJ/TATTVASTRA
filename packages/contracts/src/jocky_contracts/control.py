@@ -42,6 +42,15 @@ class VersionCreate(Contract):
     source: str = Field(min_length=1, max_length=262144)
 
 
+class BuildCreate(Contract):
+    compilation_id: UUID
+    count: int = Field(default=3, ge=1, le=8)
+    target: Literal["host"] = "host"
+    execution_mode: Literal["memory"] = "memory"
+    seed: str | None = Field(default=None, pattern=r"^[0-9a-f]{16}$")
+    expected_semantic_hash: Hash | None = None
+
+
 class VariantCreate(Contract):
     count: int = Field(default=3, ge=1, le=16)
 

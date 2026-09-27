@@ -136,8 +136,33 @@ class Compilation(Scoped, Base):
     error: Mapped[str | None] = mapped_column(Text)
 
 
+class BuildState(StrEnum):
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    READY = "READY"
+    FAILED = "FAILED"
+
+
+class BuildRun(Scoped, Base):
+    __tablename__ = "build_runs"
+    compilation_id: Mapped[UUID] = mapped_column(ForeignKey("compilations.id"))
+    status: Mapped[BuildState] = mapped_column(
+        Enum(BuildState, native_enum=False), default=BuildState.QUEUED
+    )
+    seed: Mapped[str] = mapped_column(String(16))
+    variant_count: Mapped[int]
+    target: Mapped[str] = mapped_column(String(128), default="host")
+    execution_mode: Mapped[str] = mapped_column(String(16), default="memory")
+    stages: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    results: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    manifest: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    error: Mapped[str | None] = mapped_column(Text)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class Variant(Scoped, Base):
     __tablename__ = "variants"
+    build_run_id: Mapped[UUID | None] = mapped_column(ForeignKey("build_runs.id"))
     compilation_id: Mapped[UUID] = mapped_column(ForeignKey("compilations.id"))
     seed: Mapped[str] = mapped_column(String(16))
     manifest: Mapped[dict[str, Any]] = mapped_column(JSON)

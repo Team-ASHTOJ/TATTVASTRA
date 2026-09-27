@@ -35,18 +35,18 @@ For this local stack the enrollment channel is `https://localhost:15052` and aut
 
 ## Operator sequence
 
-| Time      | Action                                                              | Demonstrate                                                                                                                                      |
-| --------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0:00–0:25 | Sign in → Command Center                                            | Authenticated user/role, operation flow and Connect / Workbench / New Investigation actions.                                                     |
-| 0:25–0:55 | Endpoints → Connect Endpoint                                        | Start three local endpoints; independent authenticated heartbeats and structured detail.                                                         |
-| 0:55–1:35 | Workbench → Load Example → Combined Investigation → CHECK → COMPILE | Empty editor, actual diagnostics, durable compilation and real Tokens / AST / Typed JIR / LLVM / Plan outputs.                                   |
-| 1:35–2:00 | Variant Explorer → Generate variants                                | Compact real hashes, seeds, measured profiles and comparison drawer. Different hashes alone do not prove equivalence.                            |
-| 2:00–2:45 | New Investigation                                                   | Select the named compilation, three real online endpoints and memory mode; review then start. Open actual persisted job completion and evidence. |
-| 2:45–3:15 | Findings                                                            | Open the sandbox unsigned-process/external-connection conclusion; supporting observations and provenance remain explicit.                        |
-| 3:15–3:45 | Graph → Timeline                                                    | Select a readable process node; filter chronological events and open detail with related analysis links.                                         |
-| 3:45–4:15 | Evidence Vault → Verify integrity                                   | Immediate verification drawer with actual stored/recomputed SHA-256; separate manifest provenance/signature.                                     |
-| 4:15–4:40 | Driver Intelligence → Performance                                   | Collected driver inventory and genuine measured compiler timings. Missing measurements remain unavailable.                                       |
-| 4:40–5:00 | Documentation                                                       | Implemented syntax, compile-valid examples and Open in Workbench.                                                                                |
+| Time      | Action                                                              | Demonstrate                                                                                                                                                       |
+| --------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0:00–0:25 | Sign in → Command Center                                            | Authenticated user/role, operation flow and Connect / Workbench / New Investigation actions.                                                                      |
+| 0:25–0:55 | Endpoints → Connect Endpoint                                        | Start three local endpoints; independent authenticated heartbeats and structured detail.                                                                          |
+| 0:55–1:35 | Workbench → Load Example → Combined Investigation → CHECK → COMPILE | Empty editor, actual diagnostics, durable compilation and real Tokens / AST / Typed JIR / LLVM / Plan outputs.                                                    |
+| 1:35–2:00 | Build Forge → BUILD 3 VARIANTS                                      | Follow persisted stage gates to READY; verify signed build provenance and bytes, then compare real hashes/structural identities with bounded fixture equivalence. |
+| 2:00–2:45 | New Investigation                                                   | Select the named compilation, three real online endpoints and memory mode; review then start. Open actual persisted job completion and evidence.                  |
+| 2:45–3:15 | Findings                                                            | Open the sandbox unsigned-process/external-connection conclusion; supporting observations and provenance remain explicit.                                         |
+| 3:15–3:45 | Graph → Timeline                                                    | Select a readable process node; filter chronological events and open detail with related analysis links.                                                          |
+| 3:45–4:15 | Evidence Vault → Verify integrity                                   | Immediate verification drawer with actual stored/recomputed SHA-256; separate manifest provenance/signature.                                                      |
+| 4:15–4:40 | Driver Intelligence → Performance                                   | Collected driver inventory and genuine measured compiler timings. Missing measurements remain unavailable.                                                        |
+| 4:40–5:00 | Documentation                                                       | Implemented syntax, compile-valid examples and Open in Workbench.                                                                                                 |
 
 For a real run choose a bounded inventory example. Rich filters/correlation/timeline/export are documented compiler syntax but not supported by the current remote execution bridge. The optional Failure Isolation Scenario is seeded backend data; it is not a default newly executed investigation.
 
@@ -65,3 +65,13 @@ npx playwright test -c playwright.prototype.config.ts
 The local-endpoint test performs browser-only startup, real TLS enrollment/heartbeat, refresh, duplicate prevention, stop/heartbeat expiry and same-identity restart. The coherence test connects all three actual agents, executes one program across them, compares variants, verifies real artifact bytes and its manifest separately, compiles every documentation example, and checks primary routes. The operator test separately preserves external native enrollment and real execution/compilation/evidence acceptance.
 
 If compilation or integrity fails, inspect the failure; never substitute output or edit hashes. Session expiration requires a fresh sign-in. `make demo-prepare` loads only optional persisted sandbox fixtures, not fake frontend progress.
+
+## Build Forge: repeatable delivery proof
+
+After Workbench CHECK/COMPILE, open Build Forge and select that compilation. Choose three variants, compiler-host target and memory-worker object delivery. An optional 16-hex-digit base seed makes byte/structural identities reproducible. Click BUILD 3 VARIANTS, follow persisted stage results and wait for READY. No endpoint jobs are launched by this action.
+
+Show A/B/C: identical JIR intent, distinct real LLVM identities, structural fingerprints and artifact SHA-256; sizes and compiler profiles come from actual builds. Open Variant Explorer for measured basic-block/function/helper counts. Click Verify build manifest & bytes: Ed25519 signature, provenance and recomputed stored objects must all pass. Click Variant A → Compare variants to show VERIFIED **only for the deterministic compiler fixture**, never universal equivalence. Refresh preserves the run. Rebuild with the same base seed to demonstrate deterministic artifact hashes; timings/timestamps can differ.
+
+Protected literals require operator-provisioned JOCKY_LITERAL_KEY_HEX and JOCKY_LITERAL_KEY_ID in the compiler environment. Do not display keys; do not imply endpoint key distribution or full fleet deployment is implemented. Native endpoint packaging/cross-target rollout are outside this delivery proof.
+
+Targeted verification: `npx playwright test -c playwright.prototype.config.ts tests/prototype/forge.spec.ts`. Native acceptance runs `make verify-native-container`; Build Forge Python tests require an actual `JOCKY_COMPILER_PATH`, otherwise native cases are explicitly skipped.

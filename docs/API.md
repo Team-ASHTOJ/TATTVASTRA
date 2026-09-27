@@ -119,3 +119,13 @@ No agent token is returned by these APIs. The launcher uses a generated internal
 New variant manifests retain the compiler-returned `profile` and the actual stored `artifact_size_bytes`. Old variants may lack these fields; missing measurements remain unavailable. Profile stage durations do not represent total control-plane wall-clock build time.
 
 Bounded inventory routes return their newest window in chronological order (default 500, or the route-specific requested limit). Historical resources remain available through detail APIs. This prototype does not expose complete fleet pagination.
+
+## Persistent Build Forge
+
+Authenticated reader routes: GET `/api/build-capabilities`, `/api/build-runs`, `/api/build-runs/{id}`, `/api/build-runs/{id}/manifest`; POST `/api/build-runs/{id}/verify` recomputes object hashes and verifies the Ed25519 build-signing domain and provenance. Tenant ownership is enforced on every run.
+
+ADMIN/ANALYST POST `/api/build-runs` accepts `compilation_id`, `count` (1–8, default 3), `target:"host"`, `execution_mode:"memory"`, optional 16-lowercase-hex `seed`, and optional SHA-256 `expected_semantic_hash`. Returns 202 with a durable QUEUED run; the existing API background task invokes the real native compiler, commits stage events and produces READY or FAILED. GET status exposes stages, actual timing scopes, selected seeds, errors, fixture results and signed manifest. Manifest retrieval returns 409 before signing. Capabilities list the actual supported delivery options and protected-literal key availability without key material.
+
+Build states: QUEUED / RUNNING / READY / FAILED. Stage states: PENDING / RUNNING / SUCCESS / FAILED / SKIPPED. Timings may be null. Deterministic fixture input is explicitly simulation=true; objects and compiler execution remain real. The manifest has a separate `JOCKY:build:v1` signing domain; it is build provenance, not an agent evidence seal. Verification exposes signature_valid, provenance_valid, artifact_integrity_valid and combined valid; missing bytes cannot be valid.
+
+Variants retain build_run_id and bounded equivalence metadata. `/api/variants/compare` reports VERIFIED only for fixture-equivalent variants whose READY delivery manifests and stored bytes still verify. Legacy variants remain NOT_TESTED. Build delivery is host-target LLVM object publication; fleet rollout, native worker linking and crash-resuming queues are not provided by this route.

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
@@ -2228,15 +2229,13 @@ function EvidenceView({ d }: { d: Data }) {
     </>
   );
 }
-function VariantView({
-  d,
-  refresh,
-}: {
-  d: Data;
-  refresh: () => Promise<void>;
-}) {
+function VariantView({ d }: { d: Data; refresh: () => Promise<void> }) {
   const [comp, setComp] = useState(
-    d.compilations.filter((c) => c.status === "SUCCESS").at(-1)?.id ?? "",
+    (typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("compilation")
+      : null) ??
+      d.compilations.filter((c) => c.status === "SUCCESS").at(-1)?.id ??
+      "",
   );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -2244,12 +2243,24 @@ function VariantView({
   const [comparison, setComparison] = useState<Record<string, unknown> | null>(
     null,
   );
-  const variants = d.variants.filter((v) => v.compilation_id === comp);
+  const router = useRouter();
+  const buildFilter =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("build")
+      : null;
+  const variants = d.variants.filter(
+    (v) =>
+      v.compilation_id === comp &&
+      (!buildFilter || v.build_run_id === buildFilter),
+  );
   return (
     <>
       <section className="panel action-heading">
         <div>
-          <h2>Same forensic intent · distinct compiled variants</h2>
+          <h2>One forensic intent → multiple verified builds</h2>
+          <Link className="text-link" href="/forge">
+            Build Forge →
+          </Link>
           <select
             aria-label="Variant compilation"
             value={comp}
@@ -2269,12 +2280,12 @@ function VariantView({
           onClick={async () => {
             setBusy(true);
             try {
-              const built = await submit<Row[]>(
-                `compilations/${comp}/variants`,
-                { count: 3 },
-              );
-              setNotice(`${built.length} variants generated ✓`);
-              await refresh();
+              const built = await submit<Row>("build-runs", {
+                compilation_id: comp,
+                count: 3,
+              });
+              setNotice("Delivery build started ✓");
+              router.push(`/forge?compilation=${comp}&build=${built.id}`);
             } catch (e) {
               setError(e instanceof Error ? e.message : "Build failed");
             } finally {
@@ -2282,7 +2293,7 @@ function VariantView({
             }
           }}
         >
-          {busy ? "Building…" : "Generate 3 Variants"}
+          {busy ? "Starting…" : "Build 3 Verified Variants"}
         </button>
       </section>
       {notice && <p role="status">{notice}</p>}
@@ -2312,6 +2323,9 @@ function VariantView({
                 obj(obj(v.manifest).profile).variant_ms ?? "Not measured",
               aot_ms: obj(obj(v.manifest).profile).aot_ms ?? "Not measured",
               bytes: obj(v.manifest).artifact_size_bytes ?? "Not measured",
+              equivalence: obj(v.manifest).equivalence_status ?? "NOT TESTED",
+              structural_fingerprint: obj(v.manifest).structural_fingerprint,
+              jir_identity: obj(v.manifest).jir_hash,
               ...obj(obj(v.manifest).structural_metrics),
             }}
           />,
@@ -2386,8 +2400,9 @@ function VariantView({
             ])}
           />
           <p>
-            Structural diversity is proven by generated artifacts. Semantic
-            equivalence has not been evaluated for this compilation.
+            {comparison.semantic_equivalence === "VERIFIED"
+              ? "Equivalent source/JIR/plan and deterministic compiler fixture results verified. This is not universal or endpoint equivalence."
+              : "Structural diversity is proven by generated artifacts. Semantic equivalence has not been evaluated for this compilation."}
           </p>
           <p>
             Stage timings are compiler measurements. They exclude control-plane

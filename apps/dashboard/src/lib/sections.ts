@@ -29,6 +29,14 @@ export const sections = [
     description: "Inspect an existing persisted compilation stage by stage.",
   },
   {
+    slug: "forge",
+    name: "Build Forge",
+    group: "BUILD",
+    phase: "P4",
+    description:
+      "Seeded LLVM builds, fixture equivalence and signed delivery provenance.",
+  },
+  {
     slug: "variants",
     name: "Variant Explorer",
     group: "BUILD",

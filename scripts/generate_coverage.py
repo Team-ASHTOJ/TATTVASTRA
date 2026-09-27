@@ -20,7 +20,8 @@ def render() -> str:
         "Status describes implementation, not importance. PLANNED = specified only; "
         "SCAFFOLDED = boundaries/build exist; IMPLEMENTED = code exists but acceptance incomplete; "
         "VERIFIED = scoped acceptance recorded; "
-        "BLOCKED_ENVIRONMENT = external prerequisite absent. "
+        "BLOCKED_ENVIRONMENT = external prerequisite absent; "
+        "PARTIAL = only the stated subset is implemented; NOT_TESTED = acceptance not executed. "
         "P0 verification does not certify P1–P10 features. Demo evidence in PLANNED rows is an "
         "acceptance target, not a claim that the demo works.",
         "",

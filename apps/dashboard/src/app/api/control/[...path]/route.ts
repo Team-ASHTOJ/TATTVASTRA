@@ -15,6 +15,8 @@ const domains = new Set([
   "scripts",
   "compilations",
   "variants",
+  "build-runs",
+  "build-capabilities",
   "endpoints",
   "local-agent",
   "local-agents",

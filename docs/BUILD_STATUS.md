@@ -1,5 +1,32 @@
 # Build status
 
+## PS-coverage sprint 1 — Build Forge delivery — 2026-09-27
+
+Status: **IMPLEMENTED and verified within the bounded delivery scope below**.
+
+- New persistent BuildRun and migration `0006_build_forge` reuse existing Compilation, Variant, object storage, outbox/audit and Ed25519 infrastructure. No compiler, Rust agent or protocol rewrite.
+- `/forge` runs SOURCE → VALIDATE → JIR → DIVERSIFY → LLVM → BUILD → TEST → EQUIVALENCE → MANIFEST → READY. Source validation/JIR gates reuse an existing successful compilation. Native lowering/AOT/ORC fixture execution are bundled by the existing compiler; persisted timings explicitly identify gate wall time versus native-stage sums across candidate seeds.
+- Default three (bounded 1–8) selected variants have actual object bytes, seeds, JIR/LLVM hashes, structural fingerprints, block/function/helper metrics, measured profiles and sizes. A bounded deterministic seed scan selects distinct structural templates and artifact hashes; insufficient diversity fails honestly. Same base seed/source/compiler/key reproduces artifact identities, while timestamps/timings differ.
+- Equivalence VERIFIED means equal source/JIR/declared plan and normalized deterministic benign ORC fixture result; a supplied expected result hash can reject delivery. Fixture inputs carry simulation=true. This does not prove universal or native endpoint equivalence.
+- Build manifests bind source/version, compilation, seed, target/mode, variant membership, actual hashes and fixture result in a separate `JOCKY:build:v1` Ed25519 domain. Verification checks signature, stored provenance and actual object bytes. Missing/tampered content cannot pass. Variant comparison only reports VERIFIED for delivery sets whose READY manifests and bytes still verify.
+- Existing AES-256-GCM protected literal pools are surfaced and integration-tested with an ephemeral externally provided key: protected fixture build READY, plaintext marker absent from the actual object, missing key rejects compilation. Native tests additionally reject wrong keys and tampering. PS protected-configuration coverage remains PARTIAL because endpoint key provisioning/distribution is absent.
+- Build Forge and Variant Explorer provide the repeatable delivery path, actual stage/status history, compact hash copy/full-value affordances, comparison and refresh persistence. Requirement Coverage and API/operator documentation describe these same capabilities and limits.
+
+Executed checks:
+
+- `make verify-foundation`: PASS, including generated contract/coverage/protobuf drift, formatting, Ruff/ESLint, mypy, workspace typecheck, Python tests, package builds and production build.
+- Python Ruff and mypy: PASS (35 typed source files).
+- Host Python suite: 86 passed, four native-only cases skipped; native Forge cases explicitly require a real LLVM compiler and are skipped on this macOS environment. All five native Forge tests were separately executed, not counted as passing skips.
+- Compiler-bearing container, fresh isolated PostgreSQL schemas: five Build Forge tests PASS; nine existing distributed/migration/auth/TLS/evidence/audit tests PASS. Every schema migrates from empty through 0006. Final container tests used the image’s pinned runtime dependencies and an isolated pytest/httpx2 runner. A first combined attempt inherited product sandbox/compiler settings that contradicted two existing test assumptions; rerun used REAL/no-compiler settings for those regressions and REAL/native-compiler settings for Forge. The source-corruption test was corrected to insert invalid input rather than overwriting an append-only version; PostgreSQL protections remain intact.
+- `make verify-native-container` and an uncached container `ctest`/compiler self-test: 35 C++/frontend tests PASS; ORC ABI probe PASS. No Rust source changed.
+- Targeted Playwright Build Forge acceptance: two desktop/mobile tests PASS, actual CHECK/compile, three distinct artifacts/LLVM/structural identities, bounded equivalence, Ed25519/byte verification, comparison and refresh; no console/runtime errors or main-view destructive overflow.
+- Generated contract/traceability checks and `git diff --check`: PASS.
+- `make demo-up`, `make demo-check` and Compose config validation: PASS with PostgreSQL, API, gRPC, dashboard and three existing internal local-agent runtimes. Previously persisted identities and evidence are preserved.
+
+Known limitations: only compiler-host memory-worker LLVM objects are delivered here; native worker packaging, cross-target compilation and fleet deployment are not gates. Fixture equivalence is bounded ORC execution of compiler-produced lowering after successful AOT emission; it is not execution of the emitted object on an endpoint. The API uses a bounded background task, not a crash-resuming queue: process interruption may leave a RUNNING record; repeat the build. Candidate scanning is bounded, so requests may fail when a program cannot yield enough distinct structural templates. Protected endpoint key distribution remains PARTIAL. No antivirus optimization/bypass is claimed.
+
+Useful verification: `make verify-foundation`; `make verify-native-container`; `npx playwright test -c playwright.prototype.config.ts tests/prototype/forge.spec.ts`; `.venv/bin/python -m pytest services/control-plane/tests/test_forge.py` with an actual configured `JOCKY_COMPILER_PATH` (and optional isolated `JOCKY_TEST_DATABASE_URL`).
+
 ## Operator coherence and three real local agents — 2026-09-27
 
 Status: **VERIFIED within the existing prototype capabilities**. This supersedes the single-slot local endpoint limit below. The existing internal fixed-command supervisor is reused in three isolated containers/state volumes, each enrolling its own Rust agent normally. ADMIN-only lifecycle APIs accept bounded slots 1–3; repeated start reuses enrollment and identity. No Docker socket, arbitrary execution API or Rust/protobuf change was introduced.

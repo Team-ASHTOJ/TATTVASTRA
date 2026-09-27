@@ -934,6 +934,72 @@
       "title": "Budget",
       "type": "object"
     },
+    "BuildCreate": {
+      "additionalProperties": false,
+      "properties": {
+        "compilation_id": {
+          "format": "uuid",
+          "title": "Compilation Id",
+          "type": "string"
+        },
+        "count": {
+          "default": 3,
+          "maximum": 8,
+          "minimum": 1,
+          "title": "Count",
+          "type": "integer"
+        },
+        "execution_mode": {
+          "const": "memory",
+          "default": "memory",
+          "title": "Execution Mode",
+          "type": "string"
+        },
+        "expected_semantic_hash": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Semantic Hash"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "seed": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Seed"
+        },
+        "target": {
+          "const": "host",
+          "default": "host",
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "compilation_id"
+      ],
+      "title": "BuildCreate",
+      "type": "object"
+    },
     "CapabilityStatus": {
       "additionalProperties": false,
       "properties": {
@@ -2889,6 +2955,8 @@
         "PLANNED",
         "SCAFFOLDED",
         "IMPLEMENTED",
+        "PARTIAL",
+        "NOT_TESTED",
         "VERIFIED",
         "BLOCKED_ENVIRONMENT"
       ],
@@ -5101,6 +5169,9 @@
     },
     "Budget": {
       "$ref": "#/$defs/Budget"
+    },
+    "BuildCreate": {
+      "$ref": "#/$defs/BuildCreate"
     },
     "CapabilityStatus": {
       "$ref": "#/$defs/CapabilityStatus"

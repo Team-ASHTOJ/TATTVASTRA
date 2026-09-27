@@ -169,8 +169,10 @@ test("coherent product connects three real agents and runs one investigation", a
   );
   await page.goto("/variants");
   await page.getByLabel("Variant compilation").selectOption(comp!);
-  await page.getByRole("button", { name: "Generate 3 Variants" }).click();
-  await expect(page.getByText("3 variants generated ✓")).toBeVisible({
+  await page.getByRole("button", { name: "Build 3 Verified Variants" }).click();
+  await expect(
+    page.getByText("3 real objects published", { exact: false }),
+  ).toBeVisible({
     timeout: 30000,
   });
   const generated = (await get("variants")).filter(
@@ -182,10 +184,11 @@ test("coherent product connects three real agents and runs one investigation", a
     expect(typeof variant.manifest.profile.variant_ms).toBe("number");
     expect(typeof variant.manifest.profile.aot_ms).toBe("number");
   }
+  await page.getByRole("link", { name: "Variant A", exact: true }).click();
   await page.getByRole("button", { name: "Compare variants" }).click();
   await expect(
     page.getByRole("dialog", { name: "Variant comparison" }),
-  ).toContainText("NOT TESTED");
+  ).toContainText("VERIFIED");
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Close", exact: true })
