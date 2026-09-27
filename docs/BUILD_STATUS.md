@@ -1,5 +1,50 @@
 # Build status
 
+## Operator coherence and three real local agents — 2026-09-27
+
+Status: **VERIFIED within the existing prototype capabilities**. This supersedes the single-slot local endpoint limit below. The existing internal fixed-command supervisor is reused in three isolated containers/state volumes, each enrolling its own Rust agent normally. ADMIN-only lifecycle APIs accept bounded slots 1–3; repeated start reuses enrollment and identity. No Docker socket, arbitrary execution API or Rust/protobuf change was introduced.
+
+The authenticated header, Command Center operation flow, online-first inventory, spacious investigation wizard, compact variant comparison, focused/aggregated visual graph, separate immediate artifact/manifest verification drawers, platform-specific driver inventory, measured performance history and navigable Documentation now form one operator journey. Raw observations and evidence are preserved. New variant manifests retain actual compiler stage profiles and stored artifact byte size; no synthetic measurements are introduced. Investigation detail safely uses the newly persisted API response during cache refresh.
+
+Observed actual Linux/aarch64 agents (version 0.1.0, simulation=false):
+
+- LOCAL-LINUX-01: `1a590a8d-e7f8-487c-99f7-cc123dd8e56b`
+- LOCAL-LINUX-02: `ae5bfd53-a8ee-4892-97f4-5da547811863`
+- LOCAL-LINUX-03: `17c296b7-2ba1-4e10-8ae7-7d200365022d`
+
+Executed verification:
+
+- `make demo-up`: PASS, including PostgreSQL, API, authenticated gRPC, dashboard and three internal launcher containers. Native agent identities survived image recreation; no secrets are committed.
+- `make verify-foundation`: PASS, including Ruff/Prettier, ESLint, mypy, workspace typecheck, production build, contracts/protobuf drift, packaging and **85 Python tests**.
+- `.venv/bin/python scripts/test_postgres.py services/control-plane/tests/test_local_agent.py services/control-plane/tests/test_operator_product.py` with `JOCKY_TEST_DATABASE_URL` pointing to a temporary fresh PostgreSQL 17.6 instance: **25 passed**. The disposable container was removed. This includes persistence, tenant/RBAC, real TLS, evidence, hunt lifecycle, slot idempotency and the newest-resource inventory window. An initial attempt used the unpublished product database port and failed; it is not counted as passing.
+- `make verify-agent-container`: PASS; locked build, format, **24 Rust tests** (18 agent + 6 transport), clippy and doctor. No Rust source or transport contract changed.
+- `npx playwright test -c playwright.prototype.config.ts`: **8 passed**, desktop/mobile. Actual browser-only three-agent enrollment/heartbeat, independently selected jobs with three SUCCESS outcomes, measured variant metadata, refresh/idempotency, stop/90-second heartbeat expiry/restart, external native enrollment, artifact byte recomputation, separate manifest provenance/signature, driver inventory, real benchmarks, all **19** documentation programs compiled through LLVM, primary routes and viewport overflow checks passed. No browser runtime/console errors occurred.
+- `npx playwright test -c playwright.prototype.config.ts tests/prototype/coherence.spec.ts`: **4 passed** after the final contextual breadcrumb change. Compiler Explorer selects the just-created compilation; the variant link opens that exact record. Frontend lint/typecheck/production build also passed after this change.
+- `make demo-check`: PASS for existing compiler/fixture/evidence/audit invariants. This command checks the labelled sandbox scenario; the browser tests separately prove real local execution.
+- `docker compose --env-file .env -f infra/docker/prototype.compose.yaml config --quiet` and `git diff --check`: PASS. No launcher publishes a host port or mounts a Docker socket. Tracked/non-ignored files contain zero matches for locally generated secret values.
+- Desktop screenshots were inspected at 1366 × 768 for Command Center and wizard spacing.
+
+Acceptance caught and fixed an invalid uppercase documentation severity, a stale comparison-label assertion and a race between the persisted start response and the refreshed hunt list. The final runs above passed after fixes. Bounded inventories now return their newest window in chronological order (500 records by default; cases retain the requested 100/default, 500 maximum), so old records cannot bury current operations. Direct detail APIs preserve access to historical records; full fleet pagination remains outside this prototype.
+
+Known limits: semantic-equivalence evaluation is not exposed for persisted variant comparisons (NOT TESTED); old variants lack stored profiles/byte size. Total wall-clock build latency, CPU/memory telemetry and collector durations are not reported. Rich DSL filters/correlation compile but exceed the bounded remote inventory bridge. Findings used for the walkthrough include explicitly labelled backend sandbox observations; ordinary Linux inventory does not manufacture suspicious findings. Physical Windows live acceptance remains unverified. Local agents collect their own containers, not the macOS host. Each slot belongs to its first enrolling organization, and restart preserves identity but requires an explicit start.
+
+## One-click local endpoint — 2026-09-27 (macOS development host)
+
+Status: **VERIFIED** for the local Linux container workflow. `make demo-up` now builds the existing Rust agent into the bundled worker/runtime and starts an internal local-agent-launcher. Its fixed-command supervisor initializes, enrolls and connects exactly one real agent using persistent `/endpoint/local-agent-1` state. No Rust protocol change or Docker socket was introduced. The launcher is unpublished on the host, authenticated with a generated internal credential, and runs as UID 10001. Local API start/status/stop require ADMIN and enforce organization ownership. Repeated start reuses active operation/enrollment/identity; stop preserves history. ONLINE is derived only from an authenticated heartbeat newer than the current connect process, never from process launch success.
+
+Executed verification:
+
+- `make demo-up`: PASS; PostgreSQL, API, gRPC, dashboard and internal launcher healthy. Rust workspace was built with the existing locked source; no Rust code was changed.
+- `make demo-prepare`, `make demo-check`: PASS; existing compiler/fixture/evidence/audit checks preserved.
+- `make verify-foundation`: PASS, including frontend lint, strict mypy, dashboard/workspace typecheck, production build, contract/protobuf checks, packaging and **83 Python tests**. Four new targeted tests cover fixed-command/internal authentication, missing-agent failure, persistent identity/idempotency, ADMIN/tenant boundaries, unavailable runtime and heartbeat-based status. An initial formatting gate failure was corrected before the successful aggregate.
+- `npx playwright test -c playwright.prototype.config.ts`: **4 passed** across desktop/mobile, including browser-only local startup with real TLS enrollment/heartbeat, refresh, duplicate prevention, actual stop plus 90-second expiry on desktop, same-identity restart and preserved artifact history. The launcher container was also restarted before the final suite, retaining credentials/identity. Existing external native-agent enrollment, execution and full operator journey still passed. No runtime/console errors were observed.
+- `docker compose --env-file .env -f infra/docker/prototype.compose.yaml config --quiet`: PASS. Launcher has no published host port and no service mounts a Docker socket.
+- `git diff --check`: PASS.
+
+Observed real local endpoint: **LOCAL-LINUX-01**, Linux **aarch64**, agent **0.1.0**, `simulation=false`, endpoint ID `1a590a8d-e7f8-487c-99f7-cc123dd8e56b`. Repeated starts and agent/launcher restarts reused the identity and enrollment. The first browser attempt revealed a missing dashboard proxy allowlist entry; it was fixed and the actual final suite passed.
+
+Limitations: one local endpoint/owning organization per launcher; this Linux container collects its own environment, not the macOS host. Runtime restart leaves the agent STOPPED until Start is requested. External machines still require native agent/worker installation and a correctly addressed trusted TLS certificate. Consumed enrollment with missing local credentials is rejected rather than silently creating a duplicate endpoint; restore the persistent state in that corruption case. Physical Windows acceptance remains outside this change.
+
 ## Operator product workflow — 2026-09-27 (macOS development host)
 
 Status: **VERIFIED within the existing prototype capabilities**. This entry supersedes earlier product UI descriptions; it does not declare final Phase 4 or physical Windows acceptance complete.

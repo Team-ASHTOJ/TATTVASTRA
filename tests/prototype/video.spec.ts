@@ -61,7 +61,7 @@ test("complete operator journey uses real enrollment, compiler, hunt and evidenc
     .getByRole("button", { name: "Connect Endpoint", exact: true })
     .click();
   const dialog = page.getByRole("dialog", { name: "Endpoint Enrollment" });
-  await dialog.getByRole("button", { name: "Create enrollment" }).click();
+  await dialog.getByRole("button", { name: "Generate Enrollment" }).click();
   await expect(
     dialog.getByText("WAITING FOR AGENT", { exact: true }),
   ).toBeVisible();
@@ -187,8 +187,13 @@ test("complete operator journey uses real enrollment, compiler, hunt and evidenc
     });
     await page.getByRole("button", { name: "Compare variants" }).click();
     await expect(
-      page.getByText("semantic equivalence", { exact: true }),
+      page
+        .getByRole("dialog", { name: "Variant comparison" })
+        .getByText("Semantic equivalence", { exact: true }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("dialog", { name: "Variant comparison" }),
+    ).toContainText("NOT TESTED");
     await page.goto("/investigations");
     await page
       .getByRole("button", { name: "New Investigation", exact: true })

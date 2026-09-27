@@ -3,6 +3,7 @@
 import asyncio
 import json
 import secrets
+import threading
 from collections.abc import AsyncIterator, Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
@@ -15,7 +16,7 @@ from jocky_contracts import control as contracts
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from jocky_control_plane import hunts, investigation
+from jocky_control_plane import hunts, investigation, local_agent
 from jocky_control_plane.builds import build_variants, compile_version
 from jocky_control_plane.config import Settings
 from jocky_control_plane.models import (
@@ -72,6 +73,7 @@ def document(row: Any) -> dict[str, Any]:
 def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> APIRouter:
     router = APIRouter(prefix="/api", tags=["control-plane"])
     store = ObjectStore(settings.object_root)
+    local_lock = threading.Lock()
 
     def transaction() -> Iterator[Session]:
         with factory() as session:
@@ -143,7 +145,7 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
         return Response(status_code=204)
 
     def collection(
-        db: Session, user: User, model: Any, limit: int = 100, **filters: Any
+        db: Session, user: User, model: Any, limit: int = 500, **filters: Any
     ) -> list[dict[str, Any]]:
         query = select(model).where(model.organization_id == user.organization_id)
         for key, value in filters.items():
@@ -151,7 +153,13 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
                 query = query.where(getattr(model, key) == value)
         return [
             document(row)
-            for row in db.scalars(query.order_by(model.created_at, model.id).limit(limit))
+            for row in reversed(
+                list(
+                    db.scalars(
+                        query.order_by(model.created_at.desc(), model.id.desc()).limit(limit)
+                    )
+                )
+            )
         ]
 
     @router.get("/scripts")
@@ -418,6 +426,102 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
             simulation_label=row.simulation_label,
         )
         return {"id": row.id, "one_time_token": token, "expires_at": row.expires_at}
+
+    def local_status(db: Session, user: User, slot: int = 1) -> dict[str, Any]:
+        status = local_agent.runtime(settings, "/status", slot=slot)
+        status["slot"] = slot
+        if status.get("organization_id") and status["organization_id"] != str(user.organization_id):
+            raise HTTPException(409, "Local runtime belongs to another organization")
+        endpoint = (
+            owned(db, Endpoint, UUID(status["endpoint_id"]), user)
+            if status.get("endpoint_id")
+            else None
+        )
+        if endpoint:
+            status["endpoint"] = document(endpoint)
+        if status["state"] == "WAITING_FOR_HEARTBEAT":
+            started = aware(datetime.fromisoformat(status["connected_at"]))
+            if (
+                endpoint
+                and endpoint.status != State.REVOKED
+                and endpoint.last_seen
+                and aware(endpoint.last_seen) >= started
+            ):
+                status["state"] = (
+                    "ONLINE"
+                    if datetime.now(UTC) - aware(endpoint.last_seen) <= timedelta(seconds=90)
+                    else "STALE"
+                )
+            elif datetime.now(UTC) - started > timedelta(seconds=45):
+                status.update(
+                    state="FAILED",
+                    error="Authenticated heartbeat timed out. Check AgentControl, then retry.",
+                )
+        return status
+
+    @router.get("/local-agent/status")
+    def get_local_agent(db: DB, user: Admin, slot: int = Query(default=1, ge=1, le=3)) -> Any:
+        return local_status(db, user, slot)
+
+    @router.get("/local-agents")
+    def get_local_agents(db: DB, user: Admin) -> Any:
+        return [local_status(db, user, slot) for slot in range(1, 4)]
+
+    @router.post("/local-agent/start")
+    def start_local_agent(db: DB, user: Admin, slot: int = Query(default=1, ge=1, le=3)) -> Any:
+        with local_lock:
+            status = local_status(db, user, slot)
+            if status["state"] in {
+                "STARTING",
+                "ENROLLING",
+                "WAITING_FOR_HEARTBEAT",
+                "ONLINE",
+                "STALE",
+            }:
+                return status
+            if status.get("state") == "FAILED":
+                local_agent.runtime(settings, "/stop", {}, slot=slot)
+            material = {"organization_id": str(user.organization_id)}
+            if status.get("needs_enrollment"):
+                if status.get("enrollment_id"):
+                    previous = owned(db, EndpointEnrollment, UUID(status["enrollment_id"]), user)
+                    if previous.endpoint_id:
+                        raise HTTPException(
+                            409,
+                            "Enrollment consumed but local credentials incomplete. "
+                            "Restore runtime state; refusing to duplicate the endpoint.",
+                        )
+                issued = enrollment(
+                    contracts.EnrollmentCreate(
+                        simulation=False,
+                        validity_seconds=600,
+                        capabilities=[
+                            "system.read",
+                            "users.read",
+                            "process.read",
+                            "network.read",
+                            "persistence.read",
+                            "logs.read",
+                            "drivers.read",
+                        ],
+                    ),
+                    db,
+                    user,
+                )
+                db.commit()  # AgentControl must see the durable token before enrollment begins.
+                material.update(
+                    enrollment_id=str(issued["id"]),
+                    token=issued["one_time_token"],
+                    ca=settings.tls_ca_path.read_text(),
+                )
+            local_agent.runtime(settings, "/start", material, slot=slot)
+            return local_status(db, user, slot)
+
+    @router.post("/local-agent/stop")
+    def stop_local_agent(db: DB, user: Admin, slot: int = Query(default=1, ge=1, le=3)) -> Any:
+        local_status(db, user, slot)  # Verify organization ownership before any lifecycle action.
+        local_agent.runtime(settings, "/stop", {}, slot=slot)
+        return local_status(db, user, slot)
 
     @router.get("/endpoints")
     def endpoints(db: DB, user: Reader) -> Any:

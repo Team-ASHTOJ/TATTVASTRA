@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { api } from "../../lib/api";
 import type { LoginRequest } from "@jocky/contracts";
 
 export default function LoginPage() {
   const router = useRouter();
+  const client = useQueryClient();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   return (
@@ -35,6 +37,7 @@ export default function LoginPage() {
               method: "POST",
               body: JSON.stringify(payload),
             });
+            await client.invalidateQueries({ queryKey: ["operator"] });
             router.push("/");
             router.refresh();
           } catch (failure) {

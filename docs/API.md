@@ -107,3 +107,15 @@ Artifact verification returns `available`, `expected_hash`, `computed_hash`,
 and `integrity_valid`. Missing stored content returns unavailable/false with a
 null computed hash. Matching metadata alone is not content verification.
 Manifest signature verification remains a separate operation.
+
+## Local endpoint lifecycle
+
+ADMIN-only `POST /api/local-agent/start` and `POST /api/local-agent/stop`, plus `GET /api/local-agent/status`, manage a selected internal runtime. The optional `slot` query parameter defaults to 1 and accepts only 1–3. ADMIN-only `GET /api/local-agents` returns all three slots; each has its own process, state volume, endpoint identity and tenant ownership. Start reuses active operations/identity; stop preserves all persisted jobs/evidence. The launcher is tenant-bound on first use. A different organization cannot inspect or control it.
+
+States are STOPPED, STARTING, ENROLLING, WAITING_FOR_HEARTBEAT, ONLINE, FAILED and STALE. ONLINE is derived by the control plane from the enrolled endpoint's authenticated heartbeat after the current connect process began. Missing, overdue or pre-restart heartbeats do not establish ONLINE. A heartbeat timeout reports FAILED with an actionable error.
+
+No agent token is returned by these APIs. The launcher uses a generated internal bearer credential, is unpublished on the host, accepts only a fixed typed enrollment body, and runs the existing init/enroll/connect commands without a shell or Docker socket. Agent credentials live in separate local_agent_state, local_agent_state_2 and local_agent_state_3 volumes; ephemeral enrollment token files are removed after use.
+
+New variant manifests retain the compiler-returned `profile` and the actual stored `artifact_size_bytes`. Old variants may lack these fields; missing measurements remain unavailable. Profile stage durations do not represent total control-plane wall-clock build time.
+
+Bounded inventory routes return their newest window in chronological order (default 500, or the route-specific requested limit). Historical resources remain available through detail APIs. This prototype does not expose complete fleet pagination.

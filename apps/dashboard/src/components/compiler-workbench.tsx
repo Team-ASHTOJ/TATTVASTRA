@@ -57,6 +57,14 @@ export function CompilerWorkbench({
     queryKey: ["compilations"],
     queryFn: () => api<Compilation[]>("domain/compilations"),
   });
+  const preferred =
+    typeof window === "undefined"
+      ? null
+      : (new URLSearchParams(window.location.search).get("id") ??
+        sessionStorage.getItem("jocky-compilation"));
+  const history = [...(compilations.data ?? [])]
+    .reverse()
+    .sort((a, b) => Number(b.id === preferred) - Number(a.id === preferred));
 
   useEffect(() => {
     const transferred = sessionStorage.getItem("jocky-source-transfer");
@@ -137,7 +145,7 @@ export function CompilerWorkbench({
       setTab("diagnostics");
       if (output.status !== "SUCCESS")
         throw new Error(output.error ?? "Native compilation did not complete.");
-      setMessage(`Compilation complete · ${output.id}`);
+      setMessage(`Compilation complete ✓ · ${output.id}`);
       await client.invalidateQueries({ queryKey: ["compilations"] });
     } catch (failure) {
       setError(
@@ -148,7 +156,7 @@ export function CompilerWorkbench({
     }
   }
   async function output(stage: Stage) {
-    const current = selected ?? (explorer ? compilations.data?.[0] : undefined);
+    const current = selected ?? (explorer ? history[0] : undefined);
     if (!current) return;
     setActive(stage);
     setError("");
@@ -199,7 +207,7 @@ export function CompilerWorkbench({
   if (explorer)
     return (
       <Explorer
-        compilations={compilations.data ?? []}
+        compilations={history}
         selected={selected}
         onSelect={(item) => {
           setSelected(item);

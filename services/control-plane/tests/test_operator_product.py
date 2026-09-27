@@ -73,3 +73,31 @@ def test_artifact_validity_requires_accessible_matching_content_and_hashes(runti
     unavailable = client.post(f"/api/artifacts/{identifier}/verify").json()
     assert not unavailable["available"] and not unavailable["integrity_valid"]
     assert unavailable["expected_hash"] == hashed and unavailable["computed_hash"] is None
+
+
+def test_recent_inventory_window_preserves_new_resources(runtime):
+    factory, _, client, org_id, _ = runtime
+    from datetime import timedelta
+
+    start = datetime.now(UTC)
+    with factory.begin() as db:
+        rows = [
+            Case(
+                organization_id=org_id,
+                title=f"Inventory {i}",
+                created_at=start + timedelta(seconds=i),
+            )
+            for i in range(501)
+        ]
+        db.add_all(rows)
+        db.flush()
+        newest = str(rows[-1].id)
+        oldest = str(rows[0].id)
+    inventory = client.get("/api/cases?limit=500").json()
+    assert len(inventory) == 500
+    assert inventory[-1]["id"] == newest
+    assert oldest not in {row["id"] for row in inventory}
+    default_window = client.get("/api/cases").json()
+    assert len(default_window) == 100
+    assert default_window[-1]["id"] == newest
+    assert client.get(f"/api/cases/{oldest}").status_code == 200

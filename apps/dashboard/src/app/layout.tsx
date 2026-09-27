@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Navigation } from "../components/navigation";
 import { Providers } from "../components/providers";
 import "./globals.css";
+import { AccountMenu } from "../components/account-menu";
 import { ModeIndicator } from "../components/demo-presentation";
 
 export const metadata: Metadata = {
@@ -37,7 +38,7 @@ export default function RootLayout({
             <header className="topbar">
               <span>One Language. Every Endpoint. No Noise.</span>
               <ModeIndicator />
-              <Link href="/login">Operator sign in</Link>
+              <AccountMenu />
             </header>
             <main id="main">{children}</main>
             <footer className="workspace-footer">

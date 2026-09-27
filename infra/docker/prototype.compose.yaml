@@ -19,6 +19,9 @@ services:
     environment:
       JOCKY_MODE: DEMO
       JOCKY_DATABASE_URL: postgresql+psycopg://jocky:${POSTGRES_PASSWORD}@postgres:5432/jocky
+      JOCKY_LOCAL_LAUNCHER_URLS: '["http://local-agent-launcher:8090","http://local-agent-launcher-2:8090","http://local-agent-launcher-3:8090"]'
+      JOCKY_LOCAL_LAUNCHER_URL: http://local-agent-launcher:8090
+      JOCKY_LOCAL_LAUNCHER_TOKEN: ${JOCKY_LOCAL_LAUNCHER_TOKEN:?Run make configure-local}
       JOCKY_BOOTSTRAP_PASSWORD: ${JOCKY_BOOTSTRAP_PASSWORD:?Run make configure-local}
     volumes: ["video_objects:/app/.local"]
     ports: ["127.0.0.1:18080:8000"]
@@ -50,6 +53,98 @@ services:
     ports: ["127.0.0.1:15051:50051", "127.0.0.1:15052:50052"]
     depends_on:
       control-plane: { condition: service_healthy }
+  local-agent-launcher:
+    build:
+      context: ../..
+      dockerfile: infra/docker/agent-runtime.Dockerfile
+      args:
+        RUNTIME_IMAGE: runtime
+      additional_contexts:
+        runtime: service:control-plane
+    hostname: LOCAL-LINUX-01
+    entrypoint:
+      ["/app/.venv/bin/python", "-m", "jocky_control_plane.local_launcher"]
+    environment:
+      JOCKY_LOCAL_LAUNCHER_TOKEN: ${JOCKY_LOCAL_LAUNCHER_TOKEN:?Run make configure-local}
+    volumes: ["local_agent_state:/endpoint"]
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 10s
+    depends_on:
+      agent-control: { condition: service_started }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/app/.venv/bin/python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8090/health')",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  local-agent-launcher-2:
+    build:
+      context: ../..
+      dockerfile: infra/docker/agent-runtime.Dockerfile
+      args:
+        RUNTIME_IMAGE: runtime
+      additional_contexts:
+        runtime: service:control-plane
+    hostname: LOCAL-LINUX-02
+    entrypoint:
+      ["/app/.venv/bin/python", "-m", "jocky_control_plane.local_launcher"]
+    environment:
+      JOCKY_LOCAL_AGENT_SLOT: "2"
+      JOCKY_LOCAL_LAUNCHER_TOKEN: ${JOCKY_LOCAL_LAUNCHER_TOKEN:?Run make configure-local}
+    volumes: ["local_agent_state_2:/endpoint"]
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 10s
+    depends_on:
+      agent-control: { condition: service_started }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/app/.venv/bin/python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8090/health')",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  local-agent-launcher-3:
+    build:
+      context: ../..
+      dockerfile: infra/docker/agent-runtime.Dockerfile
+      args:
+        RUNTIME_IMAGE: runtime
+      additional_contexts:
+        runtime: service:control-plane
+    hostname: LOCAL-LINUX-03
+    entrypoint:
+      ["/app/.venv/bin/python", "-m", "jocky_control_plane.local_launcher"]
+    environment:
+      JOCKY_LOCAL_AGENT_SLOT: "3"
+      JOCKY_LOCAL_LAUNCHER_TOKEN: ${JOCKY_LOCAL_LAUNCHER_TOKEN:?Run make configure-local}
+    volumes: ["local_agent_state_3:/endpoint"]
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 10s
+    depends_on:
+      agent-control: { condition: service_started }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/app/.venv/bin/python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8090/health')",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
   dashboard:
     build:
       context: ../..
@@ -61,5 +156,8 @@ services:
     depends_on:
       control-plane: { condition: service_healthy }
 volumes:
+  local_agent_state:
+  local_agent_state_2:
+  local_agent_state_3:
   video_database:
   video_objects:

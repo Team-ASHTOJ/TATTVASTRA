@@ -184,6 +184,10 @@ def build_variants(
                     content = executable.read_bytes()
                     manifest["artifact_hash"] = digest(content)
                     manifest["artifact_format"] = "native-worker"
+                # Retain the compiler's measured profile alongside persisted build provenance.
+                if isinstance(document.get("profile"), dict):
+                    manifest["profile"] = document["profile"]
+                manifest["artifact_size_bytes"] = len(content)
                 key = store.put(content)
             except (OSError, subprocess.TimeoutExpired, ValueError, KeyError) as error:
                 raise HTTPException(

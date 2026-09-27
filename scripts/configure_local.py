@@ -49,9 +49,17 @@ if target.exists():
         print("Added a unique bootstrap password; existing operator configuration was preserved.")
     else:
         print(".env already configured; preserved existing operator configuration.")
+    if not any(
+        line.startswith("JOCKY_LOCAL_LAUNCHER_TOKEN=") and line.split("=", 1)[1].strip()
+        for line in existing.splitlines()
+    ):
+        with target.open("a", encoding="utf-8") as handle:
+            handle.write("\nJOCKY_LOCAL_LAUNCHER_TOKEN=" + secrets.token_urlsafe(48) + "\n")
+        print("Added internal local-runtime credential without changing existing credentials.")
     raise SystemExit(0)
 password = secrets.token_urlsafe(32)
 values = {
+    "JOCKY_LOCAL_LAUNCHER_TOKEN": secrets.token_urlsafe(48),
     "JOCKY_ENVIRONMENT": "development",
     "JOCKY_MODE": "REAL",
     "JOCKY_TRANSPORT_MODE": "DIRECT",

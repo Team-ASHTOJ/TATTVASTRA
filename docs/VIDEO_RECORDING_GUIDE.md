@@ -12,28 +12,41 @@ make demo-check
 
 Open `http://localhost:13000`. Sign in using the organization UUID printed by preparation and local bootstrap credentials. Keep passwords and enrollment tokens out of the recording.
 
-## Connect a real Linux agent
+## Connect three real local Linux endpoints
 
-Endpoints → Connect Endpoint → Create enrollment. Download the control-plane CA and save the token in a permission-restricted file. Follow the dialog's native `jocky-agent init`, `enroll`, then `connect` commands. The enrollment channel is `https://localhost:15052`; authenticated control is `https://localhost:15051`. Use the same state directory throughout.
+No additional terminal is needed after the three startup commands above.
 
-The existing Docker runtime image can run the actual Linux agent on the Compose network. Within that network use `https://agent-control:50052` for enrollment and `https://agent-control:50051` for control, mount the CA/token/state directory, and use `/usr/local/bin/jocky-worker`. The automated operator test exercises exactly this path with `jocky-agent-runtime:phase4-current`. If absent, build the existing `infra/docker/agent-runtime.Dockerfile` workflow documented in BUILD_STATUS.md. The UI does not claim to launch host containers.
+1. Open Endpoints → Connect Endpoint.
+2. Under Local Endpoint, click Start Local Endpoint.
+3. The internal runtime initializes/enrolls the actual Rust agent and starts its TLS connection. Progress comes from launcher state, not frontend timers.
+4. Wait for Endpoint connected. ONLINE requires a newly persisted authenticated heartbeat.
+5. Click Open Endpoint to inspect LOCAL-LINUX-01, its actual architecture/version and last heartbeat.
+6. Choose Start Another Local Endpoint twice to connect LOCAL-LINUX-02 and LOCAL-LINUX-03. Each enrolls separately with its own TLS identity, worker and persistent state. The dialog shows running slots out of three; selecting an existing slot and starting it again reuses that identity.
 
-WAITING means no authenticated heartbeat yet. ONLINE appears only after the bound agent sends its heartbeat. Stopped agents become stale/offline. SANDBOX fixture machines remain distinct from real agents.
+Repeated starts reuse the agent, enrollment and persistent identity. Stop Local Endpoint terminates only that supervised process, preserving jobs/evidence. Connection becomes stale, then offline after the 90-second heartbeat window. Start again reconnects the same identity. Restarting the launcher container preserves credentials but leaves the agent stopped until the operator starts it again.
+
+The bundled Linux endpoints run inside Docker; LOCAL identifies this location and REAL identifies its genuine agent data. It is not a simulated fixture and does not collect the macOS host.
+
+## External Endpoint / Advanced Setup
+
+Connect Endpoint → Generate Enrollment retains one-time tokens, public CA download, expiry and native commands. Save the token to a protected file and use the same agent state directory for init, enroll and connect. Use the control-plane CA; never replace it with an untrusted certificate. Native external machines need their own compatible worker and a reachable control-plane TLS address.
+
+For this local stack the enrollment channel is `https://localhost:15052` and authenticated control is `https://localhost:15051`. Replace localhost with the authorized server address for external hosts and configure a certificate valid for that address. Native Windows/Ubuntu support is not replaced by the local convenience runtime; physical Windows execution is not verified by this walkthrough.
 
 ## Operator sequence
 
-| Time      | Action                                                       | Demonstrate                                                                                                                         |
-| --------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| 0:00–0:25 | Sign in → Command Center                                     | Persisted resources and clear Connect / Workbench / New Investigation actions.                                                      |
-| 0:25–0:55 | Endpoints → Connect Endpoint                                 | Real enrollment instructions and heartbeat state; inspect an endpoint's structured detail tabs.                                     |
-| 0:55–1:35 | Workbench → Load Example → System Baseline → CHECK → COMPILE | Empty editor, actual diagnostics, durable compilation and real Tokens / AST / Typed JIR / LLVM / Plan outputs.                      |
-| 1:35–2:00 | Variant Explorer → Generate variants                         | Real artifact hashes, seeds and backend comparison. Different hashes alone do not prove equivalence.                                |
-| 2:00–2:45 | New Investigation                                            | Select the compilation, real online endpoint and memory mode; review then start. Open actual persisted job completion and evidence. |
-| 2:45–3:15 | Findings                                                     | Open the sandbox unsigned-process/external-connection conclusion; supporting observations and provenance remain explicit.           |
-| 3:15–3:45 | Graph → Timeline                                             | Select a readable process node; filter chronological events and open detail with related analysis links.                            |
-| 3:45–4:15 | Evidence Vault → Verify integrity                            | Actual stored and recomputed SHA-256; separately verify the evidence manifest signature.                                            |
-| 4:15–4:40 | Driver Intelligence → Performance                            | Collected driver inventory and genuine measured compiler timings. Missing measurements remain unavailable.                          |
-| 4:40–5:00 | JOCKY Language                                               | Implemented syntax, compile-valid examples and Open in Workbench.                                                                   |
+| Time      | Action                                                              | Demonstrate                                                                                                                                      |
+| --------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0:00–0:25 | Sign in → Command Center                                            | Authenticated user/role, operation flow and Connect / Workbench / New Investigation actions.                                                     |
+| 0:25–0:55 | Endpoints → Connect Endpoint                                        | Start three local endpoints; independent authenticated heartbeats and structured detail.                                                         |
+| 0:55–1:35 | Workbench → Load Example → Combined Investigation → CHECK → COMPILE | Empty editor, actual diagnostics, durable compilation and real Tokens / AST / Typed JIR / LLVM / Plan outputs.                                   |
+| 1:35–2:00 | Variant Explorer → Generate variants                                | Compact real hashes, seeds, measured profiles and comparison drawer. Different hashes alone do not prove equivalence.                            |
+| 2:00–2:45 | New Investigation                                                   | Select the named compilation, three real online endpoints and memory mode; review then start. Open actual persisted job completion and evidence. |
+| 2:45–3:15 | Findings                                                            | Open the sandbox unsigned-process/external-connection conclusion; supporting observations and provenance remain explicit.                        |
+| 3:15–3:45 | Graph → Timeline                                                    | Select a readable process node; filter chronological events and open detail with related analysis links.                                         |
+| 3:45–4:15 | Evidence Vault → Verify integrity                                   | Immediate verification drawer with actual stored/recomputed SHA-256; separate manifest provenance/signature.                                     |
+| 4:15–4:40 | Driver Intelligence → Performance                                   | Collected driver inventory and genuine measured compiler timings. Missing measurements remain unavailable.                                       |
+| 4:40–5:00 | Documentation                                                       | Implemented syntax, compile-valid examples and Open in Workbench.                                                                                |
 
 For a real run choose a bounded inventory example. Rich filters/correlation/timeline/export are documented compiler syntax but not supported by the current remote execution bridge. The optional Failure Isolation Scenario is seeded backend data; it is not a default newly executed investigation.
 
@@ -49,6 +62,6 @@ No claims of production readiness, Windows live acceptance, antivirus bypass, dr
 npx playwright test -c playwright.prototype.config.ts
 ```
 
-The test performs login, real TLS agent enrollment/heartbeat, compilation and variants, a real successful job, findings/graph/timeline, actual artifact verification, drivers, measurements, all five documentation examples and primary routes. It stops its temporary agent afterward.
+The local-endpoint test performs browser-only startup, real TLS enrollment/heartbeat, refresh, duplicate prevention, stop/heartbeat expiry and same-identity restart. The coherence test connects all three actual agents, executes one program across them, compares variants, verifies real artifact bytes and its manifest separately, compiles every documentation example, and checks primary routes. The operator test separately preserves external native enrollment and real execution/compilation/evidence acceptance.
 
 If compilation or integrity fails, inspect the failure; never substitute output or edit hashes. Session expiration requires a fresh sign-in. `make demo-prepare` loads only optional persisted sandbox fixtures, not fake frontend progress.

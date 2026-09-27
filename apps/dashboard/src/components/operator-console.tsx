@@ -3,6 +3,13 @@ import Link from "next/link";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
+import {
+  connectionState,
+  sortedEndpoints,
+  aggregateConnections,
+  shortHash,
+  stageTotal,
+} from "../lib/product-data";
 import { useControlEvents } from "../lib/use-control-events";
 type Row = { id: string; [key: string]: unknown };
 type Data = {
@@ -115,6 +122,13 @@ export function OperatorConsole({ section }: { section: string }) {
       };
     },
   });
+  const local = useQuery({
+    queryKey: ["local-agent"],
+    enabled: !!user.data && user.data.role === "ADMIN",
+    refetchInterval: 2000,
+    retry: false,
+    queryFn: () => api<Row[]>("domain/local-agents"),
+  });
   const [selected, setSelected] = useState<Row | null>(null);
   const [enroll, setEnroll] = useState(false);
   const [wizard, setWizard] = useState(false);
@@ -140,14 +154,23 @@ export function OperatorConsole({ section }: { section: string }) {
       </section>
     );
   if (!data.data) return <p role="status">Loading persisted resources…</p>;
-  const d = data.data;
+  const d: Data = {
+    ...data.data,
+    endpoints: data.data.endpoints.map((e) => ({
+      ...e,
+      status: connectionState(
+        e,
+        local.data?.find((r) => r.endpoint_id === e.id),
+      ),
+    })),
+  };
   const refresh = async () => {
     await client.invalidateQueries({ queryKey: ["resources"] });
   };
   const host = (id: unknown) =>
     str(d.endpoints.find((e) => e.id === id)?.hostname);
-  const program = (h: Row) => {
-    const c = d.compilations.find((r) => r.id === h.compilation_id);
+  const program = (h?: Row) => {
+    const c = d.compilations.find((r) => r.id === h?.compilation_id);
     const v = d.versions.find((r) => r.id === c?.script_version_id);
     return str(d.scripts.find((r) => r.id === v?.script_id)?.name);
   };
@@ -177,6 +200,68 @@ export function OperatorConsole({ section }: { section: string }) {
               <Link className="button secondary" href="/endpoints?connect=1">
                 Connect Endpoint
               </Link>
+            </div>
+          </section>
+          <section className="panel">
+            <h2>Operation flow</h2>
+            <p className="eyebrow">
+              CONNECT → WRITE → COMPILE → DIVERSIFY → RUN → INVESTIGATE → VERIFY
+            </p>
+            <div className="operation-flow">
+              {(() => {
+                const h = d.hunts.at(-1),
+                  c =
+                    d.compilations.find((c) => c.id === h?.compilation_id) ??
+                    d.compilations.at(-1),
+                  v = d.versions.find((v) => v.id === c?.script_version_id),
+                  script = d.scripts.find((s) => s.id === v?.script_id);
+                return [
+                  [
+                    "Endpoints",
+                    `${d.endpoints.filter((e) => e.status === "ONLINE" && !e.simulation).length} online`,
+                    "/endpoints",
+                  ],
+                  [
+                    "Program",
+                    script?.name ?? "Write a .jky program",
+                    "/workbench",
+                  ],
+                  [
+                    "Compilation",
+                    c?.status ?? "Not compiled",
+                    c ? `/compiler?id=${c.id}` : "/compiler",
+                  ],
+                  [
+                    "Variants",
+                    `${d.variants.filter((v) => v.compilation_id === c?.id).length} generated`,
+                    "/variants",
+                  ],
+                  [
+                    "Investigation",
+                    h?.status ?? "Start a new operation",
+                    "/investigations",
+                  ],
+                  [
+                    "Findings",
+                    String(
+                      d.findings.filter((f) => !h || f.case_id === h.case_id)
+                        .length,
+                    ),
+                    "/findings",
+                  ],
+                  [
+                    "Evidence",
+                    `${d.manifests.filter((m) => m.signature_verified).length} manifests verified`,
+                    "/evidence",
+                  ],
+                ].map(([label, value, url]) => (
+                  <Link key={str(label)} href={str(url)}>
+                    <small>{str(label)}</small>
+                    <strong>{str(value)}</strong>
+                    <span>→</span>
+                  </Link>
+                ));
+              })()}
             </div>
           </section>
           <div className="metric-grid">
@@ -248,45 +333,68 @@ export function OperatorConsole({ section }: { section: string }) {
               "Hostname",
               "Platform",
               "Architecture",
-              "Agent state",
+              "Connection",
               "Last seen",
               "Current investigation",
+              "Last Run",
               "Trust",
               "Source",
             ]}
-            rows={d.endpoints.map((e) => [
-              <button
-                key={e.id}
-                className="secondary"
-                onClick={() => setSelected(e)}
-              >
-                {str(e.hostname)}
-              </button>,
-              str(e.target_os),
-              str(e.target_arch),
-              str(e.status),
-              date(e.last_seen),
-              d.jobs
-                .filter(
-                  (j) =>
-                    j.endpoint_id === e.id &&
-                    ["QUEUED", "DISPATCHED", "RUNNING"].includes(str(j.status)),
-                )
-                .map((j) => program(d.hunts.find((h) => h.id === j.hunt_id)!))
-                .join(" · ") || "None",
-              e.simulation
-                ? "Fixture identity"
-                : e.status === "REVOKED"
-                  ? "Revoked"
-                  : "Enrolled identity",
-              provenance(e),
-            ])}
+            rows={sortedEndpoints(d.endpoints).map((e) => {
+              return [
+                <button
+                  key={e.id}
+                  className="secondary"
+                  onClick={() => setSelected(e)}
+                >
+                  {str(e.hostname)}
+                </button>,
+                str(e.target_os),
+                str(e.target_arch),
+                <span
+                  key="connection"
+                  className={e.status === "ONLINE" ? "connection-online" : ""}
+                >
+                  {str(e.status)}
+                </span>,
+                date(e.last_seen),
+                d.jobs
+                  .filter(
+                    (j) =>
+                      j.endpoint_id === e.id &&
+                      ["QUEUED", "DISPATCHED", "RUNNING"].includes(
+                        str(j.status),
+                      ),
+                  )
+                  .map((j) => program(d.hunts.find((h) => h.id === j.hunt_id)!))
+                  .join(" · ") || "None",
+                str(
+                  d.jobs.filter((j) => j.endpoint_id === e.id).at(-1)?.status ??
+                    "NONE",
+                ),
+                e.simulation
+                  ? "Fixture identity"
+                  : e.status === "REVOKED"
+                    ? "Revoked"
+                    : "Enrolled identity",
+                e.simulation
+                  ? "SANDBOX"
+                  : local.data?.find((l) => l.endpoint_id === e.id)
+                    ? "LOCAL"
+                    : "EXTERNAL",
+              ];
+            })}
           />
           {(enroll ||
             (typeof window !== "undefined" &&
               new URLSearchParams(window.location.search).has("connect"))) && (
             <Enrollment
               endpoints={d.endpoints}
+              openEndpoint={(endpoint) => {
+                setSelected(endpoint);
+                setEnroll(false);
+                history.replaceState(null, "", "/endpoints");
+              }}
               close={() => {
                 setEnroll(false);
                 history.replaceState(null, "", "/endpoints");
@@ -294,11 +402,27 @@ export function OperatorConsole({ section }: { section: string }) {
               refresh={refresh}
             />
           )}{" "}
-          {selected && (
+          {(selected ||
+            (typeof window !== "undefined" &&
+              d.endpoints.find(
+                (e) =>
+                  e.id ===
+                  new URLSearchParams(window.location.search).get("id"),
+              ))) && (
             <EndpointDetail
-              endpoint={selected}
+              endpoint={
+                selected ??
+                d.endpoints.find(
+                  (e) =>
+                    e.id ===
+                    new URLSearchParams(window.location.search).get("id"),
+                )!
+              }
               d={d}
-              close={() => setSelected(null)}
+              close={() => {
+                setSelected(null);
+                history.replaceState(null, "", "/endpoints");
+              }}
             />
           )}
         </>
@@ -347,6 +471,7 @@ export function OperatorConsole({ section }: { section: string }) {
               new URLSearchParams(window.location.search).has("new"))) && (
             <InvestigationWizard
               d={d}
+              localIds={local.data?.map((r) => str(r.endpoint_id)) ?? []}
               close={() => {
                 setWizard(false);
                 history.replaceState(null, "", "/investigations");
@@ -367,12 +492,14 @@ export function OperatorConsole({ section }: { section: string }) {
                   new URLSearchParams(window.location.search).get("id"),
               ))) && (
             <InvestigationDetail
-              hunt={d.hunts.find(
-                (h) =>
-                  h.id ===
-                  (selected?.id ??
-                    new URLSearchParams(window.location.search).get("id")),
-              )!}
+              hunt={
+                d.hunts.find(
+                  (h) =>
+                    h.id ===
+                    (selected?.id ??
+                      new URLSearchParams(window.location.search).get("id")),
+                ) ?? selected!
+              }
               d={d}
               events={feed.events}
               close={() => {
@@ -517,11 +644,54 @@ function Fields({ data }: { data: Record<string, unknown> }) {
 function Enrollment({
   close,
   refresh,
+  openEndpoint,
 }: {
   endpoints: Row[];
+  openEndpoint: (endpoint: Row) => void;
   close: () => void;
   refresh: () => Promise<void>;
 }) {
+  const queryClient = useQueryClient();
+  const [path, setPath] = useState<"local" | "external" | null>(null);
+  const [slot, setSlot] = useState(1);
+  const pool = useQuery({
+    queryKey: ["local-agent"],
+    queryFn: () => api<Row[]>("domain/local-agents"),
+    refetchInterval: path === "local" ? 1500 : false,
+    retry: false,
+  });
+  const local = { ...pool, data: pool.data?.find((r) => r.slot === slot) };
+  const active =
+    pool.data?.filter((r) =>
+      [
+        "STARTING",
+        "ENROLLING",
+        "WAITING_FOR_HEARTBEAT",
+        "ONLINE",
+        "STALE",
+      ].includes(str(r.state)),
+    ) ?? [];
+  async function localAction(action: "start" | "stop") {
+    setBusy(true);
+    setError("");
+    setPath("local");
+    try {
+      const state = await submit<Row>(`local-agent/${action}?slot=${slot}`);
+      queryClient.setQueryData(["local-agent"], (old: Row[] | undefined) =>
+        old?.map((r) => (r.slot === slot ? state : r)),
+      );
+      await pool.refetch();
+      await refresh();
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Local runtime operation failed",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   const [token, setToken] = useState<Row | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -531,106 +701,232 @@ function Enrollment({
     refetchInterval: 3000,
     queryFn: () => api<Row>(`domain/endpoints/enrollments/${token!.id}`),
   });
+  async function externalAction() {
+    setPath("external");
+    setError("");
+
+    setBusy(true);
+    try {
+      setToken(
+        await submit<Row>("endpoints/enrollments", {
+          simulation: false,
+          capabilities: [
+            "system.read",
+            "users.read",
+            "process.read",
+            "network.read",
+            "persistence.read",
+            "logs.read",
+            "drivers.read",
+          ],
+          validity_seconds: 600,
+        }),
+      );
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Enrollment failed");
+    } finally {
+      setBusy(false);
+    }
+  }
   const connected = enrollment.data?.state === "ONLINE";
   const command = `jocky-agent --state-dir .jocky-agent init\njocky-agent --state-dir .jocky-agent enroll --enrollment-server https://localhost:15052 --server https://localhost:15051 --ca control-plane-ca.pem --token-file enrollment.token --worker /usr/local/bin/jocky-worker\njocky-agent --state-dir .jocky-agent connect`;
   return (
     <Drawer title="Endpoint Enrollment" close={close}>
-      <p>
-        Generate a one-time token, save it to enrollment.token on the authorized
-        endpoint, and provide the control plane CA certificate. Tokens expire in
-        ten minutes.
-      </p>
-      <p className="resource-label">
-        {connected
-          ? "ONLINE · Agent connected"
-          : token
-            ? enrollment.data?.state === "EXPIRED"
-              ? "EXPIRED"
-              : enrollment.data?.state === "STALE"
-                ? "STALE · Agent enrolled, heartbeat overdue"
-                : "WAITING FOR AGENT"
-            : "WAITING FOR ENROLLMENT"}
-      </p>
-      {!token && (
-        <button
-          disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            try {
-              setToken(
-                await submit<Row>("endpoints/enrollments", {
-                  simulation: false,
-                  capabilities: [
-                    "system.read",
-                    "users.read",
-                    "process.read",
-                    "network.read",
-                    "persistence.read",
-                    "logs.read",
-                    "drivers.read",
-                  ],
-                  validity_seconds: 600,
-                }),
-              );
-              await refresh();
-            } catch (e) {
-              setError(e instanceof Error ? e.message : "Enrollment failed");
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          Create enrollment
-        </button>
+      <div className="metric-grid">
+        <section className="panel">
+          <h3>Local Endpoint</h3>
+          <p>Local endpoints: {active.length} / 3 running</p>
+          <p>Start a JOCKY agent locally using the bundled runtime.</p>
+          <button disabled={busy} onClick={() => void localAction("start")}>
+            Start Local Endpoint
+          </button>
+          {active.length > 0 && active.length < 3 && (
+            <button
+              className="secondary"
+              disabled={busy}
+              onClick={async () => {
+                const next = pool.data?.find(
+                  (r) =>
+                    ![
+                      "STARTING",
+                      "ENROLLING",
+                      "WAITING_FOR_HEARTBEAT",
+                      "ONLINE",
+                      "STALE",
+                    ].includes(str(r.state)),
+                );
+                if (!next) return;
+                const index = Number(next.slot);
+                setSlot(index);
+                setPath("local");
+                setBusy(true);
+                setError("");
+                try {
+                  await submit(`local-agent/start?slot=${index}`);
+                  await pool.refetch();
+                  await refresh();
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : "Runtime failed");
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Start Another Local Endpoint
+            </button>
+          )}
+          {pool.data && (
+            <div className="workbench-actions">
+              {pool.data.map((r) => (
+                <button
+                  key={str(r.slot)}
+                  className="secondary"
+                  onClick={() => {
+                    setSlot(Number(r.slot));
+                    setPath("local");
+                  }}
+                >
+                  Endpoint {str(r.slot)} · {str(r.state)}
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+        <section className="panel">
+          <h3>External Endpoint</h3>
+          <p>Connect a Windows or Linux machine running the JOCKY Agent.</p>
+          <button
+            className="secondary"
+            disabled={busy}
+            onClick={() => void externalAction()}
+          >
+            Generate Enrollment
+          </button>
+        </section>
+      </div>
+      {path === "local" && (
+        <section className="panel" aria-label="Local endpoint connection">
+          <h3>Local endpoint connection</h3>
+          <p role="status">
+            {busy
+              ? "Starting local runtime…"
+              : local.data?.state === "ONLINE"
+                ? "Endpoint connected"
+                : local.data?.state === "ENROLLING"
+                  ? "Enrolling JOCKY Agent…"
+                  : local.data?.state === "WAITING_FOR_HEARTBEAT"
+                    ? "Waiting for authenticated heartbeat…"
+                    : local.data?.state === "STARTING"
+                      ? "Starting JOCKY Agent…"
+                      : str(local.data?.state ?? "Runtime unavailable")}
+          </p>
+          {!!local.data?.endpoint && (
+            <Fields
+              data={{
+                hostname: obj(local.data.endpoint).hostname,
+                connection: local.data.state,
+                platform: obj(local.data.endpoint).target_os,
+                architecture: obj(local.data.endpoint).target_arch,
+                agent_version: obj(local.data.endpoint).agent_version,
+                last_heartbeat: date(obj(local.data.endpoint).last_seen),
+                source: "LOCAL",
+              }}
+            />
+          )}
+          {local.data?.state === "ONLINE" && (
+            <button onClick={() => openEndpoint(local.data!.endpoint as Row)}>
+              Open Endpoint
+            </button>
+          )}
+          {["ONLINE", "STALE", "WAITING_FOR_HEARTBEAT"].includes(
+            str(local.data?.state),
+          ) && (
+            <button
+              className="secondary"
+              disabled={busy}
+              onClick={() => void localAction("stop")}
+            >
+              Stop Local Endpoint
+            </button>
+          )}
+          {!!(error || local.error || local.data?.error) && (
+            <>
+              <p role="alert">
+                {error || local.error?.message || str(local.data?.error)}
+              </p>
+              <button disabled={busy} onClick={() => void localAction("start")}>
+                Retry
+              </button>
+            </>
+          )}
+        </section>
       )}
-      {token && (
+      {path === "external" && (
         <>
-          <p>Enrollment created. Waiting for an authenticated heartbeat.</p>
-          <label>
-            One-time enrollment token
-            <input readOnly value={str(token.one_time_token)} />
-          </label>
-          <button
-            className="secondary"
-            onClick={() =>
-              void navigator.clipboard.writeText(str(token.one_time_token))
-            }
-          >
-            Copy token
-          </button>
-          <a
-            className="button secondary"
-            href={`/api/control/domain/endpoints/enrollments/${token.id}/ca`}
-          >
-            Download control plane CA
-          </a>
           <p>
-            Install the existing JOCKY Agent and compiler worker on Linux or
-            Windows. Use the CA from the control plane; never replace it with an
-            untrusted certificate.
+            Generate a one-time token, save it to enrollment.token on the
+            authorized endpoint, and provide the control plane CA certificate.
+            Tokens expire in ten minutes.
           </p>
-          <pre className="compiler-output">{command}</pre>
-          <button
-            className="secondary"
-            onClick={() => void navigator.clipboard.writeText(command)}
-          >
-            Copy command
-          </button>
-          <p>
-            Local container support uses the existing agent-runtime Dockerfile.
-            Mount your CA and enrollment.token in /endpoint, then run the same
-            init, enroll, and connect commands inside that image. On the local
-            Compose network use https://agent-control:50052 and
-            https://agent-control:50051. Browser-driven host process launch is
-            unavailable; the native agent supplies every heartbeat.
+          <p className="resource-label">
+            {connected
+              ? "ONLINE · Agent connected"
+              : token
+                ? enrollment.data?.state === "EXPIRED"
+                  ? "EXPIRED"
+                  : enrollment.data?.state === "STALE"
+                    ? "STALE · Agent enrolled, heartbeat overdue"
+                    : "WAITING FOR AGENT"
+                : "WAITING FOR ENROLLMENT"}
           </p>
-          <small>
-            Expires {date(token.expires_at)}. Endpoint inventory refreshes every
-            five seconds.
-          </small>
+          {!token && (
+            <button disabled={busy} onClick={() => void externalAction()}>
+              Retry Enrollment
+            </button>
+          )}
+          {token && (
+            <>
+              <p>Enrollment created. Waiting for an authenticated heartbeat.</p>
+              <label>
+                One-time enrollment token
+                <input readOnly value={str(token.one_time_token)} />
+              </label>
+              <button
+                className="secondary"
+                onClick={() =>
+                  void navigator.clipboard.writeText(str(token.one_time_token))
+                }
+              >
+                Copy token
+              </button>
+              <a
+                className="button secondary"
+                href={`/api/control/domain/endpoints/enrollments/${token.id}/ca`}
+              >
+                Download control plane CA
+              </a>
+              <p>
+                Install the existing JOCKY Agent and compiler worker on Linux or
+                Windows. Use the CA from the control plane; never replace it
+                with an untrusted certificate.
+              </p>
+              <pre className="compiler-output">{command}</pre>
+              <button
+                className="secondary"
+                onClick={() => void navigator.clipboard.writeText(command)}
+              >
+                Copy command
+              </button>
+              <small>
+                Expires {date(token.expires_at)}. Endpoint inventory refreshes
+                every five seconds.
+              </small>
+            </>
+          )}
+          {error && <p role="alert">{error}</p>}
         </>
       )}
-      {error && <p role="alert">{error}</p>}
     </Drawer>
   );
 }
@@ -736,11 +1032,13 @@ function EndpointDetail({
 }
 function InvestigationWizard({
   d,
+  localIds,
   close,
   refresh,
   created,
 }: {
   d: Data;
+  localIds: string[];
   close: () => void;
   refresh: () => Promise<void>;
   created: (h: Row) => void;
@@ -771,7 +1069,13 @@ function InvestigationWizard({
     ].filter(Boolean);
   return (
     <Drawer title="New Investigation" close={close}>
-      <div className="eyebrow">STEP {step} / 4</div>
+      <div className="wizard-steps">
+        {["Program", "Endpoints", "Execution", "Review"].map((label, i) => (
+          <span key={label} className={step === i + 1 ? "active" : ""}>
+            {i + 1}. {label}
+          </span>
+        ))}
+      </div>
       {step === 1 && (
         <>
           <h3>Choose compiled program</h3>
@@ -785,7 +1089,20 @@ function InvestigationWizard({
               .filter((r) => r.status === "SUCCESS")
               .map((r) => (
                 <option key={r.id} value={r.id}>
-                  {r.id} · {provenance(r)}
+                  {str(
+                    d.scripts.find(
+                      (s) =>
+                        s.id ===
+                        d.versions.find((v) => v.id === r.script_version_id)
+                          ?.script_id,
+                    )?.name,
+                  )}{" "}
+                  · {date(r.created_at)} ·{" "}
+                  {str(
+                    obj(obj(obj(r.outputs).llvm).manifest).target_triple ??
+                      "Target not reported",
+                  )}{" "}
+                  · {str(r.status)}
                 </option>
               ))}
           </select>
@@ -797,7 +1114,7 @@ function InvestigationWizard({
       {step === 2 && (
         <>
           <h3>Choose endpoints</h3>
-          {d.endpoints.map((e) => (
+          {sortedEndpoints(d.endpoints).map((e) => (
             <label className="endpoint-choice" key={e.id}>
               <input
                 type="checkbox"
@@ -811,7 +1128,13 @@ function InvestigationWizard({
                 }
               />
               <span>
-                {str(e.hostname)} · {provenance(e)} · {str(e.status)}
+                {str(e.hostname)} · {str(e.target_os)} ·{" "}
+                {e.simulation
+                  ? "SANDBOX"
+                  : localIds.includes(e.id)
+                    ? "LOCAL"
+                    : "EXTERNAL"}{" "}
+                · {str(e.status)} · Last seen {date(e.last_seen)}
               </span>
             </label>
           ))}
@@ -1065,6 +1388,17 @@ function FindingDetail({
             {str(a.content_hash)}
           </p>
         ))}
+      <div className="workbench-actions">
+        <Link
+          href={`/investigations?id=${str(d.jobs.find((j) => j.id === observations[0]?.job_id)?.hunt_id)}`}
+        >
+          Investigation →
+        </Link>
+        <Link href={`/endpoints?id=${str(observations[0]?.endpoint_id)}`}>
+          Endpoint →
+        </Link>
+        <Link href={`/graph?finding=${finding.id}`}>Related graph →</Link>
+      </div>
       <RelatedLinks />
       <details>
         <summary>Advanced / Raw Data</summary>
@@ -1269,63 +1603,93 @@ function DriverView({ d }: { d: Data }) {
       ) &&
       (!endpoint || o.endpoint_id === endpoint),
   );
+  const platform = (o: Row) =>
+    d.endpoints.find((e) => e.id === o.endpoint_id)?.target_os;
+  const linux = drivers.filter((o) => platform(o) === "linux"),
+    windows = drivers.filter((o) => platform(o) !== "linux");
+  const known = drivers.filter((o) => typeof payload(o).signed === "boolean");
   return (
     <>
-      <section className="panel">
-        <label>
-          Endpoint
-          <select
-            aria-label="Driver endpoint"
-            value={endpoint}
-            onChange={(e) => setEndpoint(e.target.value)}
-          >
-            <option value="">All endpoints</option>
-            {d.endpoints.map((e) => (
-              <option key={e.id} value={e.id}>
-                {str(e.hostname)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </section>
+      <div className="metric-grid">
+        {[
+          ["Modules / drivers", drivers.length],
+          [
+            "Endpoints reporting",
+            new Set(drivers.map((o) => o.endpoint_id)).size,
+          ],
+          [
+            "Unsigned signatures",
+            known.filter((o) => payload(o).signed === false).length,
+          ],
+          [
+            "Review items",
+            drivers.filter((o) =>
+              ["REVIEW", "KNOWN RISK"].includes(str(payload(o).risk)),
+            ).length,
+          ],
+        ].map(([label, value]) => (
+          <section className="panel metric" key={str(label)}>
+            <strong>{str(value)}</strong>
+            <span>{str(label)}</span>
+          </section>
+        ))}
+      </div>
+      <p>
+        Signature metadata reported for {known.length} of {drivers.length}{" "}
+        items; unavailable signatures are unknown, not unsigned.
+      </p>
+      <label>
+        Endpoint
+        <select
+          aria-label="Driver endpoint"
+          value={endpoint}
+          onChange={(e) => setEndpoint(e.target.value)}
+        >
+          <option value="">All endpoints</option>
+          {d.endpoints.map((e) => (
+            <option key={e.id} value={e.id}>
+              {str(e.hostname)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <h2>Linux module inventory</h2>
       <Table
-        headers={[
-          "Driver/module",
-          "Vendor",
-          "Version",
-          "Path",
-          "Signed",
-          "Hash",
-          "Risk",
-          "Source",
-        ]}
-        rows={drivers.map((o) => {
-          const p = payload(o);
-          return [
-            <button
-              key={o.id}
-              className="secondary"
-              onClick={() => setSelected(o)}
-            >
-              {str(p.name)}
-            </button>,
-            str(p.vendor),
-            str(p.version),
-            str(p.path),
-            p.signed === true
-              ? "Signed"
-              : p.signed === false
-                ? "Unsigned"
-                : "Unknown",
-            str(p.sha256),
-            p.risk === "REVIEW"
-              ? "REVIEW"
-              : p.risk === "KNOWN RISK"
-                ? "KNOWN RISK"
-                : "UNKNOWN",
-            provenance(o),
-          ];
-        })}
+        headers={["Module", "Path", "Size (bytes)", "Endpoint", "Source"]}
+        rows={linux.map((o) => [
+          <button
+            key={o.id}
+            className="secondary"
+            onClick={() => setSelected(o)}
+          >
+            {str(payload(o).name)}
+          </button>,
+          str(payload(o).path),
+          str(payload(o).size ?? "Unreported"),
+          str(d.endpoints.find((e) => e.id === o.endpoint_id)?.hostname),
+          provenance(o),
+        ])}
+      />
+      <h2>Windows driver inventory</h2>
+      <Table
+        headers={["Driver", "Path", "Signature", "Endpoint", "Source"]}
+        rows={windows.map((o) => [
+          <button
+            key={o.id}
+            className="secondary"
+            onClick={() => setSelected(o)}
+          >
+            {str(payload(o).name)}
+          </button>,
+          str(payload(o).path),
+          payload(o).signed === true
+            ? "Signed"
+            : payload(o).signed === false
+              ? "Unsigned"
+              : "Unknown",
+          str(d.endpoints.find((e) => e.id === o.endpoint_id)?.hostname),
+          provenance(o),
+        ])}
       />
       {selected && (
         <Drawer title="Driver Detail" close={() => setSelected(null)}>
@@ -1338,6 +1702,10 @@ function DriverView({ d }: { d: Data }) {
               ...payload(selected),
             }}
           />
+          <p>
+            Risk is unknown unless explicitly supported by collected metadata.
+            No CVE or exploitation claim is inferred.
+          </p>
           <RelatedLinks />
         </Drawer>
       )}
@@ -1377,12 +1745,49 @@ function PerformanceView({
         ]),
     );
   });
-  const profile = obj(
+  const [view, setView] = useState("latest");
+  const [latestRun, setLatestRun] = useState("");
+  const [notice, setNotice] = useState("");
+  const runs = d.benchmarks.filter((b) => b.compilation_id === comp);
+  const profiles = runs.flatMap((b) => {
+    const samples = obj(b.measurements).samples;
+    return Array.isArray(samples)
+      ? samples.map((s) => obj(obj(s).profile))
+      : [];
+  });
+  const fallback = obj(
     obj(obj(d.compilations.find((c) => c.id === comp)?.outputs).llvm).profile,
   );
+  const current = profiles.at(-1) ?? fallback;
+  const median = (values: number[]) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2
+      ? sorted[mid]!
+      : (sorted[mid - 1]! + sorted[mid]!) / 2;
+  };
+  const profile: Record<string, unknown> =
+    view === "median" && profiles.length > 1
+      ? Object.fromEntries(
+          Object.keys(current).map((k) => {
+            const values = profiles
+              .map((p) => p[k])
+              .filter((v): v is number => typeof v === "number");
+            return [k, values.length ? median(values) : null];
+          }),
+        )
+      : current;
   const timings = Object.entries(profile).filter(
     ([key, value]) => key.endsWith("_ms") && typeof value === "number",
   ) as [string, number][];
+  const total = stageTotal(profile),
+    totals = profiles.map(stageTotal).filter((v): v is number => v !== null);
+  const sum = (keys: string[]) => {
+    const values = keys.map((k) => profile[k]);
+    return values.every((v) => typeof v === "number")
+      ? (values as number[]).reduce((a, b) => a + b, 0)
+      : null;
+  };
   const maximum = Math.max(...timings.map(([, value]) => value), 0.001);
   return (
     <>
@@ -1413,10 +1818,16 @@ function PerformanceView({
             onClick={async () => {
               setBusy(true);
               try {
-                await submit("benchmarks", {
+                const measured = await submit<Row>("benchmarks", {
                   compilation_id: comp,
                   repetitions: 3,
                 });
+                setLatestRun(measured.id);
+                setNotice(
+                  measured.status === "SUCCESS"
+                    ? "Benchmark complete ✓"
+                    : "Benchmark did not complete; inspect its saved status.",
+                );
                 await refresh();
               } catch (e) {
                 setError(e instanceof Error ? e.message : "Measurement failed");
@@ -1425,11 +1836,97 @@ function PerformanceView({
               }
             }}
           >
-            {busy ? "Measuring…" : "Measure Compiler"}
+            {busy ? "RUNNING…" : "Measure Compiler"}
           </button>
         </div>
       </section>
       {error && <p role="alert">{error}</p>}
+      {notice && <p role="status">{notice}</p>}
+      <div className="metric-grid">
+        {[
+          ["Compile stage sum", total],
+          [
+            "Frontend time",
+            sum(["lex_ms", "parse_ms", "semantic_ms", "jir_ms"]),
+          ],
+          [
+            "LLVM / optimization",
+            sum(["llvm_generation_ms", "optimization_ms"]),
+          ],
+          ["Variant time", profile.variant_ms],
+        ].map(([label, value]) => (
+          <section className="panel metric" key={str(label)}>
+            <strong>
+              {typeof value === "number"
+                ? `${value.toFixed(3)} ms`
+                : "Not measured"}
+            </strong>
+            <span>{str(label)}</span>
+          </section>
+        ))}
+      </div>
+      <p>
+        Total is the sum of available non-overlapping recorded compile stages,
+        not wall-clock request latency. Latest run:{" "}
+        {date(runs.at(-1)?.created_at)} · {profiles.length} samples.
+      </p>
+      {totals.length > 1 && (
+        <Fields
+          data={{
+            "Minimum stage sum (ms)": Math.min(...totals),
+            "Median stage sum (ms)": median(totals),
+            "Maximum stage sum (ms)": Math.max(...totals),
+          }}
+        />
+      )}
+      <label>
+        Timing view
+        <select
+          aria-label="Timing view"
+          value={view}
+          onChange={(e) => setView(e.target.value)}
+        >
+          <option value="latest">Latest</option>
+          <option value="median" disabled={profiles.length < 2}>
+            Median
+          </option>
+        </select>
+      </label>
+      <section className="panel">
+        <h2>Recent Measurements</h2>
+        <Table
+          headers={[
+            "Run",
+            "Measured",
+            "Samples",
+            "Compile stage sum (ms)",
+            "Status",
+          ]}
+          rows={runs
+            .slice()
+            .reverse()
+            .slice(0, 8)
+            .map((b) => {
+              const values = Array.isArray(obj(b.measurements).samples)
+                ? (obj(b.measurements).samples as unknown[])
+                    .map((s) => stageTotal(obj(obj(s).profile)))
+                    .filter((v): v is number => v !== null)
+                : [];
+              return [
+                <strong
+                  key={b.id}
+                  className={latestRun === b.id ? "measurement-new" : ""}
+                >
+                  {latestRun === b.id ? "✓ New measurement" : shortHash(b.id)}
+                </strong>,
+                date(b.created_at),
+                values.length,
+                values.length ? median(values).toFixed(3) : "Not measured",
+                str(b.status),
+              ];
+            })}
+        />
+      </section>
       <section className="panel">
         <h2>Selected compilation stage latency</h2>
         {timings.length ? (
@@ -1468,7 +1965,7 @@ function PerformanceView({
         rows={samples}
       />
       <section className="panel">
-        <h2>Investigations</h2>
+        <h2>Investigation Performance</h2>
         <p>
           Dispatch latency, execution duration, and evidence throughput: not
           measured unless explicitly reported below.
@@ -1525,12 +2022,67 @@ function PerformanceView({
     </>
   );
 }
+function HashValue({ value }: { value: unknown }) {
+  return (
+    <span className="hash-value" title={str(value)}>
+      {shortHash(value)}
+      {typeof value === "string" && (
+        <button
+          className="secondary compact"
+          aria-label="Copy hash"
+          onClick={() => void navigator.clipboard.writeText(value)}
+        >
+          Copy
+        </button>
+      )}
+    </span>
+  );
+}
 function EvidenceView({ d }: { d: Data }) {
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [states, setStates] = useState<Record<string, string>>({});
+  async function verify(row: Row, kind: "artifact" | "manifest") {
+    setResult({ kind, row, pending: true });
+    setStates((old) => ({ ...old, [row.id]: "VERIFYING…" }));
+    try {
+      const checked = await submit<Record<string, unknown>>(
+        `${kind === "artifact" ? "artifacts" : "manifests"}/${row.id}/verify`,
+      );
+      const valid =
+        kind === "artifact"
+          ? checked.available &&
+            checked.expected_hash &&
+            checked.computed_hash &&
+            checked.integrity_valid
+          : checked.signature_valid && checked.integrity_valid;
+      setStates((old) => ({
+        ...old,
+        [row.id]: valid ? "✓ VERIFIED" : "✕ FAILED",
+      }));
+      setResult({ kind, row, checked, pending: false });
+    } catch (error) {
+      setResult({
+        kind,
+        row,
+        error: error instanceof Error ? error.message : "Verification failed",
+      });
+      setStates((old) => ({ ...old, [row.id]: "✕ FAILED" }));
+    }
+  }
+  const row = obj(result?.row),
+    checked = obj(result?.checked),
+    job = d.jobs.find((j) => j.id === row.job_id),
+    endpoint = d.endpoints.find((e) => e.id === job?.endpoint_id),
+    hunt = d.hunts.find((h) => h.id === job?.hunt_id),
+    manifest = d.manifests.find((m) => m.job_id === row.job_id);
   return (
     <>
+      <section className="panel">
+        <h2>Forensic artifacts</h2>
+        <p>
+          Verify stored bytes independently from signed manifest provenance.
+        </p>
+      </section>
       <Table
         headers={[
           "Artifact",
@@ -1542,7 +2094,12 @@ function EvidenceView({ d }: { d: Data }) {
           "Integrity",
         ]}
         rows={d.artifacts.map((a) => [
-          a.id,
+          <Link
+            key={a.id}
+            href={`/investigations?id=${str(d.jobs.find((j) => j.id === a.job_id)?.hunt_id)}`}
+          >
+            {shortHash(a.id)}
+          </Link>,
           str(
             d.endpoints.find(
               (e) =>
@@ -1551,99 +2108,123 @@ function EvidenceView({ d }: { d: Data }) {
           ),
           str(a.size_bytes),
           date(a.created_at),
-          str(a.content_hash),
+          <HashValue key={a.id} value={a.content_hash} />,
           provenance(a),
           <button
             key={a.id}
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                setResult({
-                  artifact_id: a.id,
-                  endpoint: d.endpoints.find(
-                    (e) =>
-                      e.id ===
-                      d.jobs.find((j) => j.id === a.job_id)?.endpoint_id,
-                  )?.hostname,
-                  job: a.job_id,
-                  created: date(a.created_at),
-                  size_bytes: a.size_bytes,
-                  manifest_present: d.manifests.some(
-                    (m) => m.job_id === a.job_id,
-                  ),
-                  ...(await submit<Record<string, unknown>>(
-                    `artifacts/${a.id}/verify`,
-                  )),
-                });
-              } catch (e) {
-                setError(
-                  e instanceof Error ? e.message : "Verification failed",
-                );
-              } finally {
-                setBusy(false);
-              }
-            }}
+            disabled={states[a.id] === "VERIFYING…"}
+            onClick={() => void verify(a, "artifact")}
           >
-            VERIFY INTEGRITY
+            {states[a.id] ?? "VERIFY INTEGRITY"}
           </button>,
         ])}
       />
-      {error && <p role="alert">{error}</p>}
-      {result && (
-        <section className="panel">
-          <h2>Integrity result</h2>
-          <Fields
-            data={{
-              "Artifact ID": result.artifact_id,
-              Endpoint: result.endpoint,
-              Job: result.job,
-              Created: result.created,
-              Bytes: result.size_bytes,
-              "Stored SHA-256": result.expected_hash,
-              "Recomputed SHA-256": result.computed_hash,
-              Integrity:
-                result.available && result.expected_hash && result.computed_hash
-                  ? result.integrity_valid
-                    ? "VALID"
-                    : "INVALID"
-                  : "NOT VERIFIED / CONTENT UNAVAILABLE",
-              "Manifest signature":
-                result.signature_valid === undefined
-                  ? result.manifest_present
-                    ? "NOT CHECKED"
-                    : "NOT PRESENT"
-                  : result.signature_valid
-                    ? "VALID"
-                    : "INVALID",
-            }}
-          />
-        </section>
-      )}
+      <h2>Signed evidence manifests</h2>
       <Table
         headers={["Manifest", "Job", "Signature", "Action"]}
         rows={d.manifests.map((m) => [
-          m.id,
-          str(m.job_id),
-          m.signature_verified ? "Verified at ingestion" : "Not verified",
+          shortHash(m.id),
+          shortHash(m.job_id),
+          m.signature_verified ? "Verified at ingestion" : "Not checked",
           <button
             key={m.id}
-            onClick={async () => {
-              try {
-                setResult(await submit(`manifests/${m.id}/verify`));
-              } catch (e) {
-                setError(
-                  e instanceof Error
-                    ? e.message
-                    : "Manifest verification failed",
-                );
-              }
-            }}
+            disabled={states[m.id] === "VERIFYING…"}
+            onClick={() => void verify(m, "manifest")}
           >
-            Verify manifest
+            {states[m.id] ?? "Verify manifest"}
           </button>,
         ])}
       />
+      {result && (
+        <Drawer
+          title={
+            result.kind === "artifact"
+              ? "Integrity result"
+              : "Manifest verification"
+          }
+          close={() => setResult(null)}
+        >
+          {!!result.pending && <p role="status">VERIFYING…</p>}
+          {!!result.error && <p role="alert">{str(result.error)}</p>}
+          {result.kind === "artifact" ? (
+            <>
+              <Fields
+                data={{
+                  "Artifact ID": row.id,
+                  Endpoint: endpoint?.hostname,
+                  Job: row.job_id,
+                  Created: date(row.created_at),
+                  Bytes: row.size_bytes,
+                  Variant: job?.variant_id,
+                  Integrity: result.pending
+                    ? "VERIFYING"
+                    : checked.available &&
+                        checked.expected_hash &&
+                        checked.computed_hash
+                      ? checked.integrity_valid
+                        ? "VALID"
+                        : "INVALID"
+                      : "NOT VERIFIED / CONTENT UNAVAILABLE",
+                  Manifest: manifest ? "NOT CHECKED" : "NOT PRESENT",
+                }}
+              />
+              <h3>Stored SHA-256</h3>
+              <HashValue value={row.content_hash} />
+              <h3>Recomputed SHA-256</h3>
+              <HashValue
+                value={checked.computed_hash ?? "Awaiting content verification"}
+              />
+              {manifest && (
+                <button onClick={() => void verify(manifest, "manifest")}>
+                  Verify related manifest
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <Fields
+                data={{
+                  "Manifest ID": row.id,
+                  Signature: result.pending
+                    ? "VERIFYING"
+                    : checked.signature_valid
+                      ? "VALID"
+                      : "INVALID",
+                  "Signing agent": endpoint?.hostname,
+                  "Signing identity": obj(row.document).agent_identity,
+                  Endpoint: endpoint?.hostname,
+                  Job: row.job_id,
+                  "Artifact count": d.artifacts.filter(
+                    (a) => a.job_id === row.job_id,
+                  ).length,
+                  "Provenance / integrity": result.pending
+                    ? "VERIFYING"
+                    : checked.integrity_valid
+                      ? "VALID"
+                      : "INVALID",
+                  Completed: date(obj(row.document).completed_at),
+                  Variant: job?.variant_id,
+                }}
+              />
+              <p>
+                A valid signature authenticates manifest provenance. It does not
+                replace independent artifact-byte verification.
+              </p>
+              <Fields data={checked} />
+            </>
+          )}
+          <div className="workbench-actions">
+            {hunt && (
+              <Link href={`/investigations?id=${hunt.id}`}>
+                Investigation →
+              </Link>
+            )}
+            {endpoint && (
+              <Link href={`/endpoints?id=${endpoint.id}`}>Endpoint →</Link>
+            )}
+          </div>
+        </Drawer>
+      )}
     </>
   );
 }
@@ -1659,6 +2240,7 @@ function VariantView({
   );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
   const [comparison, setComparison] = useState<Record<string, unknown> | null>(
     null,
   );
@@ -1687,7 +2269,11 @@ function VariantView({
           onClick={async () => {
             setBusy(true);
             try {
-              await submit(`compilations/${comp}/variants`, { count: 3 });
+              const built = await submit<Row[]>(
+                `compilations/${comp}/variants`,
+                { count: 3 },
+              );
+              setNotice(`${built.length} variants generated ✓`);
               await refresh();
             } catch (e) {
               setError(e instanceof Error ? e.message : "Build failed");
@@ -1699,6 +2285,8 @@ function VariantView({
           {busy ? "Building…" : "Generate 3 Variants"}
         </button>
       </section>
+      {notice && <p role="status">{notice}</p>}
+      <Link href={`/compiler?id=${comp}`}>Compilation →</Link>
       {error && <p role="alert">{error}</p>}
       <Table
         headers={[
@@ -1708,14 +2296,25 @@ function VariantView({
           "Execution",
           "Artifact SHA-256",
           "LLVM identity",
+          "Build / structure",
         ]}
         rows={variants.map((v, i) => [
           `Variant ${String.fromCharCode(65 + i)}`,
           str(v.seed),
           str(obj(v.manifest).target_triple),
           str(obj(v.manifest).execution_mode),
-          str(v.content_hash),
-          str(obj(v.manifest).llvm_ir_hash),
+          <HashValue key={v.id} value={v.content_hash} />,
+          <HashValue key={v.id} value={obj(v.manifest).llvm_ir_hash} />,
+          <Fields
+            key={v.id}
+            data={{
+              variant_ms:
+                obj(obj(v.manifest).profile).variant_ms ?? "Not measured",
+              aot_ms: obj(obj(v.manifest).profile).aot_ms ?? "Not measured",
+              bytes: obj(v.manifest).artifact_size_bytes ?? "Not measured",
+              ...obj(obj(v.manifest).structural_metrics),
+            }}
+          />,
         ])}
       />
       <button
@@ -1735,13 +2334,67 @@ function VariantView({
         Compare variants
       </button>
       {comparison && (
-        <Fields
-          data={{
-            same_source: comparison.same_source,
-            distinct_artifacts: comparison.distinct_artifacts,
-            semantic_equivalence: comparison.semantic_equivalence,
-          }}
-        />
+        <Drawer title="Variant comparison" close={() => setComparison(null)}>
+          <h3>Same forensic intent → distinct compiled variants</h3>
+          <Fields
+            data={{
+              "Source identity": comparison.same_source ? "SAME" : "DIFFERENT",
+              "Artifact identities":
+                Number(comparison.distinct_artifacts) > 1
+                  ? "DIFFERENT"
+                  : "IDENTICAL",
+              "LLVM identities": variants
+                .slice(0, 3)
+                .some((v) => !obj(v.manifest).llvm_ir_hash)
+                ? "NOT REPORTED"
+                : new Set(
+                      variants
+                        .slice(0, 3)
+                        .map((v) => obj(v.manifest).llvm_ir_hash),
+                    ).size > 1
+                  ? "DIFFERENT"
+                  : "IDENTICAL",
+              "Semantic equivalence": str(
+                comparison.semantic_equivalence,
+              ).replaceAll("_", " "),
+            }}
+          />
+          <Table
+            headers={[
+              "Variant",
+              "Artifact",
+              "LLVM",
+              "Variant build (ms)",
+              "AOT (ms)",
+              "Bytes / delta from A",
+              "Structure",
+            ]}
+            rows={variants.slice(0, 3).map((v, i) => [
+              `Variant ${String.fromCharCode(65 + i)}`,
+              <HashValue key={v.id} value={v.content_hash} />,
+              <HashValue key={v.id} value={obj(v.manifest).llvm_ir_hash} />,
+              str(obj(obj(v.manifest).profile).variant_ms ?? "Not measured"),
+              str(obj(obj(v.manifest).profile).aot_ms ?? "Not measured"),
+              typeof obj(v.manifest).artifact_size_bytes === "number" &&
+              typeof obj(variants[0]?.manifest).artifact_size_bytes === "number"
+                ? `${obj(v.manifest).artifact_size_bytes} B / ${Number(obj(v.manifest).artifact_size_bytes) - Number(obj(variants[0]?.manifest).artifact_size_bytes)} B`
+                : "Not measured",
+              Object.entries(obj(obj(v.manifest).structural_metrics))
+                .filter(([, value]) => typeof value === "number")
+                .map(([k, value]) => `${k}: ${value}`)
+                .join(" · "),
+            ])}
+          />
+          <p>
+            Structural diversity is proven by generated artifacts. Semantic
+            equivalence has not been evaluated for this compilation.
+          </p>
+          <p>
+            Stage timings are compiler measurements. They exclude control-plane
+            dispatch and native worker linking; a total wall-clock build latency
+            is not reported. Older builds may lack stored measurements.
+          </p>
+        </Drawer>
       )}
     </>
   );
@@ -1769,11 +2422,57 @@ function GraphView({ d }: { d: Data }) {
       };
     },
   });
-  const graph = query.data ?? { nodes: [], edges: [] };
+  const raw = query.data ?? { nodes: [], edges: [] };
+  const graph = aggregateConnections(raw.nodes, raw.edges, d.observations);
+  const [finding, setFinding] = useState(() =>
+    typeof window !== "undefined"
+      ? (new URLSearchParams(window.location.search).get("finding") ??
+        d.findings[0]?.id ??
+        "")
+      : "",
+  );
+  const related = new Set<string>();
+  const focus = d.findings.find((f) => f.id === finding);
+  if (focus) {
+    for (const node of graph.nodes)
+      if (
+        items(focus.observation_ids).some((id) =>
+          items(node.observation_ids).includes(id),
+        ) ||
+        items(focus.observation_ids).includes(str(node.id)) ||
+        node.finding_id === focus.id ||
+        node.id === `finding:${focus.id}`
+      )
+        related.add(str(node.id));
+    for (let step = 0; step < 2; step++)
+      for (const edge of graph.edges)
+        if (related.has(edge.target)) related.add(edge.source);
+  }
+
   const label = (n: Record<string, unknown>) => {
     const observed = payload(
-      d.observations.find((o) => o.id === n.observation_id) ?? { id: "" },
+      d.observations.find((o) => o.id === (n.observation_id ?? n.id)) ?? {
+        id: "",
+      },
     );
+    if (n.type === "Finding")
+      return str(
+        d.findings.find((f) => `finding:${f.id}` === n.id)?.title ?? "Finding",
+      );
+    if (n.type === "Process") {
+      const process = d.observations.find(
+        (o) =>
+          o.collector === "processes" &&
+          str(payload(o).pid) === str(n.pid) &&
+          str(n.id).includes(str(o.endpoint_id)) &&
+          str(n.id).includes(str(o.job_id)),
+      );
+      return process
+        ? `${str(payload(process).name)} / PID ${str(n.pid)}`
+        : `PID ${str(n.pid)}`;
+    }
+    if (n.type === "Connection")
+      return `${str(observed.remote_address ?? observed.remote_ip ?? observed.remote ?? observed.local_address ?? "Connection")}${observed.remote_port != null ? `:${observed.remote_port}` : ""}`;
     return str(
       n.name ??
         n.address ??
@@ -1782,23 +2481,64 @@ function GraphView({ d }: { d: Data }) {
         observed.name ??
         observed.path ??
         observed.remote_address ??
+        observed.remote_ip ??
+        observed.remote ??
         (n.pid ? `PID ${n.pid}` : n.type),
     );
   };
   const nodes = graph.nodes.filter(
     (n) =>
       (!kind || n.type === kind) &&
+      (!focus || related.has(str(n.id))) &&
       label(n).toLowerCase().includes(search.toLowerCase()),
   );
+  const levels = [
+    ["Endpoint"],
+    ["User", "Finding"],
+    ["Process"],
+    ["File", "Service", "Driver", "Connection"],
+    ["IP", "Observation"],
+  ];
   const positions = new Map(
-    nodes.map((n, i) => [
-      str(n.id),
-      { x: 105 + (i % 4) * 210, y: 75 + Math.floor(i / 4) * 120 },
-    ]),
+    nodes.map((n) => {
+      const level = Math.max(
+        0,
+        levels.findIndex((types) => types.includes(str(n.type))),
+      );
+      const siblings = nodes.filter((other) =>
+        levels[level]!.includes(str(other.type)),
+      );
+      return [
+        str(n.id),
+        {
+          x: 115 + level * 205,
+          y: 65 + siblings.findIndex((other) => other.id === n.id) * 105,
+        },
+      ];
+    }),
   );
+  const xs = [...positions.values()].map((p) => p.x),
+    left = xs.length ? Math.min(...xs) - 110 : 0,
+    width = xs.length ? Math.max(...xs) - left + 110 : 1000;
   return (
     <section className="panel">
+      <p>
+        Connections with matching endpoint, job, process and socket identity are
+        visually grouped; raw observations remain unchanged.
+      </p>
       <div className="timeline-filters">
+        <select
+          aria-label="Related finding"
+          value={finding}
+          onChange={(e) => setFinding(e.target.value)}
+        >
+          <option value="">All relationships</option>
+          {d.findings.map((f) => (
+            <option key={f.id} value={f.id}>
+              Related to {str(f.title)}
+            </option>
+          ))}
+        </select>
         <input
           aria-label="Search graph"
           placeholder="Search node…"
@@ -1824,17 +2564,40 @@ function GraphView({ d }: { d: Data }) {
         >
           Fit to view
         </button>
+        <button
+          className="secondary"
+          onClick={() => {
+            setKind("");
+            setSearch("");
+            setFinding("");
+            setSelected(null);
+          }}
+        >
+          Reset view
+        </button>
       </div>
       <svg
         className="forensic-graph"
-        viewBox={`0 0 950 ${Math.max(280, Math.ceil(nodes.length / 4) * 120 + 40)}`}
+        viewBox={`${left} 0 ${width} ${Math.max(280, ...[...positions.values()].map((p) => p.y + 80))}`}
         aria-label="Forensic relationships"
       >
         {graph.edges.map((e, i) => {
           const a = positions.get(e.source),
             b = positions.get(e.target);
           return a && b ? (
-            <line key={i} x1={a.x} y1={a.y} x2={b.x} y2={b.y}>
+            <line
+              className={
+                selected &&
+                (e.source === selected.id || e.target === selected.id)
+                  ? "selected-edge"
+                  : ""
+              }
+              key={i}
+              x1={a.x}
+              y1={a.y}
+              x2={b.x}
+              y2={b.y}
+            >
               <title>{e.relationship}</title>
             </line>
           ) : null;
@@ -1857,6 +2620,9 @@ function GraphView({ d }: { d: Data }) {
               <rect x={-85} y={-28} width={170} height={60} rx={9} />
               <text textAnchor="middle" y={-3}>
                 {str(n.type)}
+                {n.type === "Connection" && Number(n.count) > 1
+                  ? ` × ${n.count}`
+                  : ""}
               </text>
               <text textAnchor="middle" y={18} className="graph-detail">
                 {label(n).slice(0, 25)}
@@ -1868,6 +2634,14 @@ function GraphView({ d }: { d: Data }) {
       {selected && (
         <Drawer title="Node Detail" close={() => setSelected(null)}>
           <Fields data={{ label: label(selected), ...selected }} />
+          <h3>Supporting observations</h3>
+          {d.observations
+            .filter((o) => items(selected.observation_ids).includes(o.id))
+            .map((o) => (
+              <section key={o.id} className="panel">
+                <Fields data={{ collector: o.collector, ...payload(o) }} />
+              </section>
+            ))}
           <RelatedLinks />
         </Drawer>
       )}

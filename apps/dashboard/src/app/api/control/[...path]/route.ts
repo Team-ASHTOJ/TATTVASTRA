@@ -16,6 +16,8 @@ const domains = new Set([
   "compilations",
   "variants",
   "endpoints",
+  "local-agent",
+  "local-agents",
   "hunts",
   "artifacts",
   "manifests",

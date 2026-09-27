@@ -16,7 +16,7 @@ export const sections = [
   },
   {
     slug: "language",
-    name: "JOCKY Language",
+    name: "Docs",
     group: "BUILD",
     phase: "P1–P3",
     description: "Language reference and working forensic programs.",
