@@ -1,4 +1,5 @@
 # Build status
+# Build status
 
 ## PS-coverage sprint 2 — cross-target compilation, real execution and relay transport — 2026-09-28
 
@@ -28,6 +29,26 @@ Useful verification: `make verify-native-container` then an explicit `ctest` ins
 
 Known limitations: Windows target objects are emitted but cannot be linked or executed on this macOS host, so Windows remains a compilation-target claim only — **ENVIRONMENT DEPENDENT**. Certificate rotation and production OS credential storage remain open, so `SEC-02`/`AGT-03` are PARTIAL, and the endpoint state set beyond ONLINE/STALE/OFFLINE/WAITING_FOR_HEARTBEAT remains specified only (`AGT-04` PARTIAL). The relay is a byte pass-through, not a domain-fronting gateway, so `SAFE-11` is PARTIAL. cgroup hard limits are still unavailable.
 
+## Terminal `jockey` entry point and LLVM 20+ triple compatibility — 2026-09-28
+
+Status: **IMPLEMENTED and verified on LLVM 22.1.8 (Arch Linux)**. The pinned LLVM 18 branch of the new compatibility shim is **NOT TESTED** here.
+
+- `scripts/jockey` is a POSIX `sh` dispatcher. A first argument naming a `.jky` file runs `jockyc run <file> --execution memory`; any other argument is passed through to `jockyc` unchanged. `JOCKYC` overrides the located binary. `make jockey-install` builds `jockyc` and symlinks the script into `~/.local/bin`. No compiler, runtime, agent or protocol behaviour changed.
+- `native/compiler/include/jocky/llvm_compat.h` adds three inline shims (`triple_argument`, `set_module_triple`, `module_triple`) guarded by `LLVM_VERSION_MAJOR >= 20`. LLVM 20 moved `Module::getTargetTriple`/`setTargetTriple`, `TargetRegistry::lookupTarget` and `Target::createTargetMachine` from `StringRef`/`std::string` to `llvm::Triple`; the shim keeps one source tree building on both layouts. Six call sites in `src/backend.cpp` and `src/llvm_probe.cpp` were updated. Signatures were confirmed against the `release/18.x` headers, not assumed.
+- `native/compiler/CMakeLists.txt` links the LLVM shared library when `LLVMConfig` reports `LLVM_LINK_LLVM_DYLIB`. Distributions that ship only `libLLVM.so` (Arch) provide no static component archives, so `llvm_map_components_to_libnames` alone failed to link. Component linking is unchanged when the static archives are present.
+
+Executed checks, LLVM 22.1.8, `cmake -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release`:
+
+- `make jockey-install`: PASS. Builds `jockyc`, `jocky-worker`, and all four test executables with no warnings under `-Wall -Wextra -Wpedantic -Werror`.
+- `ctest --test-dir build/native --output-on-failure`: **35/35 PASS**, including `LLVMBackend.*`, `LiteralPool.*`, `frontend_examples_and_goldens` and `compiler_rejects_missing_source`.
+- `jockyc --self-test`: PASS (ORC toolchain and runtime ABI probe).
+- `jockyc check examples/basic/system.jky` → PASS, 6 typed JIR instructions. `jockyc check examples/invalid/parse.jky` → `JOCKY E120`, exit 1.
+- `jockey examples/basic/system.jky` and `cd /tmp && jockey hi.jky` → exit 0, fixture SHA-256 emitted. `jockey check <file>` passes through. `jockey examples/invalid/parse.jky` → exit 1.
+- `python3 scripts/format_native.py --check` and `npx prettier --check README.md`: PASS.
+
+Known limitations: the LLVM 18 path through `llvm_compat.h` compiles against signatures read from the `release/18.x` headers but was not executed — only LLVM 22 is installed on this host, so LLVM 18 CI remains the first real test of that branch. `jockey <file>` executes against the deterministic SIMULATED fixture collector; it is not endpoint evidence and no Agent host is involved. Passing a second `--execution` flag alongside a `.jky` path is rejected as a duplicate option rather than overridden.
+
+## PS-coverage sprint 1 — Build Forge delivery — 2026-09-27
 ## PS-coverage sprint 1 — Build Forge delivery — 2026-09-27
 
 Status: **IMPLEMENTED and verified within the bounded delivery scope below**.

@@ -21,6 +21,17 @@ Open <http://127.0.0.1:3000>. API documentation: <http://127.0.0.1:8000/docs>. T
 
 The default is REAL mode with **no operational endpoint inventory**. `JOCKY_MODE=DEMO make dev-api` declares intended demo mode but does not manufacture fixtures or make execution available. No remote authentication is implemented; the scaffold binds to loopback and refuses production/relay environment settings.
 
+## Run a hunt from the terminal
+
+```sh
+make jockey-install   # builds jockyc, links scripts/jockey into ~/.local/bin
+jockey hunt.jky       # compile and execute the hunt file
+jockey check hunt.jky # frontend validation only
+jockey --help         # full jockyc command list
+```
+
+A first argument naming a `.jky` file is run; any other argument is passed straight through to `jockyc` (`check`, `tokens`, `ast`, `jir`, `llvm`, `plan`, `compile`, `run`, `variants`, `variant-info`, `benchmark`). Local execution uses the deterministic SIMULATED fixture collector: the hunt file is compiled and JIT-executed in process, and is not endpoint evidence. Set `JOCKYC` to point at a different compiler binary. For other machines and platforms, see [installing JOCKY](docs/INSTALL.md).
+
 ## Verify
 
 ```sh

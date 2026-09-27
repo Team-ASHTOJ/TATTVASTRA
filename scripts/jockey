@@ -1,0 +1,45 @@
+#!/bin/sh
+# jockey — run a JOCKY hunt file from the terminal.
+#
+#   jockey hunt.jky           compile and execute the hunt file
+#   jockey check hunt.jky     frontend validation only
+#   jockey --help             full jockyc command list
+#
+# A first argument that names a .jky file is run; anything else is passed
+# straight through to jockyc.
+set -eu
+
+self=$(readlink -f "$0" 2>/dev/null || echo "$0")
+root=$(cd "$(dirname "$self")/.." 2>/dev/null && pwd || echo "")
+
+JOCKYC=
+for candidate in "${JOCKYC:-}" \
+  "$root/build/native/native/compiler/jockyc" \
+  "$PWD/build/native/native/compiler/jockyc"; do
+  if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+    JOCKYC=$candidate
+    break
+  fi
+done
+
+if [ -z "$JOCKYC" ]; then
+  echo "jockey: jockyc is not built. Run 'make native-build' in the JOCKY checkout." >&2
+  exit 70
+fi
+
+if [ $# -eq 0 ]; then
+  exec "$JOCKYC" --help
+fi
+
+case $1 in
+*.jky)
+  file=$1
+  shift
+  # Local execution uses the deterministic SIMULATED fixture collector: a hunt
+  # file is compiled and JIT-executed in process, it is not endpoint evidence.
+  exec "$JOCKYC" run "$file" --execution memory "$@"
+  ;;
+*)
+  exec "$JOCKYC" "$@"
+  ;;
+esac

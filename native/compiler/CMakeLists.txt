@@ -1,5 +1,12 @@
-llvm_map_components_to_libnames(JOCKY_LLVM_LIBS
-  Core Support OrcJIT ExecutionEngine native X86 AArch64 IRReader Target Passes Analysis TransformUtils CodeGen MC)
+llvm_map_components_to_libnames(JOCKY_LLVM_COMPONENTS
+  Core Support OrcJIT ExecutionEngine native Target Passes Analysis TransformUtils CodeGen MC)
+# Not every distribution ships the static component archives (Arch provides only
+# libLLVM.so). LLVMConfig reports that layout through LLVM_LINK_LLVM_DYLIB.
+if(LLVM_LINK_LLVM_DYLIB)
+  set(JOCKY_LLVM_LIBS LLVM)
+else()
+  set(JOCKY_LLVM_LIBS ${JOCKY_LLVM_COMPONENTS})
+endif()
 add_library(jocky_llvm_probe STATIC src/llvm_probe.cpp)
 target_include_directories(jocky_llvm_probe PUBLIC include)
 target_include_directories(jocky_llvm_probe SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
