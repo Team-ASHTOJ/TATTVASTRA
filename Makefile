@@ -10,12 +10,12 @@ VENV_PY ?= .venv/bin/python
 endif
 COMPOSE := docker compose --env-file .env -f infra/docker/compose.yaml
 
-.PHONY: help doctor bootstrap contracts contracts-check coverage format format-check lint typecheck test build build-python proto-check verify-foundation verify verify-containers verify-native verify-agent verify-native-container verify-agent-container native-configure native-build dev-api dev-dashboard configure-local infra-check infra-up infra-down stack-up browser-install test-e2e
+.PHONY: help doctor bootstrap contracts contracts-check coverage format format-check lint typecheck test build build-python proto-check verify-foundation verify verify-containers verify-native verify-agent verify-native-container verify-agent-container native-configure native-build jockey-install dev-api dev-dashboard configure-local infra-check infra-up infra-down stack-up browser-install test-e2e
 
 help:
 	@echo "JOCKY foundation: bootstrap | doctor | dev-api | dev-dashboard | contracts | coverage"
 	@echo "Checks: verify-foundation | verify (all host tools) | verify-containers | test-e2e"
-	@echo "Native/Rust: verify-native-container | verify-agent-container | native-build"
+	@echo "Native/Rust: verify-native-container | verify-agent-container | native-build | jockey-install"
 	@echo "Infrastructure: configure-local | infra-check | infra-up | stack-up | infra-down"
 
 doctor:
@@ -75,6 +75,11 @@ native-configure:
 
 native-build: native-configure
 	cmake --build build/native --parallel 2
+
+jockey-install: native-build
+	mkdir -p $(HOME)/.local/bin
+	ln -sf $(CURDIR)/scripts/jockey $(HOME)/.local/bin/jockey
+	@echo "Installed $(HOME)/.local/bin/jockey -> $(CURDIR)/scripts/jockey"
 
 verify-native: native-build
 	ctest --test-dir build/native --output-on-failure

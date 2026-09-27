@@ -1,4 +1,5 @@
 #include "jocky/backend.h"
+#include "jocky/llvm_compat.h"
 
 #include <algorithm>
 #include <chrono>
@@ -63,12 +64,12 @@ std::unique_ptr<llvm::TargetMachine> target_machine(std::string &error) {
     return nullptr;
   }
   llvm::Triple triple(llvm::sys::getDefaultTargetTriple());
-  const auto *target = llvm::TargetRegistry::lookupTarget(triple.str(), error);
+  const auto *target = llvm::TargetRegistry::lookupTarget(triple_argument(triple), error);
   if (target == nullptr)
     return nullptr;
   llvm::TargetOptions options;
   return std::unique_ptr<llvm::TargetMachine>(
-      target->createTargetMachine(triple.str(), llvm::sys::getHostCPUName(), "", options,
+      target->createTargetMachine(triple_argument(triple), llvm::sys::getHostCPUName(), "", options,
                                   std::nullopt, std::nullopt, llvm::CodeGenOptLevel::Default));
 }
 
@@ -303,7 +304,7 @@ LoweredVariant lower_to_llvm(const FrontendModule &frontend, const VariantOption
   auto machine = target_machine(target_error);
   if (machine == nullptr)
     fail("E263", "Host LLVM target is unavailable: " + target_error, {});
-  result.module->setTargetTriple(machine->getTargetTriple().str());
+  set_module_triple(*result.module, machine->getTargetTriple());
   result.module->setDataLayout(machine->createDataLayout());
   string_global(*result.module, "jocky_variant_identity_" + variant_id.substr(0, 16), identity,
                 true);
@@ -420,7 +421,7 @@ LoweredVariant lower_to_llvm(const FrontendModule &frontend, const VariantOption
                       jir_hash,
                       "",
                       LLVM_VERSION_STRING,
-                      result.module->getTargetTriple(),
+                      module_triple(*result.module),
                       options.execution_mode,
                       options.profile,
                       std::nullopt,
@@ -480,7 +481,7 @@ jocky_status execute_orc(LoweredVariant &&variant, jocky_context *runtime, Stage
   }
   (*jit)->getMainJITDylib().addGenerator(std::move(*generator));
   variant.module->setDataLayout((*jit)->getDataLayout());
-  variant.module->setTargetTriple((*jit)->getTargetTriple().str());
+  set_module_triple(*variant.module, (*jit)->getTargetTriple());
   auto symbol_name = variant.entry_symbol;
   if (auto failure = (*jit)->addIRModule(
           llvm::orc::ThreadSafeModule(std::move(variant.module), std::move(variant.context)))) {

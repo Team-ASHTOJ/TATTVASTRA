@@ -1,4 +1,5 @@
 #include "jocky/llvm_probe.h"
+#include "jocky/llvm_compat.h"
 #include "jocky/runtime.h"
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 #include <llvm/IR/IRBuilder.h>
@@ -21,7 +22,7 @@ bool verify_orc_toolchain(std::string &error) {
   auto context = std::make_unique<llvm::LLVMContext>();
   auto module = std::make_unique<llvm::Module>("jocky_toolchain_probe", *context);
   module->setDataLayout((*jit)->getDataLayout());
-  module->setTargetTriple((*jit)->getTargetTriple().str());
+  jocky::set_module_triple(*module, (*jit)->getTargetTriple());
   llvm::IRBuilder<> builder(*context);
   auto *type = llvm::FunctionType::get(builder.getInt32Ty(), false);
   auto *function =
