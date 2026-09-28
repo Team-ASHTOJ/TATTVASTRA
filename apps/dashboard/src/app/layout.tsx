@@ -33,6 +33,7 @@ export default function RootLayout({
                 alt=""
                 width={824}
                 height={907}
+                unoptimized
                 priority
               />
               <span className="brand-copy">
@@ -42,10 +43,11 @@ export default function RootLayout({
                   alt="Tattvastra"
                   width={1355}
                   height={146}
+                  unoptimized
                   priority
                 />
                 <small>
-                  JOCKY-based cross-platform forensic scripting language.
+                  JOCKY Framework · Cross-Platform Forensic Scripting Language
                 </small>
               </span>
             </Link>

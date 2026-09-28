@@ -51,6 +51,51 @@ const defaultArcs: CdnArc[] = [
 
 const seedActivity = [42, 38, 29, 18, 16, 13];
 
+/*
+  Particle (map dot) treatment.
+
+  cobe's map shader paints every dot as the sphere's `baseColor` scaled by that
+  sample's intensity, while the ocean floor sits at a flat 10% of the same
+  colour. That makes baseColor the one lever that lifts the particles without
+  repainting the globe body: at dot intensity it resolves to a muted antique
+  gold, and at ocean intensity it is a near-black warm graphite rather than a
+  gold sphere.
+
+  The gold is deliberately desaturated — roughly hsl(38 30% 48%) at full dot
+  intensity — so it reads as champagne/antique metal, not saturated yellow.
+  `mapBaseBrightness` floors the sample value, which is what makes the dot
+  field itself visible instead of only the continents.
+*/
+type Rgb = [number, number, number];
+
+const DOT_GOLD_IDLE: Rgb = [0.38, 0.315, 0.2];
+const DOT_GOLD_HOVER: Rgb = [0.43, 0.357, 0.228];
+const MAP_BRIGHTNESS_IDLE = 1.7;
+const MAP_BRIGHTNESS_HOVER = 1.9;
+/* The floor only affects sample values the map texture leaves at zero, i.e. the
+   ocean. Continent dots are driven by the texture and are unaffected by it, so
+   this is the knob that decides how much the open water sparkles — kept low so
+   the gold reads as landmasses rather than a gold-plated sphere. */
+const MAP_BASE_IDLE = 0.13;
+const MAP_BASE_HOVER = 0.17;
+
+/* Long enough to read as a glow rather than a switch, short enough to feel
+   immediate. The value is eased with a smoothstep before it drives the shader. */
+const GLOW_MS = 200;
+
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t;
+}
+
+function lerpRgb(from: Rgb, to: Rgb, t: number): Rgb {
+  return [lerp(from[0], to[0], t), lerp(from[1], to[1], t), lerp(from[2], to[2], t)];
+}
+
+function smoothstep(t: number) {
+  const c = t < 0 ? 0 : t > 1 ? 1 : t;
+  return c * c * (3 - 2 * c);
+}
+
 export function GlobeCdn({
   markers = defaultMarkers,
   arcs = defaultArcs,
@@ -63,6 +108,10 @@ export function GlobeCdn({
   const phiOffsetRef = useRef(0);
   const thetaOffsetRef = useRef(0);
   const isPausedRef = useRef(false);
+  /* Kept in refs rather than state: the glow is animated per frame inside the
+     existing rAF loop, and re-rendering React on every pointer enter would
+     restart that loop's effect for no visual gain. */
+  const isHoveredRef = useRef(false);
   const [activity, setActivity] = useState(() =>
     arcs.map((arc, index) => ({
       id: arc.id,
@@ -111,6 +160,15 @@ export function GlobeCdn({
     isPausedRef.current = false;
   }, []);
 
+  /* The glow is driven by the render loop, so these only flip a flag. */
+  const handlePointerEnter = useCallback(() => {
+    isHoveredRef.current = true;
+  }, []);
+
+  const handlePointerLeave = useCallback(() => {
+    isHoveredRef.current = false;
+  }, []);
+
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
       if (!pointerInteracting.current) return;
@@ -145,14 +203,37 @@ export function GlobeCdn({
       "(prefers-reduced-motion: reduce)",
     ).matches;
 
-    const render = () => {
+    /* 0 = resting gold, 1 = fully lit. Eased toward the pointer state each frame
+       over GLOW_MS, then smoothstepped so the ramp has no hard start or stop. */
+    let glow = 0;
+    let lastFrame = 0;
+
+    const render = (time?: number) => {
       if (!globe) return;
+      const now = typeof time === "number" ? time : performance.now();
+      const delta = lastFrame === 0 ? 0 : Math.min(now - lastFrame, 100);
+      lastFrame = now;
+
       if (!isPausedRef.current && !document.hidden && !reducedMotion) {
         phi += speed;
       }
+
+      const target = isHoveredRef.current ? 1 : 0;
+      if (glow !== target) {
+        const step = delta / GLOW_MS;
+        glow =
+          glow < target
+            ? Math.min(target, glow + step)
+            : Math.max(target, glow - step);
+      }
+      const lit = smoothstep(glow);
+
       globe.update({
         phi: phi + phiOffsetRef.current + dragOffset.current.phi,
         theta: 0.2 + thetaOffsetRef.current + dragOffset.current.theta,
+        baseColor: lerpRgb(DOT_GOLD_IDLE, DOT_GOLD_HOVER, lit),
+        mapBrightness: lerp(MAP_BRIGHTNESS_IDLE, MAP_BRIGHTNESS_HOVER, lit),
+        mapBaseBrightness: lerp(MAP_BASE_IDLE, MAP_BASE_HOVER, lit),
       });
       animationId = requestAnimationFrame(render);
     };
@@ -177,9 +258,9 @@ export function GlobeCdn({
         dark: 1,
         diffuse: 1.1,
         mapSamples: 16000,
-        mapBrightness: 1.7,
-        mapBaseBrightness: 0.11,
-        baseColor: [0.06, 0.09, 0.12],
+        mapBrightness: MAP_BRIGHTNESS_IDLE,
+        mapBaseBrightness: MAP_BASE_IDLE,
+        baseColor: DOT_GOLD_IDLE,
         markerColor: [0.37, 0.63, 0.75],
         glowColor: [0.08, 0.14, 0.18],
         markerElevation: 0.018,
@@ -242,7 +323,11 @@ export function GlobeCdn({
   };
 
   return (
-    <div className={`tc-globe ${className}`}>
+    <div
+      className={`tc-globe ${className}`}
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={handlePointerLeave}
+    >
       <canvas
         ref={canvasRef}
         className="tc-globe-canvas"

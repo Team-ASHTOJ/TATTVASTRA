@@ -167,37 +167,42 @@ td:first-child {
   border-right: 1px solid var(--border-default);
 }
 .brand {
-  display: grid;
-  grid-template-columns: 46px minmax(0, 1fr);
+  display: flex;
   align-items: center;
-  column-gap: 14px;
-  padding: 26px 22px 34px;
+  gap: 13px;
+  min-width: 0;
+  padding: 20px 20px 46px;
 }
 .brand-copy {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
   min-width: 0;
 }
 .brand small {
   display: block;
+  max-width: 180px;
   margin-top: 6px;
-  color: #718692;
+  color: #748896;
   font-size: 10px;
-  font-weight: 400;
-  line-height: 1.4;
+  font-weight: 450;
+  line-height: 1.3;
   letter-spacing: 0;
+  overflow-wrap: anywhere;
 }
 .brand-mark {
   display: block;
-  width: 46px;
-  height: 54px;
+  width: auto;
+  height: 52px;
   flex: 0 0 auto;
   object-fit: contain;
 }
 .brand-wordmark {
   display: block;
-  width: 100%;
-  max-width: 174px;
+  width: min(100%, 190px);
+  max-width: 190px;
   height: auto;
-  filter: brightness(1.15) contrast(1.05);
   object-fit: contain;
   object-position: left center;
 }
@@ -1922,6 +1927,406 @@ select {
   }
 }
 
+/* Endpoint lifecycle traces. Progress is driven by existing API state; these
+   rules are presentation-only. */
+
+.endpoint-lifecycle {
+  position: relative;
+  width: 100%;
+  margin-top: 4px;
+  overflow: hidden;
+  padding: 14px 15px 13px;
+  border: 1px solid rgb(116 147 166 / 24%);
+  border-radius: 11px;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      transparent 0,
+      transparent 3px,
+      rgb(190 218 230 / 1.4%) 4px
+    ),
+    rgb(8 14 19 / 86%);
+  backdrop-filter: blur(8px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 3%),
+    0 12px 24px rgb(0 0 0 / 23%);
+  font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+}
+
+.lifecycle-corner {
+  position: absolute;
+  z-index: 1;
+  width: 13px;
+  height: 13px;
+  pointer-events: none;
+}
+
+.lifecycle-corner-top {
+  top: 6px;
+  left: 6px;
+  border-top: 1px solid rgb(125 173 195 / 42%);
+  border-left: 1px solid rgb(125 173 195 / 42%);
+}
+
+.lifecycle-corner-bottom {
+  right: 6px;
+  bottom: 6px;
+  border-right: 1px solid rgb(125 173 195 / 42%);
+  border-bottom: 1px solid rgb(125 173 195 / 42%);
+}
+
+.lifecycle-header {
+  padding: 0;
+}
+
+.lifecycle-summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 0;
+  padding: 0 2px 11px;
+  border: 0;
+  border-bottom: 1px solid rgb(128 158 176 / 14%);
+  border-radius: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  box-shadow: none;
+}
+
+.lifecycle-summary:hover,
+.lifecycle-summary:active {
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.lifecycle-identity {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.lifecycle-identity strong {
+  overflow: hidden;
+  color: #d8e1e6;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lifecycle-identity small {
+  overflow: hidden;
+  color: #778790;
+  font-size: 9px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lifecycle-summary-end {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+}
+
+.lifecycle-badge {
+  padding: 3px 5px;
+  border: 1px solid rgb(190 161 105 / 23%);
+  border-radius: 4px;
+  color: #b7a071;
+  background: rgb(151 119 61 / 8%);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.lifecycle-chevron {
+  width: 14px;
+  color: #73838d;
+  font-size: 13px;
+  line-height: 1;
+  text-align: center;
+}
+
+.endpoint-lifecycle.collapsed {
+  padding-block: 10px;
+}
+
+.endpoint-lifecycle.collapsed .lifecycle-summary {
+  align-items: center;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.lifecycle-kicker,
+.lifecycle-state,
+.lifecycle-tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.lifecycle-kicker {
+  color: #788994;
+}
+
+.lifecycle-state {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border: 1px solid rgb(108 153 181 / 28%);
+  border-radius: 4px;
+  color: #86a9bd;
+  background: rgb(76 122 151 / 10%);
+}
+
+.lifecycle-state.failed {
+  border-color: rgb(216 115 102 / 36%);
+  color: #dc8d82;
+  background: rgb(159 67 58 / 10%);
+}
+
+.lifecycle-steps {
+  display: grid;
+  gap: 0;
+  margin: 11px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lifecycle-step {
+  --stage-rgb: 83 101 112;
+  position: relative;
+  display: grid;
+  grid-template-columns: 11px 48px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  min-height: 37px;
+  opacity: 0;
+  color: #5f6c74;
+  transform: translateY(3px);
+  transition:
+    opacity 170ms ease-out var(--step-delay),
+    transform 170ms ease-out var(--step-delay),
+    color 170ms ease-out;
+}
+
+.lifecycle-step.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.lifecycle-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 13px;
+  bottom: -1px;
+  left: 4px;
+  width: 1px;
+  background: rgb(115 137 149 / 18%);
+}
+
+.lifecycle-dot {
+  position: relative;
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  margin-top: 2px;
+  border: 1px solid #52616a;
+  border-radius: 50%;
+  background: #111a20;
+}
+
+.lifecycle-tag {
+  justify-self: start;
+  padding: 2px 4px;
+  border: 1px solid rgb(var(--stage-rgb) / 18%);
+  border-radius: 3px;
+  color: rgb(var(--stage-rgb) / 82%);
+  background: rgb(var(--stage-rgb) / 7%);
+  line-height: 1;
+}
+
+.lifecycle-step[data-stage="run"] {
+  --stage-rgb: 111 157 184;
+}
+
+.lifecycle-step[data-stage="init"] {
+  --stage-rgb: 101 164 159;
+}
+
+.lifecycle-step[data-stage="link"] {
+  --stage-rgb: 133 174 197;
+}
+
+.lifecycle-step[data-stage="reg"] {
+  --stage-rgb: 187 158 105;
+}
+
+.lifecycle-step[data-stage="sync"] {
+  --stage-rgb: 95 164 181;
+}
+
+.lifecycle-step[data-stage="hb"],
+.lifecycle-step[data-stage="ready"],
+.lifecycle-step[data-stage="done"] {
+  --stage-rgb: 119 161 128;
+}
+
+.lifecycle-step[data-stage="stop"] {
+  --stage-rgb: 193 112 105;
+}
+
+.lifecycle-step[data-stage="sandbox"],
+.lifecycle-step[data-stage="boot"] {
+  --stage-rgb: 127 151 179;
+}
+
+.lifecycle-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lifecycle-copy strong {
+  color: currentColor;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.lifecycle-copy small {
+  color: #64727b;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.lifecycle-step.active {
+  color: #8fb5ca;
+}
+
+.lifecycle-step.active .lifecycle-dot {
+  border-color: rgb(var(--stage-rgb) / 88%);
+  background: rgb(var(--stage-rgb) / 82%);
+  box-shadow: 0 0 0 3px rgb(var(--stage-rgb) / 11%);
+  animation: lifecycle-pulse 1.8s ease-in-out infinite;
+}
+
+.lifecycle-step.complete {
+  color: #9eb8a3;
+}
+
+.lifecycle-step.complete .lifecycle-dot {
+  border-color: rgb(var(--stage-rgb) / 78%);
+  background: rgb(var(--stage-rgb) / 70%);
+  box-shadow: 0 0 7px rgb(var(--stage-rgb) / 20%);
+}
+
+.lifecycle-step.failed {
+  color: #dc8d82;
+}
+
+.lifecycle-step.failed .lifecycle-dot {
+  border-color: #db8175;
+  background: #bd665c;
+}
+
+.lifecycle-result {
+  display: grid;
+  gap: 3px;
+  margin-top: 7px;
+  padding: 9px 10px;
+  border: 1px solid;
+  border-radius: 7px;
+}
+
+.lifecycle-result strong {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.lifecycle-result small {
+  overflow-wrap: anywhere;
+  color: #82918a;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 10px;
+}
+
+.lifecycle-result.success {
+  border-color: rgb(126 163 134 / 25%);
+  color: #a2bea7;
+  background: rgb(78 111 84 / 10%);
+}
+
+.lifecycle-result.failure {
+  border-color: rgb(215 114 101 / 28%);
+  color: #dc8d82;
+  background: rgb(151 63 54 / 9%);
+}
+
+.lifecycle-result .compact {
+  justify-self: start;
+  min-height: 28px;
+  margin-top: 5px;
+  padding: 4px 9px;
+  font-size: 10px;
+}
+
+.endpoint-lifecycle-stack {
+  display: grid;
+  gap: 7px;
+  width: 100%;
+}
+
+.enrollment-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  width: 100%;
+  margin-top: auto;
+}
+
+.enrollment-actions > button {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 7px 9px;
+  white-space: normal;
+}
+
+@keyframes lifecycle-pulse {
+  50% {
+    opacity: 0.65;
+    box-shadow: 0 0 0 5px rgb(93 150 181 / 7%);
+  }
+}
+
+@media (max-width: 760px) {
+  .endpoint-lifecycle {
+    padding: 13px 12px 12px;
+  }
+
+  .lifecycle-step {
+    grid-template-columns: 11px 44px minmax(0, 1fr);
+    gap: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lifecycle-step {
+    transition: none;
+  }
+
+  .lifecycle-step.active .lifecycle-dot {
+    animation: none;
+  }
+}
+
 /* Product-wide layout guardrails */
 :root {
   --surface-1: #0d131a;
@@ -2483,6 +2888,151 @@ pre,
 
   .command-hero.command-center-hero {
     padding: 24px 20px;
+  }
+}
+
+/* Enrollment layout guardrails. Keep lifecycle copy flexible inside the
+   three-column modal cards instead of inheriting the global nowrap controls. */
+.operator-drawer .enrollment-grid {
+  gap: 14px;
+}
+
+.operator-drawer .enrollment-grid > .panel {
+  min-width: 0;
+  padding: 18px 16px;
+  gap: 12px;
+}
+
+.operator-drawer .enrollment-grid > .panel > p {
+  max-width: none;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.operator-drawer .enrollment-actions {
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  gap: 8px;
+}
+
+.operator-drawer .enrollment-actions > button,
+.operator-drawer .enrollment-grid > .panel > button {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.operator-drawer .endpoint-lifecycle,
+.operator-drawer .endpoint-lifecycle * {
+  box-sizing: border-box;
+}
+
+.operator-drawer .endpoint-lifecycle {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.operator-drawer .lifecycle-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-width: 0;
+  white-space: normal;
+}
+
+.operator-drawer .lifecycle-identity {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.operator-drawer .lifecycle-summary-end {
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.operator-drawer .lifecycle-step {
+  grid-template-columns: 12px 58px minmax(0, 1fr);
+  align-items: start;
+  min-width: 0;
+  min-height: 43px;
+  column-gap: 10px;
+  padding-block: 3px;
+}
+
+.operator-drawer .lifecycle-tag {
+  white-space: nowrap;
+}
+
+.operator-drawer .lifecycle-copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.operator-drawer .lifecycle-copy strong,
+.operator-drawer .lifecycle-copy small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.operator-drawer .lifecycle-copy strong {
+  line-height: 1.35;
+}
+
+.operator-drawer .lifecycle-copy small {
+  line-height: 1.45;
+}
+
+.operator-drawer .endpoint-lifecycle.collapsed .lifecycle-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: start;
+  gap: 6px;
+}
+
+.operator-drawer .lifecycle-header {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.operator-drawer .endpoint-lifecycle.collapsed .lifecycle-identity,
+.operator-drawer .endpoint-lifecycle.collapsed .lifecycle-summary-end {
+  grid-column: 1;
+}
+
+.operator-drawer .endpoint-lifecycle.collapsed .lifecycle-summary-end {
+  grid-row: 2;
+}
+
+.operator-drawer .endpoint-lifecycle.collapsed .lifecycle-identity strong,
+.operator-drawer .endpoint-lifecycle.collapsed .lifecycle-identity small {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.operator-drawer .endpoint-lifecycle.collapsed .lifecycle-summary-end {
+  justify-content: flex-start;
+}
+
+.operator-drawer .endpoint-lifecycle-stack {
+  min-width: 0;
+  gap: 9px;
+}
+
+@media (max-width: 760px) {
+  .operator-drawer .enrollment-grid > .panel {
+    padding: 16px 14px;
+  }
+
+  .operator-drawer .lifecycle-step {
+    grid-template-columns: 11px 52px minmax(0, 1fr);
+    column-gap: 8px;
   }
 }
 

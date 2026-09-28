@@ -15,6 +15,7 @@ import {
 import { useControlEvents } from "../lib/use-control-events";
 import { Icon, type IconName } from "./icons";
 import { GlobeCdn } from "./globe-cdn";
+import { EndpointLifecycleTrace } from "./endpoint-lifecycle-trace";
 type Row = { id: string; [key: string]: unknown };
 type Data = {
   cases: Row[];
@@ -709,6 +710,7 @@ function Fields({ data }: { data: Record<string, unknown> }) {
   );
 }
 function Enrollment({
+  endpoints,
   close,
   refresh,
   openEndpoint,
@@ -723,6 +725,22 @@ function Enrollment({
     null,
   );
   const [slot, setSlot] = useState(1);
+  const [lifecycleMode, setLifecycleMode] = useState<"start" | "stop" | null>(
+    null,
+  );
+  const [lifecycleStartedAt, setLifecycleStartedAt] = useState(0);
+  const [lifecycleError, setLifecycleError] = useState("");
+  const [token, setToken] = useState<Row | null>(null);
+  const [sandbox, setSandbox] = useState<Row | null>(
+    endpoints.find(
+      (endpoint) =>
+        endpoint.simulation && endpoint.transport_mode === "SANDBOX",
+    ) ?? null,
+  );
+  const [sandboxStartedAt, setSandboxStartedAt] = useState(0);
+  const [sandboxError, setSandboxError] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const pool = useQuery({
     queryKey: ["local-agent"],
     queryFn: () => api<Row[]>("domain/local-agents"),
@@ -740,34 +758,39 @@ function Enrollment({
         "STALE",
       ].includes(str(r.state)),
     ) ?? [];
-  async function localAction(action: "start" | "stop") {
+  async function localAction(action: "start" | "stop", targetSlot = slot) {
+    setSlot(targetSlot);
     setBusy(true);
     setError("");
     setPath("local");
+    setLifecycleMode(action);
+    setLifecycleStartedAt((version) => version + 1);
+    setLifecycleError("");
     try {
-      const state = await submit<Row>(`local-agent/${action}?slot=${slot}`);
+      const state = await submit<Row>(
+        `local-agent/${action}?slot=${targetSlot}`,
+      );
       queryClient.setQueryData(["local-agent"], (old: Row[] | undefined) =>
-        old?.map((r) => (r.slot === slot ? state : r)),
+        old?.map((r) => (r.slot === targetSlot ? state : r)),
       );
       await pool.refetch();
       await refresh();
     } catch (failure) {
-      setError(
+      const message =
         failure instanceof Error
           ? failure.message
-          : "Local runtime operation failed",
-      );
+          : "Local runtime operation failed";
+      setError(message);
+      setLifecycleError(message);
     } finally {
       setBusy(false);
     }
   }
-  const [token, setToken] = useState<Row | null>(null);
-  const [sandbox, setSandbox] = useState<Row | null>(null);
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
   async function sandboxAction() {
     setPath("sandbox");
     setError("");
+    setSandboxError("");
+    setSandboxStartedAt((version) => version + 1);
     setBusy(true);
     try {
       // The backend persists WINDOWS-SANDBOX-01 and reuses it on repeat starts.
@@ -779,7 +802,9 @@ function Enrollment({
       setSandbox(row);
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Sandbox start failed");
+      const message = e instanceof Error ? e.message : "Sandbox start failed";
+      setError(message);
+      setSandboxError(message);
     } finally {
       setBusy(false);
     }
@@ -827,58 +852,68 @@ function Enrollment({
           <h3>Local Endpoint</h3>
           <p>Local endpoints: {active.length} / 3 running</p>
           <p>Start a JOCKY agent locally using the bundled runtime.</p>
-          <button disabled={busy} onClick={() => void localAction("start")}>
-            Start Local Endpoint
-          </button>
-          {active.length > 0 && active.length < 3 && (
-            <button
-              className="secondary"
-              disabled={busy}
-              onClick={async () => {
-                const next = pool.data?.find(
-                  (r) =>
-                    ![
-                      "STARTING",
-                      "ENROLLING",
-                      "WAITING_FOR_HEARTBEAT",
-                      "ONLINE",
-                      "STALE",
-                    ].includes(str(r.state)),
-                );
-                if (!next) return;
-                const index = Number(next.slot);
-                setSlot(index);
-                setPath("local");
-                setBusy(true);
-                setError("");
-                try {
-                  await submit(`local-agent/start?slot=${index}`);
-                  await pool.refetch();
-                  await refresh();
-                } catch (e) {
-                  setError(e instanceof Error ? e.message : "Runtime failed");
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              Start Another Local Endpoint
+          <div className="enrollment-actions">
+            <button disabled={busy} onClick={() => void localAction("start")}>
+              Start Local Endpoint
             </button>
-          )}
+            {active.length > 0 && active.length < 3 && (
+              <button
+                className="secondary"
+                disabled={busy}
+                onClick={() => {
+                  const next = pool.data?.find(
+                    (r) =>
+                      ![
+                        "STARTING",
+                        "ENROLLING",
+                        "WAITING_FOR_HEARTBEAT",
+                        "ONLINE",
+                        "STALE",
+                      ].includes(str(r.state)),
+                  );
+                  if (!next) return;
+                  void localAction("start", Number(next.slot));
+                }}
+              >
+                Start Another Local Endpoint
+              </button>
+            )}
+          </div>
           {pool.data && (
-            <div className="workbench-actions enrollment-status">
-              {pool.data.map((r) => (
-                <button
-                  key={str(r.slot)}
-                  className="secondary"
-                  onClick={() => {
-                    setSlot(Number(r.slot));
-                    setPath("local");
-                  }}
-                >
-                  Endpoint {str(r.slot)} · {str(r.state)}
-                </button>
-              ))}
+            <div className="endpoint-lifecycle-stack">
+              {pool.data.map((row) => {
+                const rowSlot = Number(row.slot);
+                const current = rowSlot === slot;
+                const rowState = str(row.state);
+                const inferredMode = rowState === "STOPPED" ? "stop" : "start";
+                const mode =
+                  current && lifecycleMode ? lifecycleMode : inferredMode;
+                const rowError =
+                  current && path === "local"
+                    ? lifecycleError || local.error?.message || ""
+                    : "";
+                return (
+                  <EndpointLifecycleTrace
+                    key={`${rowSlot}-${mode}-${lifecycleStartedAt}`}
+                    mode={mode}
+                    endpoint={{
+                      name: `Endpoint ${rowSlot}`,
+                      ...obj(row.endpoint),
+                    }}
+                    state={rowState}
+                    error={rowError}
+                    operationPending={current && path === "local" && busy}
+                    startedAt={current ? lifecycleStartedAt : 0}
+                    onActivate={() => {
+                      setSlot(rowSlot);
+                      setPath("local");
+                      setLifecycleMode(mode);
+                      setLifecycleError("");
+                    }}
+                    onRetry={() => void localAction(mode, rowSlot)}
+                  />
+                );
+              })}
             </div>
           )}
         </section>
@@ -897,6 +932,20 @@ function Enrollment({
               ? "Starting Windows Sandbox…"
               : "Start Windows Sandbox"}
           </button>
+          {(sandbox || sandboxError || (busy && path === "sandbox")) && (
+            <EndpointLifecycleTrace
+              key={`sandbox-${sandboxStartedAt}`}
+              kind="windows-sandbox"
+              mode="start"
+              endpoint={{ name: "WINDOWS-SANDBOX-01", ...(sandbox ?? {}) }}
+              state={str(sandbox?.status ?? "PENDING")}
+              error={sandboxError}
+              operationPending={busy && path === "sandbox"}
+              startedAt={sandboxStartedAt}
+              onActivate={() => setPath("sandbox")}
+              onRetry={() => void sandboxAction()}
+            />
+          )}
         </section>
         <section className="panel">
           <h3>External Endpoint</h3>
@@ -910,7 +959,7 @@ function Enrollment({
           </button>
         </section>
       </div>
-      {path === "local" && (
+      {path === "local" && !busy && (
         <section className="panel" aria-label="Local endpoint connection">
           <h3>Local endpoint connection</h3>
           <p role="status">

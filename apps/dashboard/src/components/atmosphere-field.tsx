@@ -109,7 +109,7 @@ export function AtmosphereField() {
           vx: (Math.random() - 0.5) * 0.05,
           vy: -(0.08 + Math.random() * 0.16),
           char: pickChar(),
-          alpha: 0.18 + Math.random() * 0.08,
+          alpha: 0.21 + Math.random() * 0.09,
           highlight: 0,
           nextMutation: Math.random() * 3000,
         })),
@@ -122,7 +122,7 @@ export function AtmosphereField() {
             h,
             vx: 0.04 + Math.random() * 0.07,
             vy: -(0.05 + Math.random() * 0.09),
-            alpha: 0.09 + Math.random() * 0.06,
+            alpha: 0.105 + Math.random() * 0.065,
             phase: Math.random() * Math.PI * 2,
           };
         }),
@@ -164,7 +164,7 @@ export function AtmosphereField() {
           if (!b) continue;
           const distance = Math.hypot(a.x - b.x, a.y - b.y);
           if (distance > LINK_DISTANCE) continue;
-          ctx.strokeStyle = rgba(LINK_INK, (1 - distance / LINK_DISTANCE) * 0.095);
+          ctx.strokeStyle = rgba(LINK_INK, (1 - distance / LINK_DISTANCE) * 0.115);
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(b.x, b.y);
@@ -177,7 +177,7 @@ export function AtmosphereField() {
         for (const g of glyphs) {
           const distance = Math.hypot(g.x - pointerX, g.y - pointerY);
           if (distance > MOUSE_RADIUS) continue;
-          ctx.strokeStyle = rgba(HIGHLIGHT_INK, (1 - distance / MOUSE_RADIUS) * 0.07);
+          ctx.strokeStyle = rgba(HIGHLIGHT_INK, (1 - distance / MOUSE_RADIUS) * 0.085);
           ctx.beginPath();
           ctx.moveTo(g.x, g.y);
           ctx.lineTo(pointerX, pointerY);
@@ -197,7 +197,7 @@ export function AtmosphereField() {
 
         // Highlights sweep the resting alpha up toward the bright tier.
         const lit = Math.min(1, g.highlight + near * 0.5);
-        const alpha = g.alpha + (0.36 - g.alpha) * lit;
+        const alpha = g.alpha + (0.4 - g.alpha) * lit;
         ctx.fillStyle = rgba(lit > 0.34 ? HIGHLIGHT_INK : GLYPH_INK, alpha);
         ctx.fillText(g.char, g.x, g.y);
       }
