@@ -73,7 +73,9 @@ target/release/jocky-agent --state-dir "$env:ProgramData\JOCKY" enroll \
 
 ### Normal — preconfigured Windows VM
 
-Prepare the VM once with `scripts/windows/install-jocky-bootstrap.ps1`. It installs the native `jocky-bootstrap.exe` and `jocky-agent.exe`, optionally includes `jocky-worker.exe`, stores the certificate-validated control-plane addresses and bootstrap credential in the protected `%ProgramData%\JOCKY` state directory, and registers the bounded `JockyBootstrap` Windows service.
+Set `JOCKY_AGENT_PUBLIC_HOST` on the control plane to the name or address the guest dials; the three agent addresses are composed from it and the server certificate is renewed to cover that host, so the guest validates the host it connects to rather than having verification relaxed. `make configure-local` records this machine's LAN address for you.
+
+Extract the `jocky-windows-endpoint` CI bundle on the guest, put `jocky-bootstrap.json` — downloaded from **Endpoints → Connect Endpoint → Windows → Advanced Setup → Prepare** — beside `Install-JOCKY.cmd`, and run it as administrator. It installs the native `jocky-bootstrap.exe` and `jocky-agent.exe`, optionally includes `jocky-worker.exe`, stores the certificate-validated control-plane addresses and bootstrap credential in the protected `%ProgramData%\JOCKY` state directory, installs the CA beside them, and registers the bounded `JockyBootstrap` Windows service. Re-running it keeps the existing endpoint identity.
 
 Normal operation then needs no terminal: **Endpoints → Connect Endpoint → Start Windows Endpoint**. The service polls outward over HTTPS, accepts only START/STOP/WAIT lifecycle responses, enrolls through the existing one-time mTLS flow when necessary, and starts only the colocated JOCKY agent. The dashboard shows ONLINE only after that agent's authenticated heartbeat is persisted.
 

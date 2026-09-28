@@ -1,5 +1,31 @@
 # Build status
 
+## Windows endpoint provisioning for one real host — 2026-09-28
+
+Status: **Repository provisioning READY. No Windows host exists in this environment, so the live WINDOWS-01 heartbeat, real Windows collectors and compiled-job execution remain AWAITING A REAL WINDOWS HOST. Nothing Windows was emulated, and no Windows heartbeat was seeded.**
+
+External addressing. `JOCKY_AGENT_PUBLIC_HOST` is the one setting the common case needs. The three addresses an external endpoint dials are composed from it — control-plane API, agent channel and enrollment — and `JOCKY_WINDOWS_API_URL`, `JOCKY_WINDOWS_CONTROL_SERVER` and `JOCKY_WINDOWS_ENROLLMENT_SERVER` still override each one individually. Nothing is hardcoded to a developer address: `make configure-local` records this machine's own LAN address, and the compose bind and port variables (`JOCKY_EXTERNAL_BIND`, `JOCKY_AGENT_API_PORT`, `JOCKY_AGENT_CONTROL_PORT`, `JOCKY_AGENT_ENROLLMENT_PORT`) default to the previous loopback-only behaviour, so an unconfigured stack is unchanged.
+
+TLS/SAN. The server certificate is built from configuration: the internal Compose names stay, and every host named by those addresses is added — as an `IPAddress` entry when it is a literal address, as a `DNSName` otherwise. `ensure_server_names` renews only the server certificate when the configured set outgrows what is installed, keeping the CA and every issued endpoint identity, so an operator who sets the public host later is not left with a certificate that cannot validate. Verification is never disabled, no `--insecure` path exists, and the certificate is served on the same TLS listener the agents already use, not on a plaintext one.
+
+The API listener an external endpoint polls is served over TLS from the control-plane container with that certificate and CA, on `JOCKY_AGENT_API_PORT`, in addition to the plain-HTTP listener the dashboard and the Compose network use. It is started only when a public host is configured, and it refuses to start if the certificate files are missing rather than falling back to plaintext.
+
+Windows CI artifact. The `windows-agent` job now assembles one flat bundle, `jocky-windows-endpoint`, containing `jocky-agent.exe`, `jocky-bootstrap.exe`, `install-jocky-bootstrap.ps1`, `connect-jocky.ps1`, `Install-JOCKY.cmd` and `README.txt`. `jocky-worker.exe` remains the separate best-effort `jocky-worker-windows-x86_64` artifact, published only when the runner has LLVM 18 or newer; a missing worker never blocks enrollment, heartbeat or collectors.
+
+One-time installer. `Install-JOCKY.cmd` elevates itself, finds `jocky-bootstrap.json` beside itself, and runs `install-jocky-bootstrap.ps1`. That script verifies elevation, creates and ACL-restricts `%ProgramFiles%\JOCKY` and `%ProgramData%\JOCKY`, copies the supervisor, the agent and the enrollment script (plus `jocky-worker.exe` when present), writes the CA beside the state, writes `bootstrap.json`, registers the automatic `JockyBootstrap` service and starts it. Re-running it is safe and preserves the existing endpoint identity. No credential is embedded and no certificate validation is weakened.
+
+Verified live on the running stack:
+
+- `docker compose ... config --quiet`: PASS. Published after regeneration: control-plane `0.0.0.0:18080` and `0.0.0.0:18443`, agent-control `0.0.0.0:15051` and `0.0.0.0:15052`, dashboard still loopback.
+- `configure_local.py` detected `192.168.0.151` and recorded `JOCKY_AGENT_PUBLIC_HOST` plus `JOCKY_EXTERNAL_BIND=0.0.0.0`.
+- A verifying TLS client (control-plane CA, hostname checking on) completed TLSv1.3 against `192.168.0.151:18443`; the presented certificate carries `IP Address 192.168.0.151` alongside the internal names, and `GET https://192.168.0.151:18443/health/live` returned 200.
+- An ADMIN registration over that verified HTTPS returned 201 with `api_url https://192.168.0.151:18443`, `control_server https://192.168.0.151:15051`, `enrollment_server https://192.168.0.151:15052` and the CA, and `/windows-endpoint/status` moved **NOT_CONFIGURED → READY**. That verification registration was then deleted so the operator's own **Prepare** mints a fresh one-time credential — the secret is returned only once, and a second registration is refused.
+- The three local Linux endpoints were re-verified ONLINE on the rebuilt stack with their original identities and transports (`DIRECT`, `TRUSTED_RELAY`, `DIRECT`), and their launcher, state and enrollment behaviour was not modified.
+
+Tests and checks: `test_windows_bootstrap.py` and `test_local_agent.py` — **12 passed**, including two new tests proving the addresses and the certificate SANs come from configuration (an unconfigured stack refuses registration with an actionable message; a literal address lands in the certificate as an `IPAddress`; an explicit URL still wins). `ruff check` and `ruff format --check` clean on the changed Python; `prettier --check` clean on the changed docs, workflow and compose file; `npx tsc --noEmit` clean; `git diff --check` clean. The two Windows PowerShell scripts are syntax-validated by the `windows-agent` CI job with the real PowerShell parser, which is the only PowerShell available to this session.
+
+Still not executed anywhere: a real Windows install, a real Windows enrollment, a real Windows heartbeat, real Windows collectors and a Windows compiled job. Those need a Windows host and are the user's next step, not a repository gap.
+
 ## Local Linux endpoint lifecycle regression — 2026-09-28
 
 Status: **ROOT CAUSE FOUND AND FIXED. All three local Linux endpoints were verified ONLINE at the same time, from their own authenticated heartbeats, on a stack rebuilt from this tree.**

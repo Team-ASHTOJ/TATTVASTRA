@@ -575,19 +575,18 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
         )
         if existing is not None:
             raise HTTPException(409, "WINDOWS-01 bootstrap is already registered")
-        configured = (
-            settings.windows_api_url,
-            settings.windows_control_server,
-            settings.windows_enrollment_server,
-        )
+        configured = settings.agent_public_addresses
         if not all(configured) or not all(
             str(value).startswith("https://") for value in configured
         ):
             raise HTTPException(
                 503,
-                "Configure HTTPS JOCKY_WINDOWS_API_URL, JOCKY_WINDOWS_CONTROL_SERVER, "
-                "and JOCKY_WINDOWS_ENROLLMENT_SERVER for the Windows VM",
+                "Set JOCKY_AGENT_PUBLIC_HOST to the LAN name or address the Windows host "
+                "uses for this JOCKY machine (or set JOCKY_WINDOWS_API_URL, "
+                "JOCKY_WINDOWS_CONTROL_SERVER and JOCKY_WINDOWS_ENROLLMENT_SERVER "
+                "individually) with HTTPS addresses",
             )
+        api_url, control_server, enrollment_server = configured
         secret = secrets.token_urlsafe(48)
         row = WindowsBootstrap(
             organization_id=user.organization_id,
@@ -602,9 +601,9 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
         publish(db, user, "windows.bootstrap.registered", row.id)
         return {
             "schema_version": "1.0.0",
-            "api_url": settings.windows_api_url,
-            "control_server": settings.windows_control_server,
-            "enrollment_server": settings.windows_enrollment_server,
+            "api_url": api_url,
+            "control_server": control_server,
+            "enrollment_server": enrollment_server,
             "organization_id": str(user.organization_id),
             "bootstrap_id": str(row.id),
             "bootstrap_secret": secret,

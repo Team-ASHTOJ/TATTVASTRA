@@ -23,8 +23,17 @@ services:
       JOCKY_LOCAL_LAUNCHER_URL: http://local-agent-launcher:8090
       JOCKY_LOCAL_LAUNCHER_TOKEN: ${JOCKY_LOCAL_LAUNCHER_TOKEN:?Run make configure-local}
       JOCKY_BOOTSTRAP_PASSWORD: ${JOCKY_BOOTSTRAP_PASSWORD:?Run make configure-local}
+      # The address an external endpoint dials. Empty keeps the prototype
+      # loopback-only, exactly as before; set it to this machine's LAN name or
+      # address to provision a Windows host.
+      JOCKY_AGENT_PUBLIC_HOST: ${JOCKY_AGENT_PUBLIC_HOST:-}
+      JOCKY_AGENT_API_PORT: ${JOCKY_AGENT_API_PORT:-18443}
+      JOCKY_AGENT_CONTROL_PORT: ${JOCKY_AGENT_CONTROL_PORT:-15051}
+      JOCKY_AGENT_ENROLLMENT_PORT: ${JOCKY_AGENT_ENROLLMENT_PORT:-15052}
     volumes: ["video_objects:/app/.local"]
-    ports: ["127.0.0.1:18080:8000"]
+    ports:
+      - "${JOCKY_EXTERNAL_BIND:-127.0.0.1}:18080:8000"
+      - "${JOCKY_EXTERNAL_BIND:-127.0.0.1}:${JOCKY_AGENT_API_PORT:-18443}:${JOCKY_AGENT_API_PORT:-18443}"
     mem_limit: 2g
     depends_on:
       postgres: { condition: service_healthy }
@@ -71,7 +80,9 @@ services:
       relay_backend:
         aliases: ["agent-control-relay"]
     volumes: ["video_objects:/app/.local"]
-    ports: ["127.0.0.1:15051:50051", "127.0.0.1:15052:50052"]
+    ports:
+      - "${JOCKY_EXTERNAL_BIND:-127.0.0.1}:${JOCKY_AGENT_CONTROL_PORT:-15051}:50051"
+      - "${JOCKY_EXTERNAL_BIND:-127.0.0.1}:${JOCKY_AGENT_ENROLLMENT_PORT:-15052}:50052"
     depends_on:
       control-plane: { condition: service_healthy }
   trusted-relay:

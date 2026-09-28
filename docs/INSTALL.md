@@ -82,11 +82,24 @@ not a supported configuration.
 
 ## Windows endpoint bootstrap
 
-The Windows agent is built by the `windows-agent` CI job as `jocky-agent.exe` and `jocky-bootstrap.exe`. A Windows LLVM worker is published only when its LLVM 18+ CI prerequisite exists.
+The `windows-agent` CI job builds one bundle, **`jocky-windows-endpoint`**, containing `jocky-bootstrap.exe`, `jocky-agent.exe`, `install-jocky-bootstrap.ps1`, `connect-jocky.ps1` and `Install-JOCKY.cmd`. Compiled-job execution additionally needs `jocky-worker.exe`, published separately as `jocky-worker-windows-x86_64` only when the build runner has LLVM 18 or newer; its absence never blocks enrollment, heartbeat or collectors.
 
-For the normal prototype flow, prepare a Windows VM once using `scripts/windows/install-jocky-bootstrap.ps1` and a bootstrap configuration issued by an ADMIN. Configure HTTPS addresses that are reachable from the guest for the control-plane API, AgentControl and enrollment services. Afterwards use **Endpoints → Connect Endpoint → Start Windows Endpoint**; the preinstalled service performs the fixed JOCKY lifecycle and ONLINE remains an authenticated heartbeat claim.
+First point the stack at the address the Windows host can reach. `make configure-local` records this machine's own LAN address, and it can be changed at any time:
 
-For a newly introduced machine, use **Advanced Setup → Connect a new Windows machine** in the same dialog. That retains token, CA and PowerShell bootstrap downloads. It is onboarding, not the normal operator flow. A live Windows VM was not available for this repository validation, so live Windows heartbeat, collectors and compiled-job execution remain environment-blocked.
+```sh
+# .env
+JOCKY_AGENT_PUBLIC_HOST=192.168.1.24   # the name or address WINDOWS-01 dials
+JOCKY_EXTERNAL_BIND=0.0.0.0            # publish the JOCKY ports on the network
+```
+
+Nothing is hardcoded to a developer address, and `JOCKY_AGENT_PUBLIC_HOST` is the only setting the common case needs: the control-plane API (18443), the agent channel (15051) and enrollment (15052) follow from it. The server certificate is renewed to cover that host — as a DNS name or as an IP, whichever it is — so the Windows agent validates the name it actually connects to and verification is never relaxed. For unusual port layouts, set `JOCKY_WINDOWS_API_URL`, `JOCKY_WINDOWS_CONTROL_SERVER` and `JOCKY_WINDOWS_ENROLLMENT_SERVER` individually; each overrides the composed value.
+
+1. `make demo-up` with those values set.
+2. In JOCKY: **Endpoints → Connect Endpoint → Windows → Advanced Setup → Prepare**. `jocky-bootstrap.json` downloads. It carries a one-time bootstrap credential, the control-plane CA, and the HTTPS addresses above; treat it as a secret.
+3. On WINDOWS-01: extract the bundle, copy `jocky-bootstrap.json` beside `Install-JOCKY.cmd`, run `Install-JOCKY.cmd`, and approve the UAC prompt. It installs the supervisor into `%ProgramFiles%\JOCKY`, protects `%ProgramData%\JOCKY`, and starts the **JOCKY Endpoint Bootstrap** service. Re-running it is safe and keeps the existing endpoint identity.
+4. Back in JOCKY the Windows panel reads **READY**. Choose **Start Windows Endpoint**: the endpoint moves STARTING → ENROLLING → WAITING_FOR_HEARTBEAT → ONLINE, and ONLINE is only ever that host's own authenticated heartbeat.
+
+**Advanced Setup** keeps the manual path for a machine without the service: one-time enrollment token, CA download, `connect-jocky.ps1` and the raw agent commands. It is onboarding, not the normal operator flow. A live Windows host was not available for this repository validation, so live Windows heartbeat, collectors and compiled-job execution remain environment-blocked.
 
 ## Using it
 

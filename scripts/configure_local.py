@@ -2,11 +2,29 @@
 
 import os
 import secrets
+import socket
 import sys
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 target = root / ".env"
+
+
+def local_address() -> str | None:
+    """This machine's address on its default route, without sending anything.
+
+    Connecting a UDP socket only selects a route; no packet leaves the host.
+    192.0.2.0/24 is TEST-NET-1, reserved for documentation and never routed.
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+            probe.connect(("192.0.2.1", 9))
+            candidate = probe.getsockname()[0]
+    except OSError:
+        return None
+    return None if candidate.startswith("127.") else candidate
+
+
 if target.exists():
     existing = target.read_text(encoding="utf-8")
     if "--rotate-postgres" in sys.argv:
@@ -56,6 +74,24 @@ if target.exists():
         with target.open("a", encoding="utf-8") as handle:
             handle.write("\nJOCKY_LOCAL_LAUNCHER_TOKEN=" + secrets.token_urlsafe(48) + "\n")
         print("Added internal local-runtime credential without changing existing credentials.")
+    if not any(line.startswith("JOCKY_AGENT_PUBLIC_HOST=") for line in existing.splitlines()):
+        address = local_address()
+        if address is None:
+            print(
+                "No LAN address was detected. An external Windows endpoint needs one: add\n"
+                "  JOCKY_AGENT_PUBLIC_HOST=<this machine's LAN name or address>\n"
+                "  JOCKY_EXTERNAL_BIND=0.0.0.0"
+            )
+        else:
+            with target.open("a", encoding="utf-8") as handle:
+                handle.write(f"\nJOCKY_AGENT_PUBLIC_HOST={address}\nJOCKY_EXTERNAL_BIND=0.0.0.0\n")
+            print(
+                f"External JOCKY endpoint address set to {address} and the JOCKY API and "
+                "agent listeners bound to this machine's network interfaces, so a Windows "
+                "endpoint on the same network can reach them. Change JOCKY_AGENT_PUBLIC_HOST "
+                "in .env if that address is not reachable from the Windows host, then re-run "
+                "make demo-up."
+            )
     raise SystemExit(0)
 password = secrets.token_urlsafe(32)
 values = {

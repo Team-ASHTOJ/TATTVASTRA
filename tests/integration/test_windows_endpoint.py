@@ -106,6 +106,35 @@ def test_windows_ci_validates_and_publishes_the_bootstrap() -> None:
     assert "Parser]::ParseFile" in workflow, "CI must parse the bootstrap script"
 
 
+def test_windows_bundle_ships_one_action_setup() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    installer = ROOT / "scripts/windows/Install-JOCKY.cmd"
+    settings = ROOT / "scripts/windows/install-jocky-bootstrap.ps1"
+    assert installer.is_file(), "the endpoint bundle needs a one-action entry point"
+    assert "jocky-windows-endpoint" in workflow, "CI must publish one endpoint bundle"
+    for name in (
+        "Install-JOCKY.cmd",
+        "install-jocky-bootstrap.ps1",
+        "connect-jocky.ps1",
+        "jocky-agent.exe",
+        "jocky-bootstrap.exe",
+    ):
+        assert name in workflow, f"the Windows bundle does not ship {name}"
+    launcher = installer.read_text(encoding="utf-8")
+    # The operator extracts the bundle, drops the downloaded configuration
+    # beside it and runs one file: no manual init/enroll/connect sequence.
+    assert "jocky-bootstrap.json" in launcher
+    assert "RunAs" in launcher, "the launcher must elevate itself"
+    for manual in ("jocky-agent.exe init", "jocky-agent.exe enroll", "jocky-agent.exe connect"):
+        assert manual not in launcher
+    setup = settings.read_text(encoding="utf-8")
+    assert "WindowsBuiltInRole]::Administrator" in setup, "setup must require elevation"
+    assert "sc.exe create" in setup, "setup must register the supervisor service"
+    for forbidden in TLS_WEAKENING:
+        assert forbidden not in launcher, f"the launcher weakens TLS: {forbidden}"
+        assert forbidden not in setup, f"setup weakens TLS: {forbidden}"
+
+
 def test_the_bootstrap_is_served_by_the_authenticated_enrollment_api() -> None:
     api = (ROOT / "services/control-plane/src/jocky_control_plane/api.py").read_text(
         encoding="utf-8"

@@ -54,14 +54,26 @@ jobs:
       - run: rustup toolchain install 1.90.0 --component rustfmt --component clippy
       - run: cargo fmt --all -- --check
       - run: cargo build --workspace --locked --release
+      # One bundle, flat, so an operator can extract it onto WINDOWS-01 and run
+      # Install-JOCKY.cmd. jocky-worker.exe is a separate best-effort artifact
+      # from windows-worker and is optional here; its absence never blocks
+      # enrollment, heartbeat or collectors.
+      - name: Assemble the Windows endpoint bundle
+        shell: pwsh
+        run: |
+          $bundle = 'dist/jocky-windows-endpoint'
+          New-Item -ItemType Directory -Path $bundle -Force | Out-Null
+          Copy-Item target/release/jocky-agent.exe $bundle
+          Copy-Item target/release/jocky-bootstrap.exe $bundle
+          Copy-Item scripts/windows/install-jocky-bootstrap.ps1 $bundle
+          Copy-Item scripts/windows/connect-jocky.ps1 $bundle
+          Copy-Item scripts/windows/Install-JOCKY.cmd $bundle
+          Copy-Item scripts/windows/README-windows-endpoint.txt (Join-Path $bundle 'README.txt')
+          Get-ChildItem $bundle | Select-Object Name, Length | Format-Table
       - uses: actions/upload-artifact@v4
         with:
-          name: jocky-agent-windows-x86_64
-          path: |
-            target/release/jocky-agent.exe
-            target/release/jocky-bootstrap.exe
-            scripts/windows/connect-jocky.ps1
-            scripts/windows/install-jocky-bootstrap.ps1
+          name: jocky-windows-endpoint
+          path: dist/jocky-windows-endpoint
           if-no-files-found: error
       - run: cargo test --workspace --locked
       - run: cargo clippy --workspace --locked --all-targets -- -D warnings

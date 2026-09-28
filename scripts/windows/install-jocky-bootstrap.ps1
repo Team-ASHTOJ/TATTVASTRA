@@ -10,7 +10,9 @@
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)][string] $Configuration,
+    # Defaults to the bootstrap configuration downloaded from JOCKY and placed
+    # beside this script, which is what Install-JOCKY.cmd relies on.
+    [string] $Configuration,
     [string] $SourceDirectory = $PSScriptRoot,
     [string] $InstallDirectory = (Join-Path $env:ProgramFiles 'JOCKY'),
     [string] $StateDirectory = (Join-Path $env:ProgramData 'JOCKY')
@@ -20,6 +22,7 @@ Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
 $serviceName = 'JockyBootstrap'
 
+if (-not $Configuration) { $Configuration = Join-Path $SourceDirectory 'jocky-bootstrap.json' }
 $principal = [System.Security.Principal.WindowsPrincipal]::new(
     [System.Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $principal.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -74,6 +77,13 @@ $configPath = Join-Path $StateDirectory 'bootstrap.json'
 Copy-Item -LiteralPath $Configuration -Destination $configPath -Force
 Protect-JockyPath -Path $configPath
 
+# The CA travels inside the bootstrap configuration. Installing it beside the
+# state keeps it available for troubleshooting without ever weakening the
+# verification the supervisor performs.
+$caPath = Join-Path $StateDirectory 'control-plane-ca.pem'
+Set-Content -LiteralPath $caPath -Value $parsed.ca_pem -Encoding ascii -NoNewline
+Protect-JockyPath -Path $caPath
+
 $existing = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
 if ($existing) {
     Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
@@ -88,4 +98,11 @@ if ($LASTEXITCODE -ne 0) { throw "Failed to register $serviceName" }
 & sc.exe description $serviceName `
     'Supervises only the native JOCKY agent enrollment and connection lifecycle.' | Out-Null
 Start-Service -Name $serviceName
-Write-Host 'JOCKY Windows bootstrap installed and READY. Future starts use the JOCKY Endpoints page.'
+$state = (Get-Service -Name $serviceName).Status
+Write-Host ''
+Write-Host "JOCKY Windows endpoint supervisor installed on $env:COMPUTERNAME and $state." -ForegroundColor Green
+Write-Host "  control plane : $($parsed.api_url)"
+Write-Host "  agent channel : $($parsed.control_server)"
+Write-Host "  state         : $StateDirectory (existing identity preserved)"
+Write-Host ''
+Write-Host 'Next: open JOCKY -> Endpoints -> Connect Endpoint -> Windows, confirm WINDOWS-01 is READY, then Start Windows Endpoint.'

@@ -5,6 +5,7 @@ import ipaddress
 import os
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -27,6 +28,31 @@ def secret(path: Path, content: bytes) -> None:
         os.fsync(stream.fileno())
 
 
+def server_names(settings: Settings) -> list[Any]:
+    """Every name the server certificate must be valid for.
+
+    The internal Compose names are always present so the stack keeps working
+    unchanged; the addresses an external endpoint is given are added on top, so
+    a Windows host validates the certificate for the host it actually dials
+    instead of having verification relaxed.
+    """
+    names: list[Any] = [
+        x509.DNSName("localhost"),
+        x509.DNSName("control-plane"),
+        x509.DNSName("agent-control"),
+        x509.DNSName("trusted-relay"),
+        x509.IPAddress(ipaddress.ip_address("127.0.0.1")),
+    ]
+    for host in settings.agent_public_names:
+        try:
+            entry: Any = x509.IPAddress(ipaddress.ip_address(host))
+        except ValueError:
+            entry = x509.DNSName(host)
+        if entry not in names:
+            names.append(entry)
+    return names
+
+
 def initialize_keys(settings: Settings) -> None:
     if not settings.signing_key_path.exists():
         secret(settings.signing_key_path, ed25519.Ed25519PrivateKey.generate().private_bytes_raw())
@@ -35,7 +61,7 @@ def initialize_keys(settings: Settings) -> None:
         for path in (settings.tls_ca_key_path, settings.tls_key_path, settings.tls_cert_path):
             if not path.exists():
                 raise RuntimeError("Incomplete TLS provisioning; restore the original key material")
-        ensure_relay_name(settings)
+        ensure_server_names(settings)
         return
     now = datetime.now(UTC)
     ca_key = ec.generate_private_key(ec.SECP256R1())
@@ -62,15 +88,7 @@ def initialize_keys(settings: Settings) -> None:
         .not_valid_after(now + timedelta(days=90))
         .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
         .add_extension(
-            x509.SubjectAlternativeName(
-                [
-                    x509.DNSName("localhost"),
-                    x509.DNSName("control-plane"),
-                    x509.DNSName("agent-control"),
-                    x509.DNSName("trusted-relay"),
-                    x509.IPAddress(ipaddress.ip_address("127.0.0.1")),
-                ]
-            ),
+            x509.SubjectAlternativeName(server_names(settings)),
             critical=False,
         )
         .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.SERVER_AUTH]), critical=False)
@@ -96,11 +114,13 @@ def initialize_keys(settings: Settings) -> None:
     secret(settings.tls_ca_path, ca.public_bytes(serialization.Encoding.PEM))
 
 
-def ensure_relay_name(settings: Settings) -> None:
+def ensure_server_names(settings: Settings) -> None:
     """Renew only the server certificate; keep the CA and all endpoint identities."""
     old = x509.load_pem_x509_certificate(settings.tls_cert_path.read_bytes())
     san = old.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
-    if "trusted-relay" in san.get_values_for_type(x509.DNSName):
+    required = server_names(settings)
+    missing = [entry for entry in required if entry not in set(san)]
+    if not missing:
         return
     ca = x509.load_pem_x509_certificate(settings.tls_ca_path.read_bytes())
     key = serialization.load_pem_private_key(settings.tls_ca_key_path.read_bytes(), None)
@@ -118,12 +138,13 @@ def ensure_relay_name(settings: Settings) -> None:
     )
     for extension in old.extensions:
         value = (
-            x509.SubjectAlternativeName([*san, x509.DNSName("trusted-relay")])
+            x509.SubjectAlternativeName([*san, *missing])
             if isinstance(extension.value, x509.SubjectAlternativeName)
             else extension.value
         )
         builder = builder.add_extension(value, extension.critical)
-    replacement = settings.tls_cert_path.with_suffix(".renewed")
+    # A per-process name: two callers renewing at once must not share a file.
+    replacement = settings.tls_cert_path.with_suffix(f".renewed-{os.getpid()}")
     replacement.write_bytes(
         builder.sign(key, hashes.SHA256()).public_bytes(serialization.Encoding.PEM)
     )
