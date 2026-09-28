@@ -186,10 +186,33 @@ export function OperatorConsole({ section }: { section: string }) {
     <div className="operator-presentation">
       {section === "home" && (
         <>
+          <section className="panel brand-hero">
+            <div className="brand-hero-copy">
+              <div className="eyebrow">TATTVASTRA // FORENSIC OPERATIONS</div>
+              <h1>
+                Script once.{" "}
+                <span>Diversify everywhere.</span>
+              </h1>
+              <p>
+                A JOCKY-based cross-platform forensic scripting language built
+                for compilation, diversified execution, investigation, and
+                verification across endpoints.
+              </p>
+              <ul className="brand-hero-pills">
+                <li>Native compiler pipeline</li>
+                <li>Variant generation</li>
+                <li>Cross-platform endpoints</li>
+              </ul>
+            </div>
+            <div className="brand-hero-visual">
+              <span className="command-globe-label">GLOBAL ENDPOINT MESH</span>
+              <GlobeCdn />
+            </div>
+          </section>
           <section className="panel command-hero command-center-hero">
             <div className="command-hero-copy">
               <div className="eyebrow">CONTROL / FORENSIC OPERATIONS</div>
-              <h1>Command Center</h1>
+              <h2>Command Center</h2>
               <p>
                 Connect endpoints. Compile forensic programs. Investigate and
                 verify evidence.
@@ -205,10 +228,6 @@ export function OperatorConsole({ section }: { section: string }) {
                   Connect Endpoint
                 </Link>
               </div>
-            </div>
-            <div className="command-globe-stage">
-              <span className="command-globe-label">GLOBAL ENDPOINT MESH</span>
-              <GlobeCdn />
             </div>
           </section>
           <section className="panel">

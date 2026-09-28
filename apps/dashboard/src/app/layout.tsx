@@ -5,6 +5,7 @@ import { Navigation } from "../components/navigation";
 import { Providers } from "../components/providers";
 import "./globals.css";
 import { AccountMenu } from "../components/account-menu";
+import { AtmosphereField } from "../components/atmosphere-field";
 import { ModeIndicator } from "../components/demo-presentation";
 
 export const metadata: Metadata = {
@@ -19,6 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <AtmosphereField />
         <Providers>
           <a className="skip-link" href="#main">
             Skip to content

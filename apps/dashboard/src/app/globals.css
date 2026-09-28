@@ -45,12 +45,23 @@
   box-sizing: border-box;
 }
 html {
-  background: var(--bg-base);
+  /* The base ramp lives on <html> rather than <body> so it paints on the
+     viewport canvas, underneath the .atmosphere-field layer.
+
+     Black is the base; the blue is a tint that only appears in two chosen
+     regions. A single full-coverage blue gradient is what made the old version
+     read as a uniformly navy screen, so the colour is carried by the two radial
+     pools and the linear ramp stays almost neutral until the 74% stop. */
+  background-color: #05070a;
+  background-image:
+    radial-gradient(circle at 78% 12%, rgb(39 79 102 / 13%), transparent 36%),
+    radial-gradient(circle at 18% 72%, rgb(28 60 78 / 8%), transparent 40%),
+    linear-gradient(135deg, #05070a 0%, #070b10 44%, #081019 74%, #05080c 100%);
 }
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--bg-base);
+  background: transparent;
   color: var(--text-primary);
   font-family:
     Inter,
@@ -300,6 +311,11 @@ main {
   gap: 20px;
   padding: 16px 40px;
   border-top: 1px solid var(--border-default);
+  /* The footer is the one band of chrome that sits straight on the atmosphere.
+     Without its own fill a drifting beam lifts the backdrop to ~rgb(30 42 53)
+     and drops the 10px text below 4.5:1, so it gets the same treatment as the
+     topbar. */
+  background: rgb(7 12 18 / 94%);
   color: var(--text-subtle);
   font-size: 10px;
   letter-spacing: 0.08em;
@@ -1482,7 +1498,9 @@ meter {
 }
 
 body {
-  background: linear-gradient(135deg, #070a0e 0%, #091018 55%, #0a1118 100%);
+  /* Kept transparent: the background ramp is on <html> so the atmosphere layer
+     can paint between the two. */
+  background: transparent;
   color: var(--text-primary);
 }
 
@@ -2125,51 +2143,100 @@ pre,
   }
 }
 
-/* Command Center globe hero — isolated from the Zepa demo surface */
-.command-hero.command-center-hero {
+/* Command Center brand hero — visual identity above the functional card. */
+.brand-hero {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
+  grid-template-columns: minmax(0, 1.16fr) minmax(320px, 0.84fr);
   align-items: center;
-  gap: 28px;
-  min-height: 380px;
+  gap: 32px;
+  min-height: 340px;
   overflow: hidden;
-  padding: 34px 38px;
+  padding: 36px 40px;
+  border-color: transparent;
   border-radius: 16px;
   background:
-    linear-gradient(115deg, rgb(255 255 255 / 1.5%), transparent 52%),
-    var(--bg-secondary);
+    radial-gradient(118% 132% at 86% 8%, rgb(62 112 138 / 15%), transparent 58%),
+    radial-gradient(96% 118% at 2% 98%, rgb(30 58 76 / 20%), transparent 62%),
+    linear-gradient(168deg, #0a1219 0%, #070d13 46%, #05090e 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 3%),
+    0 18px 44px rgb(0 0 0 / 22%);
 }
 
-.command-hero-copy {
+.brand-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(255 255 255 / 3%), transparent 38%);
+  pointer-events: none;
+}
+
+.brand-hero-copy {
   position: relative;
   z-index: 2;
   min-width: 0;
 }
 
-.command-hero-copy h1 {
-  font-size: clamp(36px, 3.2vw, 40px);
+.brand-hero-copy .eyebrow {
+  margin-bottom: 14px;
 }
 
-.command-hero-copy > p {
-  max-width: 540px;
-  margin: 12px 0 24px;
+.brand-hero h1 {
+  font-size: clamp(31px, 3.1vw, 41px);
+  font-weight: 560;
+  letter-spacing: -0.024em;
+  line-height: 1.13;
+}
+
+/* The headline is two sentences that should break as two lines at every
+   width, rather than reflowing into an awkward three-line stack. */
+.brand-hero h1 span {
+  display: block;
+}
+
+.brand-hero-copy > p {
+  max-width: 520px;
+  margin: 16px 0 0;
   color: var(--text-secondary);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.65;
 }
 
-.command-globe-stage {
+.brand-hero-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.brand-hero-pills li {
+  padding: 5px 11px;
+  border: 1px solid rgb(140 180 205 / 11%);
+  border-radius: 999px;
+  background: rgb(15 25 34 / 66%);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 550;
+  letter-spacing: 0.012em;
+  white-space: nowrap;
+}
+
+.brand-hero-visual {
   position: relative;
   display: grid;
   place-items: center;
-  width: min(100%, 480px);
+  width: min(100%, 390px);
   margin-inline: auto;
   aspect-ratio: 1;
+  /* Contains the globe's own stacking (its nodes sit at z-index 5) along with
+     the glow behind it. */
   isolation: isolate;
 }
 
-.command-globe-stage::before {
+.brand-hero-visual::before {
   content: "";
   position: absolute;
   z-index: -1;
@@ -2184,16 +2251,21 @@ pre,
   pointer-events: none;
 }
 
-.command-globe-stage::after {
+/* Soft circular falloff that knocks back the globe's outer band, so it reads as
+   part of the hero rather than a disc pasted on top of it. Sized with
+   closest-side and faded back to transparent at the rim: a farthest-corner
+   gradient is still ~20% opaque where it meets the box edge below it, and that
+   step shows up as a hard square drawn across the hero. */
+.brand-hero-visual::after {
   content: "";
   position: absolute;
   z-index: 4;
   inset: 0;
   background: radial-gradient(
-    circle,
-    transparent 58%,
-    rgb(9 15 21 / 25%) 74%,
-    rgb(9 15 21 / 78%) 100%
+    circle closest-side,
+    transparent 54%,
+    rgb(9 15 21 / 18%) 86%,
+    transparent 100%
   );
   pointer-events: none;
 }
@@ -2207,6 +2279,37 @@ pre,
   font-size: 9px;
   font-weight: 650;
   letter-spacing: 0.14em;
+}
+
+/* Command Center control card — the functional section, now full width. */
+.command-hero.command-center-hero {
+  position: relative;
+  display: block;
+  min-height: 0;
+  padding: 30px 34px;
+  border-radius: 16px;
+  background:
+    linear-gradient(115deg, rgb(255 255 255 / 1.5%), transparent 52%),
+    var(--bg-secondary);
+}
+
+.command-hero-copy {
+  position: relative;
+  min-width: 0;
+}
+
+.command-hero-copy h2 {
+  font-size: clamp(24px, 2.2vw, 29px);
+  font-weight: 580;
+  letter-spacing: -0.018em;
+}
+
+.command-hero-copy > p {
+  max-width: 620px;
+  margin: 9px 0 22px;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 .tc-globe {
@@ -2290,40 +2393,48 @@ pre,
 }
 
 @media (max-width: 1100px) {
-  .command-hero.command-center-hero {
-    grid-template-columns: minmax(0, 1fr) minmax(330px, 0.8fr);
-    min-height: 360px;
+  .brand-hero {
+    grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr);
+    gap: 26px;
+    min-height: 320px;
     padding: 32px;
   }
 
-  .command-globe-stage {
-    width: min(100%, 410px);
+  .brand-hero-visual {
+    width: min(100%, 330px);
   }
 }
 
-@media (max-width: 800px) {
-  .command-hero.command-center-hero {
+/* Stacks at 980 rather than 800: the sidebar keeps a fixed ~270px until 760,
+   so between those widths the viewport is much wider than the hero's own
+   column — two columns would squeeze the headline to a few words per line. */
+@media (max-width: 980px) {
+  .brand-hero {
     grid-template-columns: minmax(0, 1fr);
-    gap: 20px;
+    gap: 22px;
     padding: 28px 24px;
   }
 
-  .command-globe-stage {
-    width: min(100%, 340px);
+  .brand-hero-visual {
+    width: min(100%, 300px);
+  }
+
+  .command-hero.command-center-hero {
+    padding: 26px 24px;
   }
 }
 
 @media (max-width: 480px) {
-  .command-hero.command-center-hero {
+  .brand-hero {
     padding: 24px 20px;
   }
 
-  .command-globe-stage {
-    width: min(100%, 320px);
+  .brand-hero-visual {
+    width: min(100%, 262px);
   }
 
-  .command-globe-label {
-    right: 2%;
+  .command-hero.command-center-hero {
+    padding: 24px 20px;
   }
 }
 
@@ -2336,5 +2447,173 @@ pre,
 
   .tc-globe-pyramid {
     animation: none;
+  }
+}
+
+/* ==========================================================================
+   Background atmosphere + surface polish
+   ========================================================================== */
+
+/* Decorative canvas pinned behind the whole shell. The negative z-index is what
+   lets it sit under every in-flow element without raising — and thereby
+   re-scoping — the content wrappers: a positive z-index on .workspace would
+   trap in-app overlays (drawers, menus) beneath the sidebar's z-index 20.
+   The blue tint now lives on <html> so it stays anchored to the viewport
+   instead of stretching down the length of the document. */
+.atmosphere-field {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.atmosphere-field canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Vignette. The field establishes a stacking context at z-index -1, so this
+   ::after is scoped inside it and paints over the canvas without touching
+   global order. Fading the particles back toward the screen edge keeps the
+   ambience concentrated in the central content region instead of pooling in
+   the corners. Deliberately weak — 20% black at the extreme corner. */
+.atmosphere-field::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    125% 105% at 50% 46%,
+    transparent 38%,
+    rgb(0 0 0 / 20%) 100%
+  );
+}
+
+/* Crisper hairlines and a touch more presence in the dim text tiers. Nothing
+   glows; the separation just reads more cleanly against the new background. */
+:root {
+  --border-default: rgb(135 165 185 / 12%);
+  --border-structural: rgb(140 172 192 / 17%);
+  --border-hover: rgb(115 175 205 / 28%);
+  --border-selected: rgb(125 195 225 / 46%);
+  --text-primary: #e8edf1;
+  --text-secondary: #a7b2ba;
+  --text-muted: #71808a;
+  --text-subtle: #717e89;
+}
+
+/* Panels: soft top-lit surface, restrained elevation. Slightly translucent so
+   the atmosphere reads through large page-level containers, but nowhere near
+   glassmorphic — 93% still carries every text tier at full contrast. Nested
+   cards stay opaque on top of this. The two hero cards keep their own 16px
+   radius and opaque backgrounds, so they are excluded here. */
+.panel:not(.brand-hero):not(.command-center-hero) {
+  border-radius: 14px;
+  background:
+    linear-gradient(
+      180deg,
+      rgb(255 255 255 / 2.4%) 0%,
+      rgb(255 255 255 / 0%) 46%
+    ),
+    rgb(10 16 22 / 93%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 3.5%),
+    0 10px 26px rgb(0 0 0 / 20%);
+  transition:
+    border-color 180ms ease-out,
+    box-shadow 180ms ease-out;
+}
+
+.panel:not(.brand-hero):not(.command-center-hero):hover {
+  border-color: var(--border-hover);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 4.5%),
+    0 14px 32px rgb(0 0 0 / 26%);
+}
+
+/* Nested cards and stat tiles: same softer radius, plus a gentle lift on hover. */
+.metric,
+.finding-card,
+.detail-card,
+.video-card,
+.target-card {
+  border-radius: 14px;
+  border-color: var(--border-default);
+  background-color: #0d141a;
+  transition:
+    border-color 170ms ease-out,
+    background-color 170ms ease-out,
+    box-shadow 170ms ease-out,
+    transform 170ms ease-out;
+}
+
+.metric:hover,
+.finding-card:hover,
+.detail-card:hover,
+.video-card:hover,
+.target-card:hover {
+  border-color: var(--border-hover);
+  background-color: #101a22;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 20%);
+  transform: translateY(-1px);
+}
+
+/* Controls: 10px radius, and buttons shift colour plus a hair of lift. */
+.button,
+button:not(.timeline-event):not(.pipeline-stage) {
+  border-radius: 10px;
+  transition:
+    background-color 160ms ease-out,
+    border-color 160ms ease-out,
+    color 160ms ease-out,
+    box-shadow 160ms ease-out,
+    transform 160ms ease-out;
+}
+
+.button:hover,
+button:not(.timeline-event):not(.pipeline-stage):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 24%);
+}
+
+.button:active,
+button:not(.timeline-event):not(.pipeline-stage):active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+input,
+textarea,
+select {
+  border-radius: 10px;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  box-shadow: 0 0 0 3px rgb(110 180 210 / 10%);
+}
+
+/* Sidebar nav: slightly softer links, a touch more tint under the cursor. */
+.sidebar nav a {
+  border-radius: 8px;
+}
+
+.sidebar nav a:hover {
+  background: rgb(255 255 255 / 4%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button:hover,
+  button:not(.timeline-event):not(.pipeline-stage):hover,
+  .metric:hover,
+  .finding-card:hover,
+  .detail-card:hover,
+  .video-card:hover,
+  .target-card:hover {
+    transform: none;
   }
 }
