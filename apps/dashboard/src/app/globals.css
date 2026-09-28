@@ -3320,6 +3320,9 @@ pre,
 .report-findings {
   border-left: 3px solid var(--warning);
 }
+.report-integrity {
+  border-left: 3px solid var(--warning);
+}
 .finding-card {
   padding: 18px;
   border: 1px solid var(--border-structural);
@@ -3338,28 +3341,27 @@ pre,
 .finding-heading h3 {
   margin: 0;
 }
-.zero-findings {
-  margin: 0;
-  padding: 16px 18px;
-  border-left: 2px solid var(--slate-blue);
-  background: var(--surface-2);
-  color: var(--text-primary);
-}
 .capability-list {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 11px;
+  margin: 10px 0 18px;
   padding: 0;
   list-style: none;
 }
 .capability-list li {
-  padding: 6px 9px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 8px 12px;
   border: 1px solid rgb(118 173 145 / 22%);
   border-radius: 5px;
   background: var(--success-soft);
   color: #91c0a6;
   font-family: "Cascadia Code", Consolas, monospace;
   font-size: 10px;
+  line-height: 1.35;
+  white-space: nowrap;
 }
 .semantic-steps,
 .report-timeline {
@@ -3391,6 +3393,41 @@ pre,
 .report-timeline code {
   text-align: right;
   overflow-wrap: anywhere;
+}
+.report-timeline-disclosure > summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+}
+.report-timeline-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.report-timeline-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.report-timeline-label::before {
+  content: "▸";
+  color: var(--text-muted);
+  font-size: 12px;
+  transition: transform 150ms ease-out;
+}
+.report-timeline-disclosure[open] .report-timeline-label::before {
+  transform: rotate(90deg);
+}
+.report-timeline-disclosure > summary > span:last-child {
+  color: var(--text-muted);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 10px;
+  font-weight: 400;
+  white-space: nowrap;
 }
 .observation-sample {
   margin-top: 10px;
@@ -3534,7 +3571,7 @@ pre,
   .semantic-steps li,
   .report-timeline li,
   .integrity-callout,
-  .zero-findings {
+  .report-timeline-disclosure:not([open]) > .report-timeline {
     background: #fff !important;
     color: #111 !important;
   }
@@ -3559,6 +3596,12 @@ pre,
   .report-source,
   .report-identity {
     break-before: page;
+  }
+  .report-timeline-disclosure:not([open]) > .report-timeline {
+    display: grid !important;
+  }
+  .report-timeline-disclosure > summary {
+    display: none !important;
   }
 }
 

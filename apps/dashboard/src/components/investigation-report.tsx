@@ -187,57 +187,55 @@ export function InvestigationReport({ huntId }: { huntId: string }) {
         </div>
       </Section>
 
-      <Section title="Findings" className="report-findings">
-        {!findings.length && (
-          <p className="zero-findings">
-            No persisted findings were produced by this investigation. This does
-            not establish the absence of suspicious activity.
-          </p>
-        )}
-        {findings.map((finding) => (
-          <article className="finding-card" key={String(finding.id)}>
-            <div className="finding-heading">
-              <span className="severity">{String(finding.severity)}</span>
-              <h3>{String(finding.title)}</h3>
-            </div>
-            <FieldList
-              values={{
-                rule_key: finding.rule_key,
-                affected_endpoints: strings(finding.affected_endpoints).join(
-                  ", ",
-                ),
-                supporting_observations: finding.supporting_observation_count,
-                created_at: date(finding.created_at),
-              }}
-            />
-            {!!strings(finding.observation_ids).length && (
-              <details>
-                <summary>Supporting observations and linked evidence</summary>
-                <ul className="hash-list">
-                  {strings(finding.observation_ids).map((identifier) => (
-                    <li key={identifier}>
-                      <code>{identifier}</code>
-                    </li>
-                  ))}
-                  {strings(finding.timestamps).map((timestamp) => (
-                    <li key={timestamp}>Observed: {date(timestamp)}</li>
-                  ))}
-                  {strings(finding.observation_integrity_hashes).map((hash) => (
-                    <li key={hash}>
-                      Observation SHA-256: <code>{hash}</code>
-                    </li>
-                  ))}
-                  {strings(finding.linked_artifact_hashes).map((hash) => (
-                    <li key={hash}>
-                      Evidence artifact SHA-256: <code>{hash}</code>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
-          </article>
-        ))}
-      </Section>
+      {findings.length > 0 && (
+        <Section title="Findings" className="report-findings">
+          {findings.map((finding) => (
+            <article className="finding-card" key={String(finding.id)}>
+              <div className="finding-heading">
+                <span className="severity">{String(finding.severity)}</span>
+                <h3>{String(finding.title)}</h3>
+              </div>
+              <FieldList
+                values={{
+                  rule_key: finding.rule_key,
+                  affected_endpoints: strings(finding.affected_endpoints).join(
+                    ", ",
+                  ),
+                  supporting_observations: finding.supporting_observation_count,
+                  created_at: date(finding.created_at),
+                }}
+              />
+              {!!strings(finding.observation_ids).length && (
+                <details>
+                  <summary>Supporting observations and linked evidence</summary>
+                  <ul className="hash-list">
+                    {strings(finding.observation_ids).map((identifier) => (
+                      <li key={identifier}>
+                        <code>{identifier}</code>
+                      </li>
+                    ))}
+                    {strings(finding.timestamps).map((timestamp) => (
+                      <li key={timestamp}>Observed: {date(timestamp)}</li>
+                    ))}
+                    {strings(finding.observation_integrity_hashes).map(
+                      (hash) => (
+                        <li key={hash}>
+                          Observation SHA-256: <code>{hash}</code>
+                        </li>
+                      ),
+                    )}
+                    {strings(finding.linked_artifact_hashes).map((hash) => (
+                      <li key={hash}>
+                        Evidence artifact SHA-256: <code>{hash}</code>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </article>
+          ))}
+        </Section>
+      )}
 
       <Section title="Investigation Intent">
         <FieldList
@@ -384,15 +382,21 @@ export function InvestigationReport({ huntId }: { huntId: string }) {
       </Section>
 
       <Section title="Timeline">
-        <ol className="report-timeline">
-          {timeline.map((event, index) => (
-            <li key={`${event.timestamp}-${index}`}>
-              <time>{date(event.timestamp)}</time>
-              <strong>{String(event.event)}</strong>
-              <code>{String(event.resource_id)}</code>
-            </li>
-          ))}
-        </ol>
+        <details className="report-timeline-disclosure">
+          <summary>
+            <span className="report-timeline-label">Investigation Timeline</span>
+            <span>{timeline.length} events</span>
+          </summary>
+          <ol className="report-timeline">
+            {timeline.map((event, index) => (
+              <li key={`${event.timestamp}-${index}`}>
+                <time>{date(event.timestamp)}</time>
+                <strong>{String(event.event)}</strong>
+                <code>{String(event.resource_id)}</code>
+              </li>
+            ))}
+          </ol>
+        </details>
       </Section>
 
       <Section title="Compiler Provenance">
@@ -408,7 +412,10 @@ export function InvestigationReport({ huntId }: { huntId: string }) {
         ))}
       </Section>
 
-      <Section title="Evidence Integrity & Chain of Custody">
+      <Section
+        title="Evidence Integrity & Chain of Custody"
+        className="report-integrity"
+      >
         <div className="integrity-callout">
           <strong>
             Audit chain: {audit.integrity_valid ? "VERIFIED" : "NOT VERIFIED"}
