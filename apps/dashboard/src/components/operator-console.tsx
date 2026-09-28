@@ -202,8 +202,7 @@ export function OperatorConsole({ section }: { section: string }) {
             <div className="brand-hero-copy">
               <div className="eyebrow">TATTVASTRA // FORENSIC OPERATIONS</div>
               <h1>
-                Script once.{" "}
-                <span>Diversify everywhere.</span>
+                Script once. <span>Diversify everywhere.</span>
               </h1>
               <p>
                 A JOCKY-based cross-platform forensic scripting language built
@@ -282,7 +281,7 @@ export function OperatorConsole({ section }: { section: string }) {
                     "/investigations",
                   ],
                   [
-                    "Findings",
+                    "Insight",
                     String(
                       d.findings.filter((f) => !h || f.case_id === h.case_id)
                         .length,
@@ -326,7 +325,7 @@ export function OperatorConsole({ section }: { section: string }) {
                 "Online endpoints",
               ],
               [d.hunts.length, "Investigations"],
-              [d.findings.length, "Findings"],
+              [d.findings.length, "Insight"],
               [
                 d.manifests.filter((r) => r.signature_verified).length,
                 "Verified manifests",
@@ -354,7 +353,7 @@ export function OperatorConsole({ section }: { section: string }) {
                 "Program",
                 "Endpoints",
                 "Started",
-                "Findings",
+                "Insight",
               ]}
               rows={d.hunts
                 .slice()
@@ -514,7 +513,7 @@ export function OperatorConsole({ section }: { section: string }) {
               "Endpoints",
               "Status",
               "Started",
-              "Findings",
+              "Insight",
             ]}
             rows={d.hunts
               .slice()
@@ -2010,15 +2009,15 @@ function PerformanceView({
   const maximum = Math.max(...timings.map(([, value]) => value), 0.001);
   return (
     <>
-      <section className="panel action-heading">
-        <div>
+      <section className="panel action-heading performance-measure-card">
+        <div className="performance-measure-copy">
           <h2>Compiler measurements</h2>
           <p>
             Measured native compiler fixture timings. Endpoint performance is
             shown only when reported by the actual agent.
           </p>
         </div>
-        <div>
+        <div className="performance-measure-controls">
           <select
             aria-label="Benchmark compilation"
             value={comp}

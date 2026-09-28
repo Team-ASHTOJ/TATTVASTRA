@@ -12,14 +12,14 @@ export function Coverage({ items }: { items: CapabilityStatus[] }) {
   );
   return (
     <section className="panel coverage-panel">
-      <div className="panel-heading">
-        <h2>
+      <div className="panel-heading coverage-heading">
+        <h2 className="coverage-title">
           Requirement coverage{" "}
           <span className="subtle">
             {filtered.length} / {items.length}
           </span>
         </h2>
-        <label>
+        <label className="coverage-filter">
           Filter requirements{" "}
           <input
             value={filter}
@@ -29,7 +29,7 @@ export function Coverage({ items }: { items: CapabilityStatus[] }) {
         </label>
       </div>
       <div className="table-scroll">
-        <table>
+        <table className="coverage-table">
           <thead>
             <tr>
               <th>Requirement / implementation</th>
@@ -42,11 +42,13 @@ export function Coverage({ items }: { items: CapabilityStatus[] }) {
             {filtered.map((item) => (
               <tr key={item.id}>
                 <td>
-                  <small>
+                  <small className="requirement-code">
                     {item.id} / {item.subsystem} / {item.phase}
                   </small>
-                  <strong>{item.title}</strong>
-                  <p>{item.implementation}</p>
+                  <strong className="requirement-title">{item.title}</strong>
+                  <p className="requirement-description">
+                    {item.implementation}
+                  </p>
                 </td>
                 <td>
                   <StatusBadge

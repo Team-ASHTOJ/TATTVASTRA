@@ -53,7 +53,15 @@ export function LanguageDocumentation() {
           {notice && <p role="status">{notice}</p>}
         </section>
         {documentationSections.map((s) => (
-          <section className="panel" id={anchor(s.title)} key={s.title}>
+          <section
+            className={`panel documentation-section${
+              s.title === "Overview / Quick Start"
+                ? " documentation-overview"
+                : ""
+            }`}
+            id={anchor(s.title)}
+            key={s.title}
+          >
             <h2>{s.title}</h2>
             <p>{s.purpose}</p>
             <p>

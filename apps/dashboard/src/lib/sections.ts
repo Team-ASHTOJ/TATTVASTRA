@@ -60,7 +60,7 @@ export const sections = [
   },
   {
     slug: "findings",
-    name: "Findings",
+    name: "Insight",
     group: "ANALYZE",
     phase: "P7",
     description: "Evidence-backed conclusions derived from observations.",
@@ -81,7 +81,7 @@ export const sections = [
   },
   {
     slug: "evidence",
-    name: "Evidence Vault",
+    name: "Artifacts",
     group: "EVIDENCE",
     phase: "P7",
     description:

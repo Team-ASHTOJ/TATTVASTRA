@@ -242,7 +242,7 @@ export const documentationSections: DocumentationSection[] = [
     support: { compiler: "Supported", endpoint: "Collection bridge only" },
   },
   {
-    title: "Findings",
+    title: "Insight",
     purpose:
       "A finding declares its condition, severity, and evidence dataset together.",
     syntax:
