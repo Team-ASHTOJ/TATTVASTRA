@@ -136,4 +136,17 @@ untouched, along with every remaining argument. The compiler's stdout, stderr an
 pass through unchanged. Paths may be relative or absolute, may contain spaces, and may be used
 from outside the checkout. Relative paths resolve against your working directory.
 
+The launcher also provides composed commands (`caps`, `budget`, `types`, `metrics`, `fingerprint`,
+`diverge`, `diff`, `equivalence`, `forge`, `pipeline`, `verify`, `manifest`) built entirely from
+existing `jockyc` output, plus the `--dry-run`, `--execution jit` and target aliases. The complete
+command reference — including what is deliberately **NOT EXPOSED YET** — is
+[JOCKY_CLI.md](JOCKY_CLI.md).
+
+```sh
+jocky caps examples/basic/system.jky
+jocky budget examples/basic/system.jky
+jocky diverge examples/basic/system.jky --count 3
+jocky pipeline examples/basic/system.jky --count 3
+```
+
 Uninstall with `pip uninstall jockey-cli`, or `pipx uninstall jockey-cli`.
