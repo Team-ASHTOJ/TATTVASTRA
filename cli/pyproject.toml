@@ -1,0 +1,23 @@
+[project]
+name = "jockey-cli"
+dynamic = ["version"]
+description = "Cross-platform launcher for the JOCKY (jockyc) compiler."
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+jocky = "jocky_cli.main:main"
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/jocky_cli/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jocky_cli"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

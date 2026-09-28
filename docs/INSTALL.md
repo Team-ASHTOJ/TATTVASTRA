@@ -1,9 +1,10 @@
 # Installing JOCKY
 
-There is **no installer, no prebuilt binary and no published release**. The repository
-publishes no artifacts: `.github/workflows/ci.yml` builds and tests, but pushes nothing to a
-registry or release page. Installing JOCKY means building it on (or for) the machine you want to
-run it on.
+There is **no prebuilt compiler binary and no published release**. The repository publishes no
+artifacts: `.github/workflows/ci.yml` builds and tests, but pushes nothing to a registry, to PyPI
+or to a release page. Installing the JOCKY compiler means building it on (or for) the machine you
+want to run it on. The `jocky` launcher described at the end is the one piece you can install
+with `pip`, from this checkout.
 
 `jockey` is the terminal entry point; `jockyc` is the compiler it drives. Both come out of the
 same build.
@@ -93,3 +94,46 @@ A first argument naming a `.jky` file is run; any other argument passes straight
 
 Local execution uses the deterministic **SIMULATED** fixture collector: the hunt file is compiled
 and JIT-executed in process. It is not endpoint evidence, and no Agent host is involved.
+
+## The `jocky` CLI
+
+`cli/` is a small Python launcher that puts `jocky` on your `PATH` through normal Python
+packaging, so the compiler is reachable from any directory. It drives the same `jockyc` and adds
+no compiler behaviour of its own. It is **not published on PyPI** — install it from this checkout:
+
+```sh
+pip install ./cli      # or: pipx install ./cli
+jocky doctor
+```
+
+`jocky doctor` only reports readiness: whether `jocky` is on `PATH`, whether a native `jockyc` was
+found, whether Docker and the `jockey-native:foundation` image are usable, and which backend was
+selected. It changes nothing, and it never installs Docker, LLVM or anything else.
+
+The launcher uses exactly one backend, chosen in this order:
+
+1. the `JOCKYC` environment variable, when it names an executable file;
+2. a compiler built in a JOCKY checkout (`build/native/native/compiler/jockyc`);
+3. `jockyc` on `PATH`;
+4. Docker, using the `jockey-native:foundation` image.
+
+Route 4 is the cross-platform fallback and needs the image built by Route A. If the image is
+missing the launcher prints the build command; it never builds or pulls it by itself.
+
+```sh
+jocky hunt.jky                  # same as: jockyc run hunt.jky --execution memory
+jocky check hunt.jky
+jocky ast hunt.jky
+jocky jir hunt.jky
+jocky llvm hunt.jky
+jocky run hunt.jky
+jocky variants hunt.jky --count 3
+jocky benchmark hunt.jky --count 3
+```
+
+A first argument ending in `.jky` is run; any other first argument is forwarded to `jockyc`
+untouched, along with every remaining argument. The compiler's stdout, stderr and exit status
+pass through unchanged. Paths may be relative or absolute, may contain spaces, and may be used
+from outside the checkout. Relative paths resolve against your working directory.
+
+Uninstall with `pip uninstall jockey-cli`, or `pipx uninstall jockey-cli`.

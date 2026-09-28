@@ -17,6 +17,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zlib1g libxml2 libz3-4 libffi8 libtinfo6 g++ libssl-dev && rm -rf /var/lib/apt/lists/*
 COPY --from=uv /uv /usr/local/bin/uv
 COPY --from=native /src/build/native/compiler/jockyc /usr/local/bin/jockyc
+# LLVM_LINK_LLVM_DYLIB makes jockyc depend on this exact monolithic runtime
+# library. Copy only the shared object required by the CLI into the loader's
+# default search path; the native build stage retains the full LLVM toolchain.
+COPY --from=native /usr/lib/llvm-18/lib/libLLVM.so.18.1 /usr/lib/libLLVM.so.18.1
 COPY --from=native /src/build/native/compiler/jocky-worker /usr/local/bin/jocky-worker
 COPY --from=native /src/build/native/runtime/libjocky_worker_host.a /opt/jocky-worker/libjocky_worker_host.a
 COPY --from=native /src/build/native/runtime/libjocky_runtime.a /opt/jocky-worker/libjocky_runtime.a
