@@ -2103,6 +2103,54 @@ pre,
   overflow-wrap: anywhere;
 }
 
+/* Enrollment modal: three balanced enrolment cards on one desktop row. */
+.operator-drawer .enrollment-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+/* Uniform action buttons regardless of label length, so cards stay aligned. */
+.operator-drawer .enrollment-grid > .panel > button {
+  min-height: 38px;
+  max-width: 100%;
+  padding: 8px 13px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+}
+
+/* Status controls: two equal columns, third wraps to the full width. */
+.operator-drawer .enrollment-status {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.operator-drawer .enrollment-status button {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 8px 10px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.operator-drawer .enrollment-status button:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+/* Fit three across before the drawer's own single-column collapse. */
+@media (max-width: 1020px) {
+  .operator-drawer .enrollment-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 760px) {
   .brand {
     min-height: 82px;

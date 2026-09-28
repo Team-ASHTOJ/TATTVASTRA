@@ -39,6 +39,17 @@ const date = (v: unknown) =>
   v ? new Date(String(v)).toLocaleString() : "Never";
 const items = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : []);
 const provenance = (r: Row) => (r.simulation ? "SANDBOX" : "REAL");
+/**
+ * The demo Windows sandbox is a persisted simulated endpoint, never a real agent.
+ * It is identified by its transport so real endpoints keep their existing labels.
+ */
+const sandboxRow = (r: Row) => !!r.simulation && r.transport_mode === "SANDBOX";
+const capabilityLabel = (mode: string) =>
+  mode === "sandbox"
+    ? "SANDBOX / PREVIEW"
+    : mode === "memory"
+      ? "MEMORY / JIT"
+      : "NATIVE / AOT";
 const title = (r?: Row) =>
   r?.description === "JOCKY_VIDEO_V2_READY" ||
   (r?.simulation && /SIH|demo/i.test(str(r?.title)))
@@ -394,20 +405,16 @@ export function OperatorConsole({ section }: { section: string }) {
             ]}
             rows={sortedEndpoints(d.endpoints).map((e) => {
               return [
-                <button
-                  key={e.id}
-                  className="secondary"
-                  onClick={() => setSelected(e)}
-                >
-                  {str(e.hostname)}
-                </button>,
+                <span key={e.id} className="workbench-actions">
+                  <button className="secondary" onClick={() => setSelected(e)}>
+                    {str(e.hostname)}
+                  </button>
+                  {sandboxRow(e) && <span className="badge">SANDBOX</span>}
+                </span>,
                 str(e.target_os),
                 str(e.target_arch),
-                items(e.execution_modes)
-                  .map((m) =>
-                    m === "memory" ? "MEMORY / JIT" : "NATIVE / AOT",
-                  )
-                  .join(" · ") || "Not reported",
+                items(e.execution_modes).map(capabilityLabel).join(" · ") ||
+                  "Not reported",
                 str(e.transport_mode ?? "UNKNOWN").replaceAll("_", " "),
                 <span
                   key="connection"
@@ -430,11 +437,13 @@ export function OperatorConsole({ section }: { section: string }) {
                   d.jobs.filter((j) => j.endpoint_id === e.id).at(-1)?.status ??
                     "NONE",
                 ),
-                e.simulation
-                  ? "Fixture identity"
-                  : e.status === "REVOKED"
-                    ? "Revoked"
-                    : "Enrolled identity",
+                sandboxRow(e)
+                  ? "SANDBOX"
+                  : e.simulation
+                    ? "Fixture identity"
+                    : e.status === "REVOKED"
+                      ? "Revoked"
+                      : "Enrolled identity",
                 e.simulation
                   ? "SANDBOX"
                   : local.data?.find((l) => l.endpoint_id === e.id)
@@ -710,7 +719,9 @@ function Enrollment({
   refresh: () => Promise<void>;
 }) {
   const queryClient = useQueryClient();
-  const [path, setPath] = useState<"local" | "external" | null>(null);
+  const [path, setPath] = useState<"local" | "external" | "sandbox" | null>(
+    null,
+  );
   const [slot, setSlot] = useState(1);
   const pool = useQuery({
     queryKey: ["local-agent"],
@@ -751,8 +762,28 @@ function Enrollment({
     }
   }
   const [token, setToken] = useState<Row | null>(null);
+  const [sandbox, setSandbox] = useState<Row | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  async function sandboxAction() {
+    setPath("sandbox");
+    setError("");
+    setBusy(true);
+    try {
+      // The backend persists WINDOWS-SANDBOX-01 and reuses it on repeat starts.
+      // The floor only paces the transition: success still comes from the API.
+      const [row] = await Promise.all([
+        submit<Row>("endpoints/sandbox/windows"),
+        new Promise((resolve) => setTimeout(resolve, 700)),
+      ]);
+      setSandbox(row);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Sandbox start failed");
+    } finally {
+      setBusy(false);
+    }
+  }
   const enrollment = useQuery({
     queryKey: ["enrollment-status", token?.id],
     enabled: !!token,
@@ -791,7 +822,7 @@ function Enrollment({
   const command = `jocky-agent --state-dir .jocky-agent init\njocky-agent --state-dir .jocky-agent enroll --enrollment-server https://localhost:15052 --server https://localhost:15051 --ca control-plane-ca.pem --token-file enrollment.token --worker /usr/local/bin/jocky-worker\njocky-agent --state-dir .jocky-agent connect`;
   return (
     <Drawer title="Endpoint Enrollment" close={close}>
-      <div className="metric-grid">
+      <div className="metric-grid enrollment-grid">
         <section className="panel">
           <h3>Local Endpoint</h3>
           <p>Local endpoints: {active.length} / 3 running</p>
@@ -835,7 +866,7 @@ function Enrollment({
             </button>
           )}
           {pool.data && (
-            <div className="workbench-actions">
+            <div className="workbench-actions enrollment-status">
               {pool.data.map((r) => (
                 <button
                   key={str(r.slot)}
@@ -850,6 +881,22 @@ function Enrollment({
               ))}
             </div>
           )}
+        </section>
+        <section className="panel">
+          <h3>Windows Sandbox</h3>
+          <p>
+            Launch a simulated Windows endpoint for cross-platform
+            demonstration.
+          </p>
+          <button
+            className="secondary"
+            disabled={busy}
+            onClick={() => void sandboxAction()}
+          >
+            {busy && path === "sandbox"
+              ? "Starting Windows Sandbox…"
+              : "Start Windows Sandbox"}
+          </button>
         </section>
         <section className="panel">
           <h3>External Endpoint</h3>
@@ -985,6 +1032,42 @@ function Enrollment({
           {error && <p role="alert">{error}</p>}
         </>
       )}
+      {path === "sandbox" && (
+        <section className="panel" aria-label="Windows sandbox endpoint">
+          <h3>Windows sandbox connection</h3>
+          <p role="status">
+            {busy
+              ? "STARTING SANDBOX"
+              : sandbox
+                ? "Sandbox endpoint online"
+                : str(error || "Sandbox unavailable")}
+          </p>
+          {sandbox && (
+            <>
+              <Fields
+                data={{
+                  hostname: sandbox.hostname,
+                  connection: sandbox.status,
+                  platform: sandbox.target_os,
+                  architecture: sandbox.target_arch,
+                  transport: str(sandbox.transport_mode).replaceAll("_", " "),
+                  last_seen: date(sandbox.last_seen),
+                  trust: "SANDBOX",
+                  source: "SANDBOX",
+                }}
+              />
+              <p className="resource-label">SIMULATED · SANDBOX</p>
+              <p>
+                Simulated endpoint. No Windows agent, TLS identity or execution
+                worker is involved, and no job can be dispatched to it.
+              </p>
+              <button onClick={() => openEndpoint(sandbox)}>
+                Open Endpoint
+              </button>
+            </>
+          )}
+        </section>
+      )}
     </Drawer>
   );
 }
@@ -1041,12 +1124,16 @@ function EndpointDetail({
               "_",
               " ",
             ),
-            execution_capability: items(endpoint.execution_modes).join(" / "),
+            execution_capability: sandboxRow(endpoint)
+              ? "SANDBOX / PREVIEW"
+              : items(endpoint.execution_modes).join(" / "),
             status: endpoint.status,
             last_seen: date(endpoint.last_seen),
-            trust: endpoint.simulation
-              ? "Fixture identity"
-              : "Enrolled transport identity",
+            trust: sandboxRow(endpoint)
+              ? "SANDBOX"
+              : endpoint.simulation
+                ? "Fixture identity"
+                : "Enrolled transport identity",
             source: provenance(endpoint),
             current_investigation: jobs[0]?.status,
           }}

@@ -16,7 +16,7 @@ from jocky_contracts import control as contracts
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from jocky_control_plane import forge, hunts, investigation, local_agent
+from jocky_control_plane import forge, hunts, investigation, local_agent, sandbox
 from jocky_control_plane.builds import build_variants, compile_version
 from jocky_control_plane.config import Settings
 from jocky_control_plane.models import (
@@ -617,6 +617,7 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
         for row in rows:
             if row["status"] == State.REVOKED:
                 continue
+            sandbox.project(row)  # Simulated liveness; real rows are left untouched.
             if row["last_seen"] is None or datetime.now(UTC) - aware(
                 datetime.fromisoformat(row["last_seen"])
             ) > timedelta(seconds=90):
@@ -657,9 +658,24 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
             },
         )
 
+    @router.post("/endpoints/sandbox/windows")
+    def windows_sandbox(db: DB, user: Admin) -> Any:
+        """Start the demo Windows sandbox. Idempotent: reuses the existing row."""
+        row, created = sandbox.ensure(db, user)
+        if created:
+            publish(
+                db,
+                user,
+                "endpoint.sandbox.started",
+                row.id,
+                simulation=row.simulation,
+                simulation_label=row.simulation_label,
+            )
+        return sandbox.project(document(row))
+
     @router.get("/endpoints/{identifier}")
     def endpoint(identifier: UUID, db: DB, user: Reader) -> Any:
-        return document(owned(db, Endpoint, identifier, user))
+        return sandbox.project(document(owned(db, Endpoint, identifier, user)))
 
     @router.post("/endpoints/{identifier}/revoke")
     def revoke_endpoint(identifier: UUID, db: DB, user: Admin) -> Any:
