@@ -13,6 +13,7 @@ import os
 import shutil
 import subprocess
 import sys
+from importlib import metadata
 from pathlib import Path
 
 from . import __version__
@@ -125,6 +126,7 @@ usage:
   {PROGRAM} <command> <file.jky> [...]    forward <command> to jockyc
   {PROGRAM} <composed> <file.jky> [...]   composed local commands (below)
   {PROGRAM} install <package-spec>      install a local Python package
+  {PROGRAM} packages                    list local Python packages
   {PROGRAM} doctor                        report environment readiness
   {PROGRAM} --help | help | --version
 
@@ -178,6 +180,40 @@ backend, chosen in this order and nothing else:
 not exposed yet: {NOT_EXPOSED_LIST}
 see docs/JOCKY_CLI.md for each reason and for what is available.
 """
+
+
+def _python_packages_dir() -> Path:
+    """The isolated package directory shared by `install` and `packages`."""
+    return Path(
+        os.environ.get("JOCKY_PYTHON_PACKAGES_DIR", "~/.jocky/python/site-packages")
+    ).expanduser().resolve()
+
+
+def packages() -> int:
+    """List distributions installed in JOCKY's isolated Python environment."""
+    target = _python_packages_dir()
+    distributions = sorted(
+        (
+            (distribution.metadata["Name"], distribution.version)
+            for distribution in metadata.distributions(path=[str(target)])
+            if distribution.metadata.get("Name")
+        ),
+        key=lambda item: item[0].casefold(),
+    )
+    print("JOCKY Python Environment\n")
+    if not distributions:
+        print("No packages installed.")
+        print(f"Location: {target}\n")
+        print("Install one with:")
+        print(f"  {PROGRAM} install <package>")
+        return 0
+    width = max(len("Package"), *(len(name) for name, _ in distributions))
+    print(f"{'Package':<{width}}  Version")
+    for name, version in distributions:
+        print(f"{name:<{width}}  {version}")
+    print(f"\n{len(distributions)} packages installed")
+    print(f"Location: {target}")
+    return 0
 
 
 def _apply_aliases(args: list[str]) -> list[str]:
@@ -381,11 +417,7 @@ def main(argv: list[str] | None = None) -> int:
             print("jocky: install requires exactly one package specification", file=sys.stderr)
             return EXIT_USAGE
         try:
-            target = (
-                Path(os.environ.get("JOCKY_PYTHON_PACKAGES_DIR", "~/.jocky/python/site-packages"))
-                .expanduser()
-                .resolve()
-            )
+            target = _python_packages_dir()
             target.mkdir(parents=True, exist_ok=True)
             status = subprocess.run(
                 [sys.executable, "-m", "pip", "install", "--target", str(target), args[1]],
@@ -401,6 +433,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Installed {args[1]} into JOCKY Python environment")
             print(f"Location: {target}")
         return status
+    if first in {"packages", "list"}:
+        return packages()
     if first == "doctor":
         return doctor()
     if first in COMPOSED:

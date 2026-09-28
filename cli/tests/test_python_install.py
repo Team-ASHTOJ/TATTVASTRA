@@ -71,3 +71,50 @@ def test_container_run_without_packages_keeps_working(tmp_path, monkeypatch):
     argv = container.container_command("docker", ["run", "demo.jky"], tmp_path)
     assert "/jocky-python/site-packages:ro" not in " ".join(argv)
     assert not any(value.startswith("JOCKY_PYTHON_PACKAGES_DIR=") for value in argv)
+
+
+def write_distribution(directory, name, version):
+    metadata = directory / f"{name}-{version}.dist-info"
+    metadata.mkdir()
+    (metadata / "METADATA").write_text(f"Metadata-Version: 2.1\nName: {name}\nVersion: {version}\n")
+
+
+def test_packages_lists_sorted_distributions_from_override(tmp_path, monkeypatch, capsys):
+    write_distribution(tmp_path, "python-slugify", "8.0.4")
+    write_distribution(tmp_path, "humanize", "4.13.0")
+    monkeypatch.setenv("JOCKY_PYTHON_PACKAGES_DIR", str(tmp_path))
+
+    assert main.main(["packages"]) == 0
+
+    assert capsys.readouterr().out == (
+        "JOCKY Python Environment\n\n"
+        "Package         Version\n"
+        "humanize        4.13.0\n"
+        "python-slugify  8.0.4\n\n"
+        "2 packages installed\n"
+        f"Location: {tmp_path}\n"
+    )
+
+
+def test_packages_empty_environment(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("JOCKY_PYTHON_PACKAGES_DIR", str(tmp_path))
+
+    assert main.main(["packages"]) == 0
+
+    assert capsys.readouterr().out == (
+        "JOCKY Python Environment\n\n"
+        "No packages installed.\n"
+        f"Location: {tmp_path}\n\n"
+        "Install one with:\n"
+        "  jocky install <package>\n"
+    )
+
+
+def test_list_is_an_exact_packages_alias(tmp_path, monkeypatch, capsys):
+    write_distribution(tmp_path, "humanize", "4.13.0")
+    monkeypatch.setenv("JOCKY_PYTHON_PACKAGES_DIR", str(tmp_path))
+
+    assert main.main(["packages"]) == 0
+    packages_output = capsys.readouterr().out
+    assert main.main(["list"]) == 0
+    assert capsys.readouterr().out == packages_output
