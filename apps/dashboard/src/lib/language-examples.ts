@@ -1,33 +1,95 @@
 export const languageExamples = [
-  { name: "System Baseline", capability: "system.read", collector: "system" },
   {
-    name: "Process Investigation",
-    capability: "process.read",
-    collector: "processes",
-  },
-  {
-    name: "Network Investigation",
-    capability: "network.read",
-    collector: "connections",
-  },
-  {
-    name: "Driver Inventory",
-    capability: "drivers.read",
-    collector: "drivers",
-  },
-].map((item) => ({
-  name: item.name,
-  source: `hunt "${item.name.toLowerCase().replaceAll(" ", "-")}" {\n    targets { group "AUTHORIZED" os windows | linux }\n    runtime { backend llvm execution memory }\n    capabilities { ${item.capability} }\n    collect ${item.collector} as inventory\n}`,
-}));
-languageExamples.push({
-  name: "Combined Investigation",
-  source: `hunt "combined-investigation" {
+    name: "System & Identity Baseline",
+    source: `case "Baseline triage" {
+  hunt "system-identity-baseline" {
     targets { group "AUTHORIZED" os windows | linux }
-    runtime { backend llvm execution memory }
-    capabilities { system.read process.read network.read drivers.read }
-    collect system as sys
-    collect processes as procs
-    collect connections as conns
-    collect drivers as drv
+    runtime {
+      backend llvm
+      execution memory
+      variant { enabled true seed auto profile minimal }
+    }
+    capabilities { system.read users.read network.read }
+    budget { cpu <= 15% memory <= 192MB io <= 100MB duration <= 90s }
+    collect system as system_info
+    collect users as accounts
+    collect interfaces as interfaces
+  }
 }`,
-});
+  },
+  {
+    name: "Process & Network Triage",
+    source: `case "Process network triage" {
+  hunt "process-network-triage" {
+    targets { group "AUTHORIZED" os windows | linux }
+    runtime {
+      backend llvm
+      execution memory
+      variant { enabled true seed 0x2a profile balanced }
+    }
+    capabilities { process.read network.read }
+    budget { cpu <= 18% memory <= 224MB io <= 125MB duration <= 105s }
+    collect processes as processes
+    collect connections as connections
+    collect routes as routes
+  }
+}`,
+  },
+  {
+    name: "Network Surface Snapshot",
+    source: `case "Network surface inventory" {
+  hunt "network-surface-snapshot" {
+    targets { host "authorized-linux" os linux }
+    runtime {
+      backend llvm
+      execution memory
+      variant { enabled true seed 0x73 profile minimal }
+    }
+    capabilities { network.read }
+    budget { cpu <= 12% memory <= 160MB io <= 80MB duration <= 75s }
+    collect interfaces as interface_inventory
+    collect routes as route_inventory
+    collect connections as connection_inventory
+  }
+}`,
+  },
+  {
+    name: "Driver & System Inventory",
+    source: `case "Driver inventory" {
+  hunt "driver-system-inventory" {
+    targets { group "AUTHORIZED" os windows | linux }
+    runtime {
+      backend llvm
+      execution memory
+      variant { enabled true seed 0x91 profile balanced }
+    }
+    capabilities { system.read drivers.read }
+    budget { cpu <= 16% memory <= 208MB io <= 110MB duration <= 100s }
+    collect system as host_system
+    collect drivers as driver_inventory
+  }
+}`,
+  },
+  {
+    name: "Comprehensive Endpoint Sweep",
+    source: `case "Comprehensive endpoint sweep" {
+  hunt "comprehensive-endpoint-sweep" {
+    targets { group "AUTHORIZED" os windows | linux }
+    runtime {
+      backend llvm
+      execution memory
+      variant { enabled true seed auto profile balanced }
+    }
+    capabilities { system.read users.read process.read network.read drivers.read }
+    budget { cpu <= 20% memory <= 256MB io <= 150MB duration <= 120s }
+    collect system as system_info
+    collect users as accounts
+    collect processes as process_inventory
+    collect interfaces as interface_inventory
+    collect connections as connection_inventory
+    collect routes as route_inventory
+    collect drivers as driver_inventory
+  }
+}`,
+  },
+];

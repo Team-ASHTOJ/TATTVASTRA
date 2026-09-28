@@ -149,7 +149,7 @@ test("coherent product connects three real agents and runs one investigation", a
   await page.goto("/workbench");
   await page.getByText("Load Example", { exact: true }).click();
   await page
-    .getByRole("button", { name: "Combined Investigation", exact: true })
+    .getByRole("button", { name: "Comprehensive Endpoint Sweep", exact: true })
     .click();
   await page.getByRole("button", { name: "CHECK", exact: true }).click();
   await expect(page.getByLabel("Compiler output")).toContainText("source_hash");

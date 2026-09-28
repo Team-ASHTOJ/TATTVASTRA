@@ -56,25 +56,27 @@ export function LanguageDocumentation() {
           <section className="panel" id={anchor(s.title)} key={s.title}>
             <h2>{s.title}</h2>
             <p>{s.purpose}</p>
-            {example(s.title, s.source)}
-            {s.title === "Collectors" && (
-              <p>
-                Compiler-supported aliases:
-                system/hostname/endpoints/environment/packages; users/sessions;
-                processes/process_metadata/process_hash/process_signatures;
-                connections/ports/interfaces/routes/dns;
-                files/file_metadata/directories/hash/file_hash/file_content;
-                logs/events; services/startup/scheduled_tasks;
-                drivers/driver_hash/driver_signatures/modules. Path collectors
-                require typed path options. Hash/content reads require
-                filesystem.content. Adapter availability is reported by
-                endpoints.
+            <p>
+              <strong>Syntax</strong>
+              <br />
+              <code>{s.syntax}</code>
+            </p>
+            {s.support && (
+              <p className="documentation-support">
+                <strong>Compiler + JIR:</strong> {s.support.compiler}
+                <br />
+                <strong>Live endpoint:</strong> {s.support.endpoint}
               </p>
             )}
+            {example(s.title, s.source)}
           </section>
         ))}
         <section className="panel" id="examples">
           <h2>Examples</h2>
+          <p>
+            These programs use the subset currently supported by live endpoint
+            execution and are suitable for running against connected agents.
+          </p>
           {languageExamples.map((e) => (
             <article className="language-construct" key={e.name}>
               <h3>{e.name}</h3>

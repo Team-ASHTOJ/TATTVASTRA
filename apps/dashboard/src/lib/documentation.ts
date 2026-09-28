@@ -1,99 +1,324 @@
 import { languageExamples } from "./language-examples";
-const declarations = `targets { group "AUTHORIZED" os windows | linux }
+
+export type DocumentationSection = {
+  title: string;
+  purpose: string;
+  syntax: string;
+  source: string;
+  support?: { compiler: string; endpoint: string };
+};
+
+export const documentationSections: DocumentationSection[] = [
+  {
+    title: "Overview / Quick Start",
+    purpose:
+      "A JOCKY source describes an authorized investigation. CHECK validates it before COMPILE lowers its typed plan through LLVM.",
+    syntax: 'hunt "name" { declarations; statements; }',
+    source: `hunt "quick-start" {
+  targets { group "AUTHORIZED" os linux }
+  runtime { backend llvm execution memory }
+  capabilities { system.read }
+  collect system as inventory
+}`,
+  },
+  {
+    title: "Program Structure",
+    purpose:
+      "A compilation unit contains one hunt, optionally wrapped in a human-readable case. Declarations always come before statements.",
+    syntax: 'case "label" { hunt "name" { ... } }',
+    source: `case "Authorized investigation" {
+  hunt "program-structure" {
+    targets { group "AUTHORIZED" os windows | linux }
     runtime { backend llvm execution memory }
-    capabilities { system.read users.read process.read network.read drivers.read }`;
-const program = (name: string, body: string, config = declarations) =>
-  `hunt "${name}" {\n    ${config}\n    ${body}\n}`;
-export const documentationSections = [
-  [
-    "Overview",
-    "One .jky program expresses authorized forensic intent. The control plane resolves endpoints and dispatches compiler-generated plans; Python does not interpret the language.",
-    "collect system as inventory",
-  ],
-  [
-    "Quick Start",
-    "Load this minimal valid program, CHECK then COMPILE. Connect an endpoint before selecting it for execution.",
-    "collect system as inventory",
-  ],
-  [
-    "Program Structure",
-    "Exactly one hunt per compilation unit. Declarations precede statements. Bindings are immutable; comments use // or /* … */.",
-    "collect system as inventory",
-  ],
-  [
-    "Targets",
-    "group, host and target selectors are string values. os accepts windows | linux. Empty selectors do not authorize fleet-wide collection.",
-    "collect system as inventory",
-  ],
-  [
-    "Runtime",
-    "LLVM is mandatory. Runtime settings configure lowering; they are not arbitrary native code imports.",
-    "collect system as inventory",
-  ],
-  [
-    "Execution",
-    "memory runs in a dedicated agent worker process; native runs a compiler-generated executable. Supported endpoint modes are checked before dispatch.",
-    "collect system as inventory",
-  ],
-  [
-    "Variants",
-    "enabled, seed and profile configure deterministic compiler diversity. Seeds accept hexadecimal integers. Hash differences alone do not establish semantic equivalence.",
-    "collect system as inventory",
-  ],
-  [
-    "Capabilities",
-    "Read permissions are validated at compilation and checked against enrolled endpoint policy. Collectors cannot acquire permissions by declaration alone.",
-    "collect processes as procs",
-  ],
-  [
-    "Budgets",
-    "cpu, memory, io and duration use <= limits with units. Remote execution currently supports MONITORED enforcement; strict limits are unavailable.",
-    "collect system as inventory",
-  ],
-  [
-    "Collectors",
-    "collect binds a typed dataset. The remote bridge supports bounded system, users, processes, interfaces, connections, routes, services, events and drivers without options. Compiler registry aliases and optional adapters do not imply remote support.",
-    "collect processes as procs\n    collect connections as conns",
-  ],
-  [
-    "Filters",
-    "Immutable pipelines support where, select, sort, limit and group by. where keeps true only; unavailable signature state never becomes unsigned. These operations compile but are outside the current remote inventory bridge.",
-    "collect processes as procs\n    let unsigned = procs | where signed == false | select [pid, name] | limit 25",
-  ],
-  [
-    "Correlation",
-    "correlate joins same-endpoint typed scalar keys, excluding nulls. Review process start identity and timestamps when joining PIDs. Rich correlation is outside the bounded remote bridge.",
-    "collect processes as procs\n    collect connections as conns\n    correlate procs.pid with conns.pid as related",
-  ],
-  [
-    "Findings",
-    "finding defines a conclusion with when, severity and evidence clauses. Severity is declared, not inferred from an arbitrary frontend label. Current backend findings derive from stored observations.",
-    'collect processes as procs\n    collect connections as conns\n    correlate procs.pid with conns.pid as related\n    finding "Process connection" { when count(related) > 0 severity high evidence related }',
-  ],
-  [
-    "Compiler Pipeline",
-    "Source → Lexer → Parser/AST → semantic/capability validation → Typed JIR → LLVM → variant/artifact. Inspect persisted stage output in Compiler Explorer; missing LLVM is a build failure.",
-    "collect system as inventory",
-  ],
-].map(([title, purpose, body]) => {
-  let config = declarations;
-  if (title === "Execution")
-    config = config.replace("execution memory", "execution native");
-  if (title === "Variants")
-    config = config.replace(
-      "execution memory }",
-      "execution memory variant { enabled true seed 0x01 profile balanced } }",
-    );
-  if (title === "Budgets")
-    config +=
-      "\n    budget { cpu <= 20% memory <= 256MB io <= 150MB duration <= 120s }";
-  return {
-    title: title!,
-    purpose: purpose!,
-    source: program(title!.toLowerCase().replaceAll(" ", "-"), body!, config),
-  };
-});
+    capabilities { users.read }
+    collect users as accounts
+  }
+}`,
+  },
+  {
+    title: "Targets & Selectors",
+    purpose:
+      "Group, host, target, and OS selectors narrow authorized endpoint resolution; they never authorize a fleet by themselves.",
+    syntax: 'targets { group "name" host "name" os windows | linux }',
+    source: `hunt "target-selectors" {
+  target "endpoint-asset-42"
+  host "authorized-linux"
+  group "AUTHORIZED"
+  os linux
+  runtime { backend llvm execution memory }
+  capabilities { system.read }
+  collect system as host_inventory
+}`,
+  },
+  {
+    title: "Runtime & Execution",
+    purpose:
+      "LLVM is the required backend. Memory runs in the dedicated agent worker; native is compiler-generated AOT execution.",
+    syntax:
+      "runtime { backend llvm execution memory|native protect_literals <bool> }",
+    source: `hunt "runtime-execution" {
+  targets { group "AUTHORIZED" os linux }
+  runtime { backend llvm execution native protect_literals false }
+  capabilities { system.read }
+  collect system as native_inventory
+}`,
+  },
+  {
+    title: "Variants",
+    purpose:
+      "Variants control deterministic compiler diversity without accepting arbitrary native payloads.",
+    syntax:
+      "variant { enabled <bool> seed auto|<seed> profile minimal|balanced }",
+    source: `hunt "variant-control" {
+  targets { group "AUTHORIZED" os windows | linux }
+  runtime {
+    backend llvm
+    execution memory
+    variant { enabled true seed 0x2a profile balanced }
+  }
+  capabilities { system.read }
+  collect system as variant_inventory
+}`,
+  },
+  {
+    title: "Capabilities",
+    purpose:
+      "Capabilities declare the collector permissions required by the program and are intersected with endpoint policy.",
+    syntax: "capabilities { system.read process.read network.read }",
+    source: `hunt "capability-declaration" {
+  targets { group "AUTHORIZED" os linux }
+  runtime { backend llvm execution memory }
+  capabilities { process.read network.read }
+  collect processes as processes
+  collect connections as connections
+}`,
+  },
+  {
+    title: "Budgets",
+    purpose:
+      "Budgets carry bounded CPU, memory, I/O, and duration limits into the execution plan.",
+    syntax:
+      "budget { cpu <= 20% memory <= 256MB io <= 150MB duration <= 120s }",
+    source: `hunt "budgeted-inventory" {
+  targets { group "AUTHORIZED" os linux }
+  runtime { backend llvm execution memory }
+  capabilities { system.read }
+  budget { cpu <= 20% memory <= 256MB io <= 150MB duration <= 120s }
+  collect system as bounded_inventory
+}`,
+  },
+  {
+    title: "Typed Values",
+    purpose:
+      "Typed constructors make paths, timestamps, addresses, hashes, PIDs, byte counts, and durations explicit rather than implicit strings.",
+    syntax:
+      'pid(42) bytes(42) path("/root") ip("192.0.2.10") hash("…") time("…") duration(5s)',
+    source: `hunt "typed-values" {
+  targets { group "AUTHORIZED" os linux }
+  runtime { backend llvm execution memory }
+  capabilities { process.read network.read filesystem.metadata filesystem.content logs.read system.read }
+  collect processes { pid pid(42) } as process_42
+  collect connections { pid pid(42) } as process_connections
+  collect files { path path("/approved/evidence") fields [path, name, size, sha256] } as files
+  collect logs { since time("2026-09-01T00:00:00Z") } as events
+  collect system as system_info
+  let matching_file = files | where sha256 == hash("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef") | select [path, size]
+  let sized_system = system_info | where memory_total >= bytes(1024) | select [hostname, memory_total]
+  let known_peer = process_connections | where remote == ip("192.0.2.10") | select [pid, remote]
+  let recent_events = events | where timestamp >= time("2026-09-01T00:00:00Z") | select [event_id, timestamp]
+  let short_uptime = system_info | where uptime <= duration(5s) | select [hostname, uptime]
+}`,
+    support: { compiler: "Supported", endpoint: "Collection bridge only" },
+  },
+  {
+    title: "Collectors",
+    purpose:
+      "Collectors bind typed datasets. Options, field selection, and aliases are validated by the compiler.",
+    syntax:
+      'collect files { path path("/approved/evidence") fields [path, name, size] limit 100 } as files',
+    source: `hunt "collector-options" {
+  targets { group "AUTHORIZED" os linux }
+  runtime { backend llvm execution memory }
+  capabilities { filesystem.metadata logs.read }
+  collect files {
+    path path("/approved/evidence")
+    fields [path, name, size]
+    limit 100
+  } as files
+  collect logs {
+    since time("2026-09-01T00:00:00Z")
+    where severity == "error"
+    limit 100
+  } as events
+}`,
+    support: { compiler: "Supported", endpoint: "Collection bridge only" },
+  },
+  {
+    title: "Dataset Pipelines",
+    purpose:
+      "let creates immutable datasets by composing a collector with pipeline operations.",
+    syntax: "let name = dataset | operation | operation",
+    source: `hunt "dataset-pipeline" {
+  targets { group "AUTHORIZED" os linux }
+  runtime { backend llvm execution memory }
+  capabilities { network.read }
+  collect connections as net
+  let external = net
+    | where remote.is_public == true
+    | select [pid, remote, remote_port]
+    | limit 25
+}`,
+    support: { compiler: "Supported", endpoint: "Collection bridge only" },
+  },
+  {
+    title: "Filtering",
+    purpose: "where retains only rows whose typed predicate evaluates true.",
+    syntax: "dataset | where field == value",
+    source: `hunt "filtering" {
+  targets { group "AUTHORIZED" os linux }
+  runtime { backend llvm execution memory }
+  capabilities { process.read }
+  collect processes { fields [pid, name, signed] } as proc
+  let unsigned = proc | where signed == false
+}`,
+    support: { compiler: "Supported", endpoint: "Collection bridge only" },
+  },
+  {
+    title: "Projection & Sorting",
+    purpose:
+      "select narrows fields and sort orders a dataset by one scalar field.",
+    syntax: "dataset | select [field, ...] | sort field asc|desc",
+    source: `hunt "projection-sorting" {
+  targets { group "AUTHORIZED" os linux }
+  runtime { backend llvm execution memory }
+  capabilities { process.read }
+  collect processes as proc
+  let active = proc | select [pid, name, memory_bytes] | sort memory_bytes desc
+}`,
+    support: { compiler: "Supported", endpoint: "Collection bridge only" },
+  },
+  {
+    title: "Grouping & Limits",
+    purpose:
+      "group by creates a count-bearing dataset; limit bounds returned rows.",
+    syntax: "dataset | group by [field] | sort count desc | limit 10",
+    source: `hunt "grouping-limits" {
+  targets { group "AUTHORIZED" os linux }
+  runtime { backend llvm execution memory }
+  capabilities { network.read }
+  collect connections as net
+  let counts = net | group by [protocol] | sort count desc | limit 10
+}`,
+    support: { compiler: "Supported", endpoint: "Collection bridge only" },
+  },
+  {
+    title: "Correlation",
+    purpose:
+      "correlate produces a same-endpoint inner join across matching typed keys.",
+    syntax: "correlate left.key with right.key as result",
+    source: `hunt "correlation" {
+  targets { group "AUTHORIZED" os linux }
+  runtime { backend llvm execution memory }
+  capabilities { process.read network.read }
+  collect processes as proc
+  collect connections as net
+  let external = net | where remote.is_public == true
+  correlate proc.pid with external.pid as related
+}`,
+    support: { compiler: "Supported", endpoint: "Collection bridge only" },
+  },
+  {
+    title: "Driver Analysis",
+    purpose:
+      "analyze enriches a Driver dataset with typed risk fields supplied by an authenticated risk source at execution.",
+    syntax: "analyze drivers as risk",
+    source: `hunt "driver-analysis" {
+  targets { group "AUTHORIZED" os windows | linux }
+  runtime { backend llvm execution memory }
+  capabilities { drivers.read }
+  collect drivers as drivers
+  analyze drivers as risk
+}`,
+    support: { compiler: "Supported", endpoint: "Collection bridge only" },
+  },
+  {
+    title: "Findings",
+    purpose:
+      "A finding declares its condition, severity, and evidence dataset together.",
+    syntax:
+      'finding "title" { when count(data) > 0 severity high evidence data }',
+    source: `hunt "finding-declaration" {
+  targets { group "AUTHORIZED" os linux }
+  runtime { backend llvm execution memory }
+  capabilities { process.read network.read }
+  collect processes as proc
+  collect connections as net
+  correlate proc.pid with net.pid as related
+  finding "External communication" {
+    when count(related) > 0
+    severity high
+    evidence related
+  }
+}`,
+    support: { compiler: "Supported", endpoint: "Collection bridge only" },
+  },
+  {
+    title: "Timeline",
+    purpose:
+      "timeline combines declared dataset sources while preserving source and collection time.",
+    syntax: "timeline { source sys source proc source net }",
+    source: `hunt "timeline-sources" {
+  targets { group "AUTHORIZED" os linux }
+  runtime { backend llvm execution memory }
+  capabilities { system.read process.read network.read }
+  collect system as sys
+  collect processes as proc
+  collect connections as net
+  timeline { source sys source proc source net }
+}`,
+    support: { compiler: "Supported", endpoint: "Collection bridge only" },
+  },
+  {
+    title: "Reports / Export",
+    purpose:
+      "report is the final statement and defines a planned evidence-bearing output with integrity required.",
+    syntax:
+      "export report { format json|pdf include evidence include timeline include audit integrity true }",
+    source: `hunt "report-export" {
+  targets { group "AUTHORIZED" os linux }
+  runtime { backend llvm execution memory }
+  capabilities { system.read }
+  collect system as sys
+  timeline { source sys }
+  export report {
+    format json
+    include evidence
+    include timeline
+    include audit
+    integrity true
+  }
+}`,
+    support: { compiler: "Supported", endpoint: "Collection bridge only" },
+  },
+  {
+    title: "Compiler Pipeline",
+    purpose:
+      "Source passes through lexer, parser, semantic and capability validation, typed JIR, LLVM lowering, and a compiler-owned artifact.",
+    syntax: "CHECK → Typed JIR → LLVM → COMPILE",
+    source: `hunt "compiler-pipeline" {
+  targets { group "AUTHORIZED" os linux }
+  runtime { backend llvm execution memory variant { enabled true seed 0x44 profile minimal } }
+  capabilities { drivers.read }
+  budget { cpu <= 10% memory <= 128MB io <= 64MB duration <= 60s }
+  collect drivers as inventory
+}`,
+  },
+];
+
 export const documentationExamples = [
-  ...documentationSections.map((s) => ({ name: s.title, source: s.source })),
+  ...documentationSections.map((section) => ({
+    name: section.title,
+    source: section.source,
+  })),
   ...languageExamples,
 ];
