@@ -1382,6 +1382,16 @@ dd {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.artifact-integrity-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.artifact-integrity-actions .hash-value {
+  flex: 0 1 auto;
+}
 .connection-online {
   color: var(--success);
 }

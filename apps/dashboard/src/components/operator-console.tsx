@@ -2230,6 +2230,28 @@ function PerformanceView({
   );
 }
 function HashValue({ value }: { value: unknown }) {
+  const [copied, setCopied] = useState(false);
+  async function copyHash(hash: string) {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(hash);
+      } else {
+        const input = document.createElement("textarea");
+        input.value = hash;
+        input.style.position = "fixed";
+        input.style.opacity = "0";
+        document.body.append(input);
+        input.select();
+        const didCopy = document.execCommand("copy");
+        input.remove();
+        if (!didCopy) throw new Error("Clipboard copy unavailable");
+      }
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  }
   return (
     <span className="hash-value" title={str(value)}>
       {shortHash(value)}
@@ -2237,9 +2259,10 @@ function HashValue({ value }: { value: unknown }) {
         <button
           className="secondary compact"
           aria-label="Copy hash"
-          onClick={() => void navigator.clipboard.writeText(value)}
+          aria-live="polite"
+          onClick={() => void copyHash(value)}
         >
-          Copy
+          {copied ? "Copied" : "Copy"}
         </button>
       )}
     </span>
@@ -2378,14 +2401,18 @@ function EvidenceView({ d }: { d: Data }) {
               <h3>Stored SHA-256</h3>
               <HashValue value={row.content_hash} />
               <h3>Recomputed SHA-256</h3>
-              <HashValue
-                value={checked.computed_hash ?? "Awaiting content verification"}
-              />
-              {manifest && (
-                <button onClick={() => void verify(manifest, "manifest")}>
-                  Verify related manifest
-                </button>
-              )}
+              <div className="artifact-integrity-actions">
+                <HashValue
+                  value={
+                    checked.computed_hash ?? "Awaiting content verification"
+                  }
+                />
+                {manifest && (
+                  <button onClick={() => void verify(manifest, "manifest")}>
+                    Verify related manifest
+                  </button>
+                )}
+              </div>
             </>
           ) : (
             <>
