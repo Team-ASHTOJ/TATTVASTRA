@@ -14,6 +14,7 @@ import {
 } from "../lib/product-data";
 import { useControlEvents } from "../lib/use-control-events";
 import { Icon, type IconName } from "./icons";
+import { GlobeCdn } from "./globe-cdn";
 type Row = { id: string; [key: string]: unknown };
 type Data = {
   cases: Row[];
@@ -185,24 +186,29 @@ export function OperatorConsole({ section }: { section: string }) {
     <div className="operator-presentation">
       {section === "home" && (
         <>
-          <section className="panel command-hero">
-            <div>
+          <section className="panel command-hero command-center-hero">
+            <div className="command-hero-copy">
+              <div className="eyebrow">CONTROL / FORENSIC OPERATIONS</div>
               <h1>Command Center</h1>
               <p>
                 Connect endpoints. Compile forensic programs. Investigate and
                 verify evidence.
               </p>
+              <div className="workbench-actions">
+                <Link className="button" href="/investigations?new=1">
+                  New Investigation
+                </Link>
+                <Link className="button secondary" href="/workbench">
+                  Open Workbench
+                </Link>
+                <Link className="button secondary" href="/endpoints?connect=1">
+                  Connect Endpoint
+                </Link>
+              </div>
             </div>
-            <div className="workbench-actions">
-              <Link className="button" href="/investigations?new=1">
-                New Investigation
-              </Link>
-              <Link className="button secondary" href="/workbench">
-                Open Workbench
-              </Link>
-              <Link className="button secondary" href="/endpoints?connect=1">
-                Connect Endpoint
-              </Link>
+            <div className="command-globe-stage">
+              <span className="command-globe-label">GLOBAL ENDPOINT MESH</span>
+              <GlobeCdn />
             </div>
           </section>
           <section className="panel">

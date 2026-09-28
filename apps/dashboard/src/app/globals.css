@@ -2124,3 +2124,217 @@ pre,
     max-width: 100%;
   }
 }
+
+/* Command Center globe hero — isolated from the Zepa demo surface */
+.command-hero.command-center-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
+  align-items: center;
+  gap: 28px;
+  min-height: 380px;
+  overflow: hidden;
+  padding: 34px 38px;
+  border-radius: 16px;
+  background:
+    linear-gradient(115deg, rgb(255 255 255 / 1.5%), transparent 52%),
+    var(--bg-secondary);
+}
+
+.command-hero-copy {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+}
+
+.command-hero-copy h1 {
+  font-size: clamp(36px, 3.2vw, 40px);
+}
+
+.command-hero-copy > p {
+  max-width: 540px;
+  margin: 12px 0 24px;
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.command-globe-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(100%, 480px);
+  margin-inline: auto;
+  aspect-ratio: 1;
+  isolation: isolate;
+}
+
+.command-globe-stage::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 3%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgb(84 145 172 / 12%) 0%,
+    rgb(44 86 105 / 5.5%) 38%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.command-globe-stage::after {
+  content: "";
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  background: radial-gradient(
+    circle,
+    transparent 58%,
+    rgb(9 15 21 / 25%) 74%,
+    rgb(9 15 21 / 78%) 100%
+  );
+  pointer-events: none;
+}
+
+.command-globe-label {
+  position: absolute;
+  top: 5%;
+  right: 5%;
+  z-index: 6;
+  color: #738995;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+}
+
+.tc-globe {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.tc-globe-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  cursor: grab;
+  opacity: 0;
+  touch-action: none;
+  transition: opacity 900ms ease-out;
+}
+
+.tc-globe-node,
+.tc-globe-activity {
+  position: absolute;
+  bottom: anchor(top);
+  left: anchor(center);
+  z-index: 5;
+  translate: -50% 0;
+  pointer-events: none;
+  transition:
+    opacity 300ms ease-out,
+    filter 300ms ease-out;
+}
+
+.tc-globe-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.tc-globe-pyramid {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  transform-style: preserve-3d;
+  animation: tc-globe-marker-spin 6s linear infinite;
+}
+
+@keyframes tc-globe-marker-spin {
+  from {
+    transform: rotateX(20deg) rotateY(0deg);
+  }
+  to {
+    transform: rotateX(20deg) rotateY(360deg);
+  }
+}
+
+.tc-globe-region,
+.tc-globe-activity {
+  border: 1px solid rgb(140 185 205 / 15%);
+  border-radius: 6px;
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 9px;
+  line-height: 1;
+  white-space: nowrap;
+  backdrop-filter: blur(5px);
+}
+
+.tc-globe-region {
+  padding: 3px 6px;
+  background: rgb(12 20 27 / 86%);
+  color: #afc5d0;
+}
+
+.tc-globe-activity {
+  padding: 4px 7px;
+  background: rgb(17 28 36 / 90%);
+  color: #9fbdc9;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 18%);
+}
+
+@media (max-width: 1100px) {
+  .command-hero.command-center-hero {
+    grid-template-columns: minmax(0, 1fr) minmax(330px, 0.8fr);
+    min-height: 360px;
+    padding: 32px;
+  }
+
+  .command-globe-stage {
+    width: min(100%, 410px);
+  }
+}
+
+@media (max-width: 800px) {
+  .command-hero.command-center-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    padding: 28px 24px;
+  }
+
+  .command-globe-stage {
+    width: min(100%, 340px);
+  }
+}
+
+@media (max-width: 480px) {
+  .command-hero.command-center-hero {
+    padding: 24px 20px;
+  }
+
+  .command-globe-stage {
+    width: min(100%, 320px);
+  }
+
+  .command-globe-label {
+    right: 2%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tc-globe-canvas,
+  .tc-globe-node,
+  .tc-globe-activity {
+    transition: none;
+  }
+
+  .tc-globe-pyramid {
+    animation: none;
+  }
+}
