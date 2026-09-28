@@ -1,10 +1,14 @@
 "use client";
+
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { object, shortHash } from "../lib/product-data";
+import { Icon } from "./icons";
+
 type Row = Record<string, unknown> & { id: string };
+
 function Hash({ value }: { value: unknown }) {
   return (
     <span className="hash-value">
@@ -18,6 +22,7 @@ function Hash({ value }: { value: unknown }) {
     </span>
   );
 }
+
 export function TargetBuilds({ compilation }: { compilation: string }) {
   const [targets, setTargets] = useState(["linux-x86_64", "windows-x86_64"]);
   const [busy, setBusy] = useState(false);
@@ -31,33 +36,54 @@ export function TargetBuilds({ compilation }: { compilation: string }) {
       v.compilation_id === compilation &&
       object(v.manifest).link_status === "ENVIRONMENT DEPENDENT",
   );
+
   return (
-    <section className="panel">
-      <h2>One JIR → Windows and Linux</h2>
-      <p>
-        Emit genuine target-specific LLVM objects from the same forensic
-        program. Cross-target final linking and execution require the
-        corresponding worker SDK and host; they are not tested by the host
-        fixture gate.
-      </p>
-      <div className="forge-inputs">
-        {["linux-x86_64", "linux-aarch64", "windows-x86_64"].map((target) => (
-          <label key={target}>
+    <section className="panel forge-module target-builder">
+      <div className="module-heading">
+        <Icon name="monitor" />
+        <div>
+          <div className="eyebrow">TARGET BUILDER</div>
+          <h2>Cross-platform targets</h2>
+          <p>
+            Emit genuine target-specific LLVM objects from the same forensic
+            program.
+          </p>
+        </div>
+      </div>
+      <div className="target-options">
+        {(
+          [
+            ["linux-x86_64", "Linux x86_64", "64-bit Intel / AMD"],
+            ["linux-aarch64", "Linux ARM64", "64-bit ARM"],
+            ["windows-x86_64", "Windows x86_64", "64-bit Intel / AMD"],
+          ] as const
+        ).map(([target, name, architecture]) => (
+          <label
+            key={target}
+            className={`target-card ${targets.includes(target) ? "selected" : ""}`}
+          >
             <input
               type="checkbox"
               checked={targets.includes(target)}
-              onChange={(e) =>
+              onChange={(event) =>
                 setTargets(
-                  e.target.checked
+                  event.target.checked
                     ? [...targets, target]
-                    : targets.filter((t) => t !== target),
+                    : targets.filter((item) => item !== target),
                 )
               }
             />
-            {target}
+            <span>
+              <strong>{name}</strong>
+              <small>{architecture}</small>
+            </span>
           </label>
         ))}
       </div>
+      <p className="module-note">
+        Final linking and execution require the corresponding worker SDK and
+        host; they are not tested by the host fixture gate.
+      </p>
       <button
         disabled={!compilation || !targets.length || busy}
         onClick={async () => {
@@ -70,14 +96,18 @@ export function TargetBuilds({ compilation }: { compilation: string }) {
               body: JSON.stringify({ targets }),
             });
             await variants.refetch();
-          } catch (e) {
-            setError(e instanceof Error ? e.message : "Target build failed");
+          } catch (failure) {
+            setError(
+              failure instanceof Error
+                ? failure.message
+                : "Target build failed",
+            );
           } finally {
             setBusy(false);
           }
         }}
       >
-        {busy ? "Compiling targets…" : "Build selected targets"}
+        {busy ? "Compiling targetsâ€¦" : "Build selected targets"}
       </button>
       {(error || variants.error) && (
         <p role="alert">{error || variants.error?.message}</p>
@@ -94,31 +124,31 @@ export function TargetBuilds({ compilation }: { compilation: string }) {
                   "Object SHA-256",
                   "Bytes",
                   "Final link",
-                ].map((t) => (
-                  <th key={t}>{t}</th>
+                ].map((title) => (
+                  <th key={title}>{title}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {rows.map((v) => {
-                const m = object(v.manifest);
+              {rows.map((variant) => {
+                const manifest = object(variant.manifest);
                 return (
-                  <tr key={v.id}>
+                  <tr key={variant.id}>
                     <td>
                       <Link href={`/variants?compilation=${compilation}`}>
-                        {String(m.target_triple)}
+                        {String(manifest.target_triple)}
                       </Link>
                     </td>
                     <td>
-                      <Hash value={m.jir_hash} />
+                      <Hash value={manifest.jir_hash} />
                     </td>
                     <td>
-                      <Hash value={m.llvm_ir_hash} />
+                      <Hash value={manifest.llvm_ir_hash} />
                     </td>
                     <td>
-                      <Hash value={v.content_hash} />
+                      <Hash value={variant.content_hash} />
                     </td>
-                    <td>{String(m.artifact_size_bytes)}</td>
+                    <td>{String(manifest.artifact_size_bytes)}</td>
                     <td>ENVIRONMENT DEPENDENT</td>
                   </tr>
                 );

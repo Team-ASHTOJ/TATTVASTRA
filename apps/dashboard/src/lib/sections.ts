@@ -4,11 +4,11 @@ export const sections = [
     name: "Command Center",
     group: "OVERVIEW",
     phase: "P0",
-    description: "The current operating picture across JOCKY.",
+    description: "The current operating picture across Tattvastra.",
   },
   {
     slug: "workbench",
-    name: "JOCKY Workbench",
+    name: "Tattvastra Workbench",
     group: "BUILD",
     phase: "P1–P3",
     description:
@@ -49,14 +49,14 @@ export const sections = [
     name: "Endpoints",
     group: "OPERATE",
     phase: "P5–P6",
-    description: "Connect and inspect Windows and Linux JOCKY agents.",
+    description: "Connect and inspect Windows and Linux Tattvastra agents.",
   },
   {
     slug: "investigations",
     name: "Investigations",
     group: "OPERATE",
     phase: "P5–P7",
-    description: "Launch and follow multi-endpoint JOCKY investigations.",
+    description: "Launch and follow multi-endpoint Tattvastra investigations.",
   },
   {
     slug: "findings",

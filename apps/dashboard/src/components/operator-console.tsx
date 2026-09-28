@@ -13,6 +13,7 @@ import {
   stageTotal,
 } from "../lib/product-data";
 import { useControlEvents } from "../lib/use-control-events";
+import { Icon, type IconName } from "./icons";
 type Row = { id: string; [key: string]: unknown };
 type Data = {
   cases: Row[];
@@ -144,7 +145,7 @@ export function OperatorConsole({ section }: { section: string }) {
   if (user.error)
     return (
       <section className="panel">
-        <h2>Sign in to JOCKY</h2>
+        <h2>Sign in to Tattvastra</h2>
         <Link className="button" href="/login">
           Operator sign in
         </Link>
@@ -256,8 +257,23 @@ export function OperatorConsole({ section }: { section: string }) {
                     `${d.manifests.filter((m) => m.signature_verified).length} manifests verified`,
                     "/evidence",
                   ],
-                ].map(([label, value, url]) => (
+                ].map(([label, value, url], index) => (
                   <Link key={str(label)} href={str(url)}>
+                    <Icon
+                      name={
+                        (
+                          [
+                            "monitor",
+                            "code",
+                            "workflow",
+                            "branch",
+                            "search",
+                            "triangle",
+                            "shield",
+                          ] as IconName[]
+                        )[index]!
+                      }
+                    />
                     <small>{str(label)}</small>
                     <strong>{str(value)}</strong>
                     <span>→</span>
@@ -278,8 +294,15 @@ export function OperatorConsole({ section }: { section: string }) {
                 d.manifests.filter((r) => r.signature_verified).length,
                 "Verified manifests",
               ],
-            ].map(([v, k]) => (
+            ].map(([v, k], index) => (
               <section className="panel metric" key={String(k)}>
+                <Icon
+                  name={
+                    (["monitor", "search", "triangle", "shield"] as IconName[])[
+                      index
+                    ]!
+                  }
+                />
                 <strong>{v}</strong>
                 <span>{k}</span>
               </section>
@@ -2676,6 +2699,7 @@ function GraphView({ d }: { d: Data }) {
           const p = positions.get(str(n.id))!;
           return (
             <g
+              data-node-type={str(n.type).toLowerCase()}
               className={selected?.id === n.id ? "selected-node" : ""}
               key={str(n.id)}
               role="button"

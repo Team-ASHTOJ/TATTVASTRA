@@ -2,6 +2,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { sections } from "../lib/sections";
+import { Icon, type IconName } from "./icons";
+
+const sectionIcons: Record<string, IconName> = {
+  "": "dashboard",
+  workbench: "code",
+  language: "book",
+  compiler: "workflow",
+  forge: "hammer",
+  variants: "branch",
+  endpoints: "monitor",
+  investigations: "search",
+  findings: "triangle",
+  graph: "network",
+  timeline: "clock",
+  evidence: "shield",
+  drivers: "cpu",
+  performance: "activity",
+  architecture: "database",
+};
 
 export function Navigation() {
   const pathname = usePathname();
@@ -17,7 +36,7 @@ export function Navigation() {
             href={`/${section.slug}`}
             aria-current={pathname === `/${section.slug}` ? "page" : undefined}
           >
-            <span className="nav-dot" aria-hidden="true" />
+            <Icon name={sectionIcons[section.slug] ?? "activity"} />
             {section.slug === "architecture"
               ? "Requirement Coverage"
               : section.name}

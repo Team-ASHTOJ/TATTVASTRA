@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { TargetBuilds } from "./target-builds";
 import { object, shortHash } from "../lib/product-data";
+import { Icon } from "./icons";
 
 type Row = Record<string, unknown> & { id: string };
 const string = (v: unknown) => (v == null ? "Not measured" : String(v));
@@ -93,13 +94,18 @@ export function BuildForge() {
           Open Workbench
         </Link>
       </div>
-      <section className="panel">
-        <h2>Build a delivery set</h2>
-        <p>
-          Validated source and typed JIR feed seeded LLVM lowering. Real object
-          bytes must pass deterministic fixture and equivalence gates before
-          signed provenance is published.
-        </p>
+      <section className="panel forge-module delivery-set">
+        <div className="module-heading">
+          <Icon name="hammer" />
+          <div>
+            <div className="eyebrow">DELIVERY SET</div>
+            <h2>Build a delivery set</h2>
+            <p>
+              Configure seeded, fixture-verified builds from a successful
+              compilation.
+            </p>
+          </div>
+        </div>
         <div className="forge-inputs">
           <label>
             Compilation
@@ -156,7 +162,7 @@ export function BuildForge() {
             />
           </label>
         </div>
-        <p className="muted">
+        <p className="module-note">
           Native worker packaging and cross-target delivery are not gates in
           this sprint. Timings come from measured compiler stages; no endpoint
           execution occurs here.
@@ -374,34 +380,68 @@ export function BuildForge() {
         </section>
       )}
       <TargetBuilds compilation={chosen} />
-      <section className="panel">
-        <h2>Protected configuration</h2>
-        <p>
-          AES-256-GCM literal pools are implemented by the compiler. Use{" "}
-          <code>
-            runtime &#123; backend llvm execution memory protect_literals true
-            &#125;
-          </code>{" "}
-          only with an externally provisioned key.
-        </p>
-        <p>
-          {caps.data?.literal_key_configured
-            ? "External key configured; protected sources can pass fixture gates."
-            : "No external literal key configured. Protected builds fail explicitly; keys are never embedded in artifacts or displayed here."}
-        </p>
-        <p className="muted">
-          Compiler environment: JOCKY_LITERAL_KEY_HEX / JOCKY_LITERAL_KEY_ID.
-          Endpoint key distribution remains PARTIAL. Keys are provisioned
-          separately from generated artifacts.
+      <section className="panel forge-module protected-config">
+        <div className="module-heading">
+          <Icon name="shield" />
+          <div>
+            <div className="eyebrow">PROTECTED CONFIGURATION</div>
+            <h2>Protected configuration</h2>
+          </div>
+        </div>
+        <dl className="forge-info-grid">
+          <div>
+            <dt>Status</dt>
+            <dd>
+              {caps.data?.literal_key_configured
+                ? "External key configured; protected sources can pass fixture gates."
+                : "No external literal key configured. Protected builds fail explicitly."}
+            </dd>
+          </div>
+          <div>
+            <dt>Literal protection</dt>
+            <dd>AES-256-GCM literal pools</dd>
+          </div>
+          <div>
+            <dt>Key material</dt>
+            <dd>
+              <code>JOCKY_LITERAL_KEY_HEX</code>
+            </dd>
+          </div>
+          <div>
+            <dt>Key identity</dt>
+            <dd>
+              <code>JOCKY_LITERAL_KEY_ID</code>
+            </dd>
+          </div>
+          <div>
+            <dt>Runtime declaration</dt>
+            <dd>
+              <code>
+                runtime &#123; backend llvm execution memory protect_literals
+                true &#125;
+              </code>
+            </dd>
+          </div>
+        </dl>
+        <p className="module-note">
+          Keys are provisioned separately from generated artifacts and are never
+          embedded or displayed here. Endpoint distribution remains partial.
         </p>
       </section>
-      <section className="panel">
-        <h2>Build history</h2>
+      <section className="panel forge-module build-history">
+        <div className="module-heading">
+          <Icon name="clock" />
+          <div>
+            <div className="eyebrow">BUILD HISTORY</div>
+            <h2>Build history</h2>
+          </div>
+        </div>
         {!runs.data?.length ? (
-          <p>
-            No builds yet. Compile a program in Workbench, then build its
-            variants here.
-          </p>
+          <div className="empty-state forge-empty">
+            <Icon name="database" />
+            <h3>No builds yet</h3>
+            <p>Compile a program in Workbench, then build its variants here.</p>
+          </div>
         ) : (
           <div className="table-scroll">
             <table>

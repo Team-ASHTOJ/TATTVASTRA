@@ -41,7 +41,7 @@ export default async function SectionPage({
         <div className="eyebrow">BUILD / NATIVE COMPILER</div>
         <div className="page-heading">
           <div>
-            <h1>{explorer ? "Compiler Explorer" : "JOCKY Workbench"}</h1>
+            <h1>{explorer ? "Compiler Explorer" : "Tattvastra Workbench"}</h1>
             <p>
               {explorer
                 ? "Inspect persisted frontend, JIR, LLVM, and execution-plan outputs."

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { Navigation } from "../components/navigation";
 import { Providers } from "../components/providers";
 import "./globals.css";
@@ -7,8 +8,8 @@ import { AccountMenu } from "../components/account-menu";
 import { ModeIndicator } from "../components/demo-presentation";
 
 export const metadata: Metadata = {
-  title: "JOCKY | Forensic Operations",
-  description: "One Language. Every Endpoint. No Noise.",
+  title: "Tattvastra | Forensic Operations",
+  description: "Precision investigation across every endpoint.",
   icons: { icon: "/icon.svg" },
 };
 
@@ -24,9 +25,26 @@ export default function RootLayout({
           </a>
           <aside className="sidebar">
             <Link href="/" className="brand">
-              <span className="brand-mark">J</span>
-              <span>
-                JOCKY<small>FORENSIC OPERATIONS</small>
+              <Image
+                className="brand-mark"
+                src="/tattvastra-mark.png"
+                alt=""
+                width={824}
+                height={907}
+                priority
+              />
+              <span className="brand-copy">
+                <Image
+                  className="brand-wordmark"
+                  src="/tattvastra-wordmark.png"
+                  alt="Tattvastra"
+                  width={1355}
+                  height={146}
+                  priority
+                />
+                <small>
+                  JOCKY-based cross-platform forensic scripting language.
+                </small>
               </span>
             </Link>
             <Navigation />
@@ -36,13 +54,13 @@ export default function RootLayout({
           </aside>
           <div className="workspace">
             <header className="topbar">
-              <span>One Language. Every Endpoint. No Noise.</span>
+              <span>Precision investigation across every endpoint.</span>
               <ModeIndicator />
               <AccountMenu />
             </header>
             <main id="main">{children}</main>
             <footer className="workspace-footer">
-              JOCKY / FORENSIC OPERATIONS
+              TATTVASTRA / FORENSIC OPERATIONS
               <span>
                 Capability status is explicit. Measurements require execution.
               </span>

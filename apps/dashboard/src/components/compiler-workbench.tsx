@@ -447,10 +447,11 @@ function Explorer({
   const current = selected ?? compilations[0];
   return (
     <div className="explorer-shell">
-      <section className="panel">
+      <section className="panel explorer-selector">
         <div className="panel-heading">
           <div>
-            <h2>Persisted compilations</h2>
+            <div className="eyebrow">RECENT / PERSISTED COMPILATIONS</div>
+            <h2>Compilation selector</h2>
             <p>
               Choose a durable compilation record to inspect its actual outputs.
             </p>
@@ -459,6 +460,21 @@ function Explorer({
             Open in Workbench
           </Link>
         </div>
+        {current && (
+          <div className="current-compilation">
+            <StatusBadge
+              tone={current.status === "SUCCESS" ? "good" : "warning"}
+            >
+              {current.status}
+            </StatusBadge>
+            <code title={current.id}>{current.id.slice(0, 12)}...</code>
+            <time>
+              {current.created_at
+                ? new Date(current.created_at).toLocaleString()
+                : "Timestamp unavailable"}
+            </time>
+          </div>
+        )}
         <div className="compilation-list">
           {compilations.slice(0, 12).map((item) => (
             <button
@@ -466,8 +482,15 @@ function Explorer({
               className={current?.id === item.id ? "active" : "secondary"}
               onClick={() => onSelect(item)}
             >
-              <strong>{item.status}</strong>
-              <small>{item.id}</small>
+              <strong>
+                <span aria-hidden="true" /> {item.status}
+              </strong>
+              <code title={item.id}>{item.id.slice(0, 12)}...</code>
+              <small>
+                {item.created_at
+                  ? new Date(item.created_at).toLocaleString()
+                  : "Timestamp unavailable"}
+              </small>
             </button>
           ))}
         </div>
