@@ -331,6 +331,7 @@ const std::map<std::string, OpcodeSpec> &opcodes() {
       {"DRIVER_HASH", {"DRIVER", "read", "bounded_content_io", 0, 0}},
       {"DRIVER_RISK_LOOKUP", {"DRIVER", "pure", "linear_transform", 1, 1}},
       {"MODULE_ENUMERATE", {"DRIVER", "read", "bounded_inventory", 0, 0}},
+      {"PYTHON_CALL", {"ANALYSIS", "emit", "bounded_output", 0, 0}},
       {"FILTER", {"ANALYSIS", "pure", "linear_transform", 1, 32768}},
       {"LIMIT", {"ANALYSIS", "pure", "linear_transform", 1, 1}},
       {"PROJECT", {"ANALYSIS", "pure", "linear_transform", 1, 1}},
@@ -349,9 +350,9 @@ const std::map<std::string, OpcodeSpec> &opcodes() {
 }
 const std::set<std::string> &capability_names() {
   static const std::set<std::string> names = {
-      "system.read",         "users.read",         "process.read",    "network.read",
-      "filesystem.metadata", "filesystem.content", "filesystem.read", "logs.read",
-      "persistence.read",    "services.read",      "drivers.read"};
+      "python.interop", "system.read",         "users.read",         "process.read",
+      "network.read",   "filesystem.metadata", "filesystem.content", "filesystem.read",
+      "logs.read",      "persistence.read",    "services.read",      "drivers.read"};
   return names;
 }
 } // namespace jocky

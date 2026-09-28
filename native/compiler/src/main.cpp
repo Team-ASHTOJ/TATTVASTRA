@@ -375,19 +375,35 @@ int main(int argc, char **argv) {
       if (status != JOCKY_OK) {
         auto detail = jocky_rt_last_error(context);
         std::string message(detail.message, detail.message_size);
+        auto code = std::string(detail.code, detail.code_size);
+        if (code.starts_with("PYTHON_"))
+          message = code + ":\n" + message;
         jocky_rt_context_destroy(context);
         jocky::fail("E266", "ORC execution failed: " + (error.empty() ? message : error), {});
       }
       auto semantic_hash = fixture_hash(context);
+      llvm::json::Object python_results;
+      const char *name, *value;
+      size_t name_size, value_size;
+      for (size_t index = 0;
+           jocky_rt_fixture_python_result(context, index, &name, &name_size, &value, &value_size);
+           ++index)
+        python_results[std::string(name, name_size)] = std::string(value, value_size);
       jocky_rt_context_destroy(context);
       variant.manifest.semantic_result_hash = semantic_hash;
-      if (json)
-        std::cout << jocky::canonical_json(execution_json(variant, variant.profile)) << '\n';
-      else
+      if (json) {
+        auto output = execution_json(variant, variant.profile);
+        if (!python_results.empty())
+          output["python_results"] = llvm::json::Object(python_results);
+        std::cout << jocky::canonical_json(std::move(output)) << '\n';
+      } else
         std::cout << "PASS: ORC executed compiler-generated code in this JOCKY process\n"
                   << "Fixture: SIMULATED deterministic collector\n"
                   << "Semantic result SHA-256: " << semantic_hash << '\n'
                   << jocky::canonical_json(jocky::profile_json(variant.profile)) << '\n';
+      if (!json)
+        for (const auto &entry : python_results)
+          std::cout << entry.first.str() << ": " << entry.second.getAsString()->str() << '\n';
       return 0;
     } else if (cli.command == "variants" || cli.command == "benchmark") {
       validate_target_mode(cli, "native");

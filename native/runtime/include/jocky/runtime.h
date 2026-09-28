@@ -131,6 +131,10 @@ JOCKY_RUNTIME_API jocky_status jocky_rt_analysis(jocky_context *, uint32_t, cons
 
 /* Deterministic test/CLI fixture. Every result is simulation=true, never REAL evidence. */
 JOCKY_RUNTIME_API jocky_status jocky_rt_fixture_context_create(jocky_context **out);
+/* Read-only result view; valid until the context is modified or destroyed. */
+JOCKY_RUNTIME_API int jocky_rt_fixture_python_result(const jocky_context *, size_t,
+                                                     const char **name, size_t *name_size,
+                                                     const char **value, size_t *value_size);
 JOCKY_RUNTIME_API int jocky_rt_fixture_is_simulation(const jocky_context *context);
 JOCKY_RUNTIME_API jocky_status jocky_rt_fixture_semantic_hash(const jocky_context *context,
                                                               char *hex_out, size_t hex_out_size);

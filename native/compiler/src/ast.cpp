@@ -28,7 +28,7 @@ static llvm::json::Object option_json(const Option &o) {
 }
 static llvm::json::Object statement_json(const Statement &s) {
   static const char *names[] = {"collect",  "let",    "correlate", "finding",
-                                "timeline", "report", "analyze"};
+                                "timeline", "report", "analyze",   "python_call"};
   llvm::json::Array options, pipeline, children;
   for (const auto &o : s.options)
     options.push_back(option_json(o));
@@ -68,17 +68,23 @@ llvm::json::Object ast_json(const Program &p) {
     budget[key] = option_json(o);
   for (const auto &s : p.statements)
     statements.push_back(statement_json(s));
-  return llvm::json::Object{{"schema_version", "1.0.0"},
-                            {"kind", "Program"},
-                            {"case", p.case_name},
-                            {"hunt", p.hunt_name},
-                            {"span", span_json(p.span)},
-                            {"selectors", std::move(selectors)},
-                            {"target_os", strings(p.target_os)},
-                            {"runtime", std::move(runtime)},
-                            {"variant", std::move(variant)},
-                            {"budget", std::move(budget)},
-                            {"capabilities", strings(p.capabilities)},
-                            {"statements", std::move(statements)}};
+  llvm::json::Object imports;
+  for (const auto &[alias, module] : p.python_imports)
+    imports[alias] = module;
+  auto result = llvm::json::Object{{"schema_version", "1.0.0"},
+                                   {"kind", "Program"},
+                                   {"case", p.case_name},
+                                   {"hunt", p.hunt_name},
+                                   {"span", span_json(p.span)},
+                                   {"selectors", std::move(selectors)},
+                                   {"target_os", strings(p.target_os)},
+                                   {"runtime", std::move(runtime)},
+                                   {"variant", std::move(variant)},
+                                   {"budget", std::move(budget)},
+                                   {"capabilities", strings(p.capabilities)},
+                                   {"statements", std::move(statements)}};
+  if (!imports.empty())
+    result["python_imports"] = std::move(imports);
+  return result;
 }
 } // namespace jocky

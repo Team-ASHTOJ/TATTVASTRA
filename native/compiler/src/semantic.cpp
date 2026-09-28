@@ -66,6 +66,28 @@ void SemanticAnalyzer::statement(const Statement &s) {
   if (reported_)
     fail("E239", "Report export must be the final statement.", s.span);
   switch (s.kind) {
+  case Statement::Kind::PythonCall: {
+    auto module = program_.python_imports.find(s.collector);
+    if (module == program_.python_imports.end())
+      fail("E211", "Unknown Python import alias `" + s.collector + "`.", s.span);
+    auto cap = require("python.interop", s.span, "python call");
+    llvm::json::Array arguments;
+    for (const auto &arg : s.expression->children)
+      arguments.push_back(
+          llvm::json::Object{{"type", type_name(literal_type(*arg))}, {"value", arg->value}});
+    Type type{TypeKind::Dataset,
+              false,
+              "PythonResult",
+              {{"name", scalar(TypeKind::String)}, {"value", scalar(TypeKind::String)}}};
+    auto id = emit("PYTHON_CALL", type, {},
+                   llvm::json::Object{{"module", module->second},
+                                      {"function", s.expression->value},
+                                      {"arguments", std::move(arguments)},
+                                      {"result_name", s.name}},
+                   s.span, {cap});
+    bind(s.name, type, id, s.span);
+    break;
+  }
   case Statement::Kind::Collect:
     collect(s);
     break;

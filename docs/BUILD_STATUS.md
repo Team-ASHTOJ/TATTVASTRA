@@ -2,6 +2,15 @@
 
 # Build status
 
+## Local Python package interoperability — 2026-09-29
+
+Status: **VERIFIED for local ORC execution in the Python-capable LLVM container.**
+
+- Rebuilt `jockey-native:foundation` from `infra/docker/native.Dockerfile` with Python 3 development support. The runtime compiled with `JOCKY_WITH_PYTHON=1`; `jockyc` links `libpython3.12`. The existing `jocky` container launcher mounts `JOCKY_PYTHON_PACKAGES_DIR` (or `~/.jocky/python/site-packages`) read-only for local runs.
+- `PYTHONPATH=cli/src jocky install humanize`: PASS; `humanize` is present in `~/.jocky/python/site-packages`. `jocky check examples/python/humanize_demo.jky`, `jocky jir examples/python/humanize_demo.jky --json`, `jocky llvm examples/python/humanize_demo.jky`, and `jocky compile examples/python/humanize_demo.jky --target host --execution native --output /tmp/jocky-python-demo.o`: PASS; object non-empty. JIR contains `PYTHON_CALL`, LLVM contains `jocky_rt_analysis`.
+- `jocky examples/python/humanize_demo.jky`: PASS through LLVM ORC, `formatted: 1,234,567`. `jocky examples/python/humanize_demo.jky --json`: PASS, `python_results.formatted` is `1,234,567`. With `JOCKY_PYTHON_PACKAGES_DIR` set to a temporary empty directory, the same run failed cleanly with `PYTHON_MODULE_UNAVAILABLE`.
+- Docker image build ran the native/compiler/runtime suite: 39/39 PASS, including focused Python interop. `PYTHONPATH=cli/src .venv/bin/python -m pytest cli/tests/test_python_install.py -q`: 9/9 PASS. `git diff --check`: PASS.
+
 ## Hunt-scoped forensic investigation reports — 2026-09-29
 
 Status: **IMPLEMENTED and VERIFIED within persisted investigation data.**

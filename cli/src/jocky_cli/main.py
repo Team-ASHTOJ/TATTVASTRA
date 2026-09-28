@@ -9,6 +9,7 @@ output; see docs/JOCKY_CLI.md for what is and is not available.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -123,6 +124,7 @@ usage:
   {PROGRAM} <file.jky> [options]          compile and run a hunt file
   {PROGRAM} <command> <file.jky> [...]    forward <command> to jockyc
   {PROGRAM} <composed> <file.jky> [...]   composed local commands (below)
+  {PROGRAM} install <package-spec>      install a local Python package
   {PROGRAM} doctor                        report environment readiness
   {PROGRAM} --help | help | --version
 
@@ -374,6 +376,31 @@ def main(argv: list[str] | None = None) -> int:
     if first == "--version":
         print(f"{PROGRAM} {__version__}")
         return 0
+    if first == "install":
+        if len(args) != 2 or not args[1] or args[1].startswith("-"):
+            print("jocky: install requires exactly one package specification", file=sys.stderr)
+            return EXIT_USAGE
+        try:
+            target = (
+                Path(os.environ.get("JOCKY_PYTHON_PACKAGES_DIR", "~/.jocky/python/site-packages"))
+                .expanduser()
+                .resolve()
+            )
+            target.mkdir(parents=True, exist_ok=True)
+            status = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "--target", str(target), args[1]],
+                shell=False,
+                check=False,
+            ).returncode
+        except OSError as error:
+            print(f"jocky: {error}", file=sys.stderr)
+            return EXIT_UNAVAILABLE
+        except KeyboardInterrupt:
+            return EXIT_INTERRUPTED
+        if status == 0:
+            print(f"Installed {args[1]} into JOCKY Python environment")
+            print(f"Location: {target}")
+        return status
     if first == "doctor":
         return doctor()
     if first in COMPOSED:

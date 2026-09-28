@@ -1,0 +1,9 @@
+hunt "Python Package Interop" {
+    capabilities {
+        python.interop
+    }
+
+    python import "humanize" as humanize
+
+    python call humanize.intcomma(1234567) as formatted
+}

@@ -1,3 +1,4 @@
+#include "jocky/python_bridge.h"
 #include "jocky/runtime.h"
 
 #include <array>
@@ -22,6 +23,8 @@ struct LiteralPool {
 
 struct FixtureHost {
   std::string trace;
+  std::map<jocky_dataset_handle, jocky::PythonResult> python_datasets;
+  std::map<std::string, std::string> python_results;
   std::map<jocky_dataset_handle, size_t> references;
 };
 
@@ -70,23 +73,12 @@ void set_error(jocky_context *context, jocky_status status, std::string code, st
 }
 
 bool allowed_analysis(std::string_view opcode) {
-  static const std::set<std::string_view> allowed{"EVENT_FILTER",
-                                                  "EVENT_NORMALIZE",
-                                                  "DRIVER_RISK_LOOKUP",
-                                                  "FILTER",
-                                                  "LIMIT",
-                                                  "PROJECT",
-                                                  "SORT",
-                                                  "GROUP",
-                                                  "JOIN",
-                                                  "CORRELATE",
-                                                  "TIMELINE",
-                                                  "FINDING_CREATE",
-                                                  "BIND",
-                                                  "ARTIFACT_STORE",
-                                                  "ARTIFACT_HASH",
-                                                  "MANIFEST_CREATE",
-                                                  "REPORT_GENERATE"};
+  static const std::set<std::string_view> allowed{
+      "PYTHON_CALL",     "EVENT_FILTER",   "EVENT_NORMALIZE", "DRIVER_RISK_LOOKUP",
+      "FILTER",          "LIMIT",          "PROJECT",         "SORT",
+      "GROUP",           "JOIN",           "CORRELATE",       "TIMELINE",
+      "FINDING_CREATE",  "BIND",           "ARTIFACT_STORE",  "ARTIFACT_HASH",
+      "MANIFEST_CREATE", "REPORT_GENERATE"};
   return allowed.contains(opcode);
 }
 
@@ -175,6 +167,39 @@ jocky_status dispatch(jocky_context *context, jocky_operation operation, uint32_
     config = decrypted.data();
     config_size = decrypted.size();
   }
+  if (operation == JOCKY_OP_ANALYSIS && opcode == "PYTHON_CALL") {
+    if (!context->fixture) {
+      set_error(context, JOCKY_UNAVAILABLE, "PYTHON_UNAVAILABLE",
+                "Python interop requires the local runtime.");
+      return JOCKY_UNAVAILABLE;
+    }
+    try {
+      jocky::PythonResult result;
+      auto status = jocky::python_call(
+          std::string_view(reinterpret_cast<const char *>(config), config_size), result);
+      if (!decrypted.empty())
+        OPENSSL_cleanse(decrypted.data(), decrypted.size());
+      if (status != JOCKY_OK) {
+        set_error(context, status, result.code, result.message);
+        return status;
+      }
+      auto *fixture = static_cast<FixtureHost *>(context->host.user_data);
+      // A real one-row PythonResult dataset, owned by the existing handle lifecycle.
+      uint64_t handle = 1;
+      while (fixture->references.contains(handle))
+        ++handle;
+      fixture->python_datasets.emplace(handle, result);
+      fixture->references[handle] = 1;
+      fixture->python_results[result.name] = result.value;
+      fixture->trace +=
+          "PYTHON_CALL:" + hex_digest(result.name) + ":" + hex_digest(result.value) + "\n";
+      *out = handle;
+      return JOCKY_OK;
+    } catch (...) {
+      set_error(context, JOCKY_INTERNAL_ERROR, "PYTHON_CALL_FAILED", "Cannot store Python result.");
+      return JOCKY_INTERNAL_ERROR;
+    }
+  }
   auto status =
       context->host.invoke(context->host.user_data, operation, instruction_id, opcode.data(),
                            opcode.size(), config, config_size, inputs, input_count, out);
@@ -236,8 +261,10 @@ jocky_status fixture_release(void *user_data, jocky_dataset_handle handle) {
   auto found = fixture->references.find(handle);
   if (found == fixture->references.end())
     return JOCKY_INVALID_ARGUMENT;
-  if (--found->second == 0)
+  if (--found->second == 0) {
+    fixture->python_datasets.erase(handle);
     fixture->references.erase(found);
+  }
   return JOCKY_OK;
 }
 
@@ -391,4 +418,20 @@ jocky_status jocky_rt_fixture_semantic_hash(const jocky_context *context, char *
   std::memcpy(hex_out, value.data(), value.size());
   hex_out[64] = '\0';
   return JOCKY_OK;
+}
+
+int jocky_rt_fixture_python_result(const jocky_context *context, size_t index, const char **name,
+                                   size_t *name_size, const char **value, size_t *value_size) {
+  if (!context || !context->fixture || !name || !name_size || !value || !value_size)
+    return 0;
+  const auto &results = static_cast<FixtureHost *>(context->host.user_data)->python_results;
+  if (index >= results.size())
+    return 0;
+  auto entry = results.begin();
+  std::advance(entry, index);
+  *name = entry->first.data();
+  *name_size = entry->first.size();
+  *value = entry->second.data();
+  *value_size = entry->second.size();
+  return 1;
 }

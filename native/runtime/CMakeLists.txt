@@ -11,3 +11,18 @@ if(BUILD_TESTING)
   target_link_libraries(runtime_tests PRIVATE jocky_runtime GTest::gtest_main)
   gtest_discover_tests(runtime_tests)
 endif()
+
+find_package(Python3 COMPONENTS Development QUIET)
+target_sources(jocky_runtime PRIVATE src/python_bridge.cpp)
+if(Python3_Development_FOUND)
+  target_compile_definitions(jocky_runtime PRIVATE JOCKY_WITH_PYTHON=1)
+  target_link_libraries(jocky_runtime PUBLIC Python3::Python)
+endif()
+
+if(BUILD_TESTING AND UNIX)
+  add_executable(python_bridge_test tests/python_bridge_test.cpp)
+  target_link_libraries(python_bridge_test PRIVATE jocky_runtime)
+  target_compile_options(python_bridge_test PRIVATE -UNDEBUG)
+  add_test(NAME python_bridge_runtime COMMAND python_bridge_test
+    ${CMAKE_CURRENT_BINARY_DIR}/python-fixture)
+endif()

@@ -27,7 +27,7 @@ struct PipelineOp {
   Span span;
 };
 struct Statement {
-  enum class Kind { Collect, Let, Correlate, Finding, Timeline, Report, Analyze } kind;
+  enum class Kind { Collect, Let, Correlate, Finding, Timeline, Report, Analyze, PythonCall } kind;
   std::string name;
   std::string collector;
   std::vector<Option> options;
@@ -56,6 +56,7 @@ struct Program {
   std::map<std::string, Option> variant;
   std::map<std::string, Option> budgets;
   std::vector<std::string> capabilities;
+  std::map<std::string, std::string> python_imports;
   std::vector<Statement> statements;
 };
 llvm::json::Object expression_json(const ExprPtr &expression);

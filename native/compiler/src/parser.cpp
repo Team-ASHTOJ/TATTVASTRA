@@ -188,7 +188,35 @@ Statement Parser::statement() {
   auto token = take();
   Statement s{};
   s.span.start = token.span.start;
-  if (token.text == "collect") {
+  if (token.text == "python") {
+    s.kind = Statement::Kind::PythonCall;
+    expect("call");
+    s.collector = name(true);
+    expect(".");
+    auto function = name(true);
+    s.expression = std::make_shared<Expr>(Expr{Expr::Kind::Call, function, "", token.span, {}});
+    expect("(");
+    if (!match(")")) {
+      do {
+        bool negative = match("-");
+        auto literal = peek();
+        if ((negative && literal.kind != TokenKind::Number) ||
+            (literal.kind != TokenKind::String && literal.kind != TokenKind::Number &&
+             literal.text != "true" && literal.text != "false"))
+          fail("E120", "Python arguments must be string, int, float or bool literals.",
+               literal.span);
+        take();
+        auto kind = literal.kind == TokenKind::String   ? "string"
+                    : literal.kind == TokenKind::Number ? "number"
+                                                        : "bool";
+        s.expression->children.push_back(std::make_shared<Expr>(Expr{
+            Expr::Kind::Literal, (negative ? "-" : "") + literal.value, kind, literal.span, {}}));
+      } while (match(","));
+      expect(")");
+    }
+    expect("as");
+    s.name = name(true);
+  } else if (token.text == "collect") {
     s.kind = Statement::Kind::Collect;
     s.collector = name();
     if (s.collector == "scheduled" && match("tasks"))
@@ -338,6 +366,21 @@ Program Parser::parse() {
   bool has_statements = false;
   while (!match("}")) {
     auto key = peek();
+    if (key.text == "python" && tokens_.at(cursor_ + 1).text == "import") {
+      if (has_statements)
+        fail("E128", "Declarations must precede statements.", key.span);
+      take();
+      take();
+      if (peek().kind != TokenKind::String)
+        fail("E120", "Python module name must be quoted.", peek().span);
+      auto module = take();
+      expect("as");
+      auto alias = name(true);
+      if (!p.python_imports.emplace(alias, module.value).second)
+        fail("E123", "Duplicate Python import alias `" + alias + "`.", key.span);
+      match(";");
+      continue;
+    }
     bool declaration = key.text == "targets" || key.text == "target" || key.text == "runtime" ||
                        key.text == "capabilities" || key.text == "budget" || key.text == "group" ||
                        key.text == "host" || key.text == "os";

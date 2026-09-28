@@ -55,3 +55,9 @@ if(BUILD_TESTING)
   add_test(NAME compiler_rejects_missing_source COMMAND jockyc check missing.jky)
   set_tests_properties(compiler_rejects_missing_source PROPERTIES WILL_FAIL TRUE)
 endif()
+
+if(BUILD_TESTING)
+  add_test(NAME python_interop
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/python_interop_test.py
+            $<TARGET_FILE:jockyc>)
+endif()

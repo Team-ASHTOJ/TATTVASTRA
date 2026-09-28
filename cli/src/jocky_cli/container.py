@@ -23,6 +23,7 @@ PATH_OPTIONS = ("--output",)
 
 #: Mount point for an --output that lies outside the work root.
 OUTPUT_MOUNT = "/jocky-out"
+PYTHON_PACKAGES_MOUNT = "/jocky-python/site-packages"
 
 #: Suffixes that always name a file the compiler reads.
 SOURCE_SUFFIXES = (".jky", ".json")
@@ -169,4 +170,11 @@ def container_command(docker: str, args: list[str], cwd: Path) -> list[str]:
     argv = [docker, "run", "--rm", "-w", CONTAINER_WORKDIR]
     for host, container in mounts.items():
         argv += ["-v", f"{host}:{container}"]
+    if args and args[0] == "run":
+        packages = _absolute(
+            os.environ.get("JOCKY_PYTHON_PACKAGES_DIR", "~/.jocky/python/site-packages"), cwd
+        )
+        if packages.is_dir():
+            argv += ["-v", f"{packages}:{PYTHON_PACKAGES_MOUNT}:ro"]
+            argv += ["-e", f"JOCKY_PYTHON_PACKAGES_DIR={PYTHON_PACKAGES_MOUNT}"]
     return [*argv, DOCKER_IMAGE, DOCKER_JOCKYC, *translated]
