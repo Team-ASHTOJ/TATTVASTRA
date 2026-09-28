@@ -158,7 +158,7 @@ test("complete operator journey uses real enrollment, compiler, hunt and evidenc
     await expect(page.getByLabel("JOCKY source")).toHaveValue("");
     await page.getByText("Load Example", { exact: true }).click();
     await page
-      .getByRole("button", { name: "System Baseline", exact: true })
+      .getByRole("button", { name: "System & Identity Baseline", exact: true })
       .click();
     await page.getByRole("button", { name: "CHECK", exact: true }).click();
     await expect(page.getByLabel("Compiler output")).toContainText(
@@ -293,7 +293,7 @@ test("complete operator journey uses real enrollment, compiler, hunt and evidenc
       .last()
       .click();
     await expect(page.getByLabel("JOCKY source")).toHaveValue(
-      /combined-investigation/,
+      /comprehensive-endpoint-sweep/,
     );
     for (const example of languageExamples) {
       const response = await page.request.post("/api/control/compilations", {
