@@ -568,7 +568,6 @@ export function OperatorConsole({ section }: { section: string }) {
                 ) ?? selected!
               }
               d={d}
-              events={feed.events}
               close={() => {
                 setSelected(null);
                 history.replaceState(null, "", "/investigations");
@@ -1461,82 +1460,72 @@ function InvestigationWizard({
 function InvestigationDetail({
   hunt,
   d,
-  events,
   close,
 }: {
   hunt: Row;
   d: Data;
-  events: Record<string, unknown>[];
   close: () => void;
 }) {
+  const router = useRouter();
+  const [reportBusy, setReportBusy] = useState(false);
+  const [reportError, setReportError] = useState("");
   const jobs = d.jobs.filter((j) => j.hunt_id === hunt.id);
   const compilation = d.compilations.find((c) => c.id === hunt.compilation_id);
   const version = d.versions.find(
     (v) => v.id === compilation?.script_version_id,
   );
   const program = d.scripts.find((s) => s.id === version?.script_id);
+  const observations = d.observations.filter((observation) =>
+    jobs.some((job) => job.id === observation.job_id),
+  );
+  const observationIds = new Set(
+    observations.map((observation) => observation.id),
+  );
+  const findings = d.findings.filter((finding) =>
+    items(finding.observation_ids).some((identifier) =>
+      observationIds.has(identifier),
+    ),
+  );
+  const artifacts = d.artifacts.filter((artifact) =>
+    jobs.some((job) => job.id === artifact.job_id),
+  );
   return (
     <Drawer title="Investigation Detail" close={close}>
       <h3>{title(d.cases.find((r) => r.id === hunt.case_id))}</h3>
+      <h3>Outcome</h3>
       <Fields
         data={{
           program: program?.name,
-          compilation: hunt.compilation_id,
           status: hunt.status,
-          started: date(hunt.created_at),
-          elapsed: "Not measured",
           endpoints: items(hunt.endpoint_ids).length,
-          findings: d.findings.filter((f) => f.case_id === hunt.case_id).length,
-          evidence: d.artifacts.filter((a) =>
-            jobs.some((j) => j.id === a.job_id),
-          ).length,
+          observations: observations.length,
+          findings: findings.length,
+          evidence: artifacts.length,
         }}
       />
-      <Table
-        headers={[
-          "Endpoint",
-          "Variant",
-          "Mode",
-          "Transport",
-          "Worker / duration",
-          "Status",
-          "Progress",
-          "Observations",
-          "Evidence",
-          "Reason",
-        ]}
-        rows={jobs.map((j) => [
-          str(d.endpoints.find((e) => e.id === j.endpoint_id)?.hostname),
-          str(j.variant_id),
-          `${str(obj(j.envelope).execution_mode ?? hunt.execution_mode)} · ${executionLabel(obj(j.progress).execution_engine)}`,
-          str(obj(j.envelope).transport_mode ?? "UNKNOWN").replaceAll("_", " "),
-          `${str(obj(j.progress).execution_engine ?? "Not reported")} · PID ${str(obj(j.progress).worker_pid ?? "Not reported")} · ${typeof obj(j.progress).execution_duration_ms === "number" ? Number(obj(j.progress).execution_duration_ms).toFixed(2) + " ms" : "Not measured"}`,
-          str(j.status),
-          Object.entries(obj(j.progress))
-            .map(([k, v]) => `${k}: ${str(v)}`)
-            .join(" · ") || "Not reported",
-          d.observations.filter((o) => o.job_id === j.id).length,
-          d.artifacts.filter((a) => a.job_id === j.id).length,
-          str(j.reason),
-        ])}
-      />
-      <h3>Committed activity</h3>
-      <ol className="activity-list">
-        {events
-          .filter(
-            (e) =>
-              e.resource_id === hunt.id ||
-              jobs.some((j) => j.id === e.resource_id),
-          )
-          .slice(0, 20)
-          .map((e) => (
-            <li key={str(e.id)}>
-              <strong>{str(e.topic).replaceAll(".", " ")}</strong>
-              <span>{date(e.created_at)}</span>
-            </li>
-          ))}
-      </ol>
-      <p>Only persisted jobs and committed events appear here.</p>
+      <button
+        className="button"
+        disabled={reportBusy}
+        onClick={async () => {
+          setReportBusy(true);
+          setReportError("");
+          try {
+            await submit(`hunts/${hunt.id}/report`);
+            router.push(`/investigations/${hunt.id}/report`);
+          } catch (error) {
+            setReportError(
+              error instanceof Error
+                ? error.message
+                : "Report generation failed",
+            );
+          } finally {
+            setReportBusy(false);
+          }
+        }}
+      >
+        {reportBusy ? "Generating report…" : "Open Investigation Report"}
+      </button>
+      {reportError && <p role="alert">{reportError}</p>}
     </Drawer>
   );
 }

@@ -253,8 +253,13 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
         return collection(db, user, Hunt, case_id=case_id)
 
     @router.get("/reports")
-    def reports(db: DB, user: Reader, case_id: UUID | None = None) -> Any:
-        return collection(db, user, Report, case_id=case_id)
+    def reports(
+        db: DB,
+        user: Reader,
+        case_id: UUID | None = None,
+        hunt_id: UUID | None = None,
+    ) -> Any:
+        return collection(db, user, Report, case_id=case_id, hunt_id=hunt_id)
 
     @router.post("/auth/login")
     def login(payload: contracts.LoginRequest, db: DB) -> dict[str, Any]:
@@ -756,6 +761,53 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
         hunts.cancel(db, row, user)
         return document(row)
 
+    def report_document(row: Report, db: Session, user: User) -> dict[str, Any]:
+        if row.artifact_id is None:
+            raise HTTPException(409, "Report artifact is not ready")
+        artifact = owned(db, Artifact, row.artifact_id, user)
+        try:
+            content = store.get(artifact.storage_key)
+        except FileNotFoundError as error:
+            raise HTTPException(404, "Report artifact content unavailable") from error
+        if digest(content) != artifact.content_hash or len(content) != artifact.size_bytes:
+            raise HTTPException(409, "Report artifact integrity mismatch")
+        try:
+            payload = json.loads(content)
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise HTTPException(409, "Report artifact is not valid JSON") from error
+        identity = payload.setdefault("report_identity", {})
+        identity["report_artifact_hash"] = artifact.content_hash
+        identity["artifact_id"] = str(artifact.id)
+        return {
+            "report": document(row),
+            "artifact": document(artifact),
+            "document": payload,
+            "download_url": f"/api/artifacts/{artifact.id}/content",
+        }
+
+    @router.post("/hunts/{identifier}/report", status_code=201)
+    def create_hunt_report(identifier: UUID, db: DB, user: Writer) -> Any:
+        from jocky_control_plane.reporting import generate_hunt_report
+
+        row = generate_hunt_report(db, owned(db, Hunt, identifier, user), user, store)
+        return report_document(row, db, user)
+
+    @router.get("/hunts/{identifier}/report")
+    def hunt_report(identifier: UUID, db: DB, user: Reader) -> Any:
+        owned(db, Hunt, identifier, user)
+        row = db.scalar(
+            select(Report)
+            .where(
+                Report.organization_id == user.organization_id,
+                Report.hunt_id == identifier,
+            )
+            .order_by(Report.created_at.desc(), Report.id.desc())
+            .limit(1)
+        )
+        if row is None:
+            raise HTTPException(404, "Investigation report has not been generated")
+        return report_document(row, db, user)
+
     @router.get("/artifacts")
     def artifacts(db: DB, user: Reader, case_id: UUID | None = None) -> Any:
         return collection(db, user, Artifact, case_id=case_id)
@@ -1015,5 +1067,9 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
             if row.artifact_id
             else None,
         }
+
+    @router.get("/reports/{identifier}/document")
+    def report_content(identifier: UUID, db: DB, user: Reader) -> Any:
+        return report_document(owned(db, Report, identifier, user), db, user)
 
     return router

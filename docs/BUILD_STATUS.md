@@ -1,5 +1,21 @@
 # Build status
+
 # Build status
+
+## Hunt-scoped forensic investigation reports — 2026-09-29
+
+Status: **IMPLEMENTED and VERIFIED within persisted investigation data.**
+
+- Reports may now reference one Hunt while historical case-level Report rows remain valid. The canonical JSON is built only from the Hunt's Compilation/ScriptVersion, Jobs, Endpoints, ExecutionPlans, Variants, Observations, Artifacts, EvidenceManifests, linked Findings and audit events. Data belonging only to another Hunt in the same Case is excluded.
+- The dedicated report presents deterministic summary metrics and text, actual intent and structured semantic operations, per-endpoint results, persisted findings, bounded observation samples, real timestamps, available compiler provenance, distinct signature/hash/audit-chain states, exact source, and data-derived limitations. Missing values are omitted; zero findings does not claim safety; SANDBOX provenance remains explicit.
+- Report JSON is stored through the content-addressed ObjectStore with matching Artifact and Report rows and the existing `report.generated` audit event. The report route verifies stored bytes before returning the backend document. Browser print provides Save PDF without changing the canonical JSON artifact.
+- Investigation Detail now contains only the outcome counts and the report action. `/investigations/<hunt-id>/report` uses the existing dashboard shell and has focused print styling.
+
+Executed checks:
+
+- Focused reporting/API tests: **3 passed**, covering legacy case reports, Hunt scoping, unrelated-Hunt exclusion, jobs/endpoints, source identity, job-related manifests/artifacts, sandbox provenance, zero findings, failed-job limitations, and stored-byte hash verification.
+- Targeted Playwright report acceptance: **1 passed** on desktop, covering Investigation Detail navigation, dedicated report rendering with optional runtime metadata absent, zero-findings language, exact source and browser print invocation.
+- Backend Ruff and targeted mypy: PASS. Dashboard typecheck and production build: PASS. `git diff --check`: PASS.
 
 ## PS-coverage sprint 2 — cross-target compilation, real execution and relay transport — 2026-09-28
 
@@ -49,6 +65,7 @@ Executed checks, LLVM 22.1.8, `cmake -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Relea
 Known limitations: the LLVM 18 path through `llvm_compat.h` compiles against signatures read from the `release/18.x` headers but was not executed — only LLVM 22 is installed on this host, so LLVM 18 CI remains the first real test of that branch. `jockey <file>` executes against the deterministic SIMULATED fixture collector; it is not endpoint evidence and no Agent host is involved. Passing a second `--execution` flag alongside a `.jky` path is rejected as a duplicate option rather than overridden.
 
 ## PS-coverage sprint 1 — Build Forge delivery — 2026-09-27
+
 ## PS-coverage sprint 1 — Build Forge delivery — 2026-09-27
 
 Status: **IMPLEMENTED and verified within the bounded delivery scope below**.

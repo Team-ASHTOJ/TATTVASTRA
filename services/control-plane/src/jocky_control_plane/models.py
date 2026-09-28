@@ -294,6 +294,7 @@ class CompatibilityRun(Scoped, Base):
 class Report(Scoped, Base):
     __tablename__ = "reports"
     case_id: Mapped[UUID] = mapped_column(ForeignKey("cases.id"))
+    hunt_id: Mapped[UUID | None] = mapped_column(ForeignKey("hunts.id"), index=True)
     artifact_id: Mapped[UUID | None] = mapped_column(ForeignKey("artifacts.id"))
     status: Mapped[State] = mapped_column(Enum(State, native_enum=False), default=State.CREATED)
     format: Mapped[str] = mapped_column(String(16), default="json")

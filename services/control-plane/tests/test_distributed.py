@@ -45,6 +45,7 @@ from jocky_control_plane.models import (
     EventOutbox,
     EvidenceManifest,
     ExecutionPlan,
+    Finding,
     Hunt,
     Job,
     Organization,
@@ -504,6 +505,158 @@ def test_objects_reports_audit_and_modified_bytes(runtime):
             event.document = {**event.document, "action": "modified"}
             db.flush()
             assert not verify_audit(db, user)["integrity_valid"]
+
+
+def test_hunt_report_is_scoped_and_canonical(runtime):
+    factory, settings, client, org_id, admin_id = runtime
+    ids = setup_job(factory, org_id)
+    with factory.begin() as db:
+        user = db.get(User, admin_id)
+        hunt = db.get(Hunt, ids[1])
+        job = db.get(Job, ids[2])
+        endpoint = db.get(Endpoint, ids[3])
+        plan = db.get(ExecutionPlan, job.plan_id)
+        plan.document = {
+            **plan.document,
+            "required_collectors": ["system", "processes"],
+            "runtime": {
+                "backend": "llvm",
+                "execution": "native",
+                "variant": {"enabled": True, "seed": "auto", "profile": "balanced"},
+            },
+        }
+        job.progress = {
+            "execution_engine": "NATIVE_AOT",
+            "worker_pid": 42,
+            "execution_duration_ms": 12.5,
+        }
+        job.envelope = {**job.envelope, "transport_mode": "DIRECT"}
+        endpoint.transport_mode = "DIRECT"
+        related = ingest_observation(
+            db,
+            endpoint,
+            observation_payload(db, ids, "system", {"hostname": "TEST-ONLY"}),
+            user,
+        )
+        finding = Finding(
+            **provenance(hunt),
+            case_id=ids[0],
+            rule_key="TEST-ONLY-RULE",
+            title="Persisted test finding",
+            severity="HIGH",
+            observation_ids=[str(related.id)],
+        )
+        db.add(finding)
+        store = ObjectStore(settings.object_root)
+        evidence = json.dumps({"persisted": True}, sort_keys=True).encode()
+        evidence_hash = store.put(evidence)
+        db.add(
+            Artifact(
+                **provenance(job),
+                case_id=ids[0],
+                job_id=job.id,
+                content_hash=evidence_hash,
+                size_bytes=len(evidence),
+                media_type="application/json",
+                storage_key=evidence_hash,
+            )
+        )
+        db.add(
+            EvidenceManifest(
+                **provenance(job),
+                job_id=job.id,
+                document={
+                    "agent_identity": endpoint.identity,
+                    "transport_mode": "DIRECT",
+                },
+                signature_verified=True,
+            )
+        )
+        other_hunt = Hunt(
+            **provenance(hunt),
+            case_id=hunt.case_id,
+            compilation_id=hunt.compilation_id,
+            endpoint_ids=[str(endpoint.id)],
+            execution_mode="native",
+            status=State.SUCCESS,
+        )
+        db.add(other_hunt)
+        db.flush()
+        other_job = Job(
+            **provenance(job),
+            hunt_id=other_hunt.id,
+            endpoint_id=endpoint.id,
+            plan_id=job.plan_id,
+            variant_id=job.variant_id,
+            status=State.RUNNING,
+            attempt=1,
+            envelope=dict(job.envelope),
+        )
+        db.add(other_job)
+        db.flush()
+        other_ids = (ids[0], other_hunt.id, other_job.id, endpoint.id, ids[4], ids[5])
+        unrelated = ingest_observation(
+            db,
+            endpoint,
+            observation_payload(db, other_ids, "drivers", {"name": "unrelated"}),
+            user,
+        )
+        hunt.status = State.SUCCESS
+        job.status = State.SUCCESS
+        other_hunt.status = State.SUCCESS
+        other_job.status = State.SUCCESS
+        hunt_id = hunt.id
+        finding_id = finding.id
+        unrelated_id = unrelated.id
+        source_hash = db.get(
+            ScriptVersion, db.get(Compilation, hunt.compilation_id).script_version_id
+        ).source_hash
+
+    response = client.post(f"/api/hunts/{hunt_id}/report")
+    assert response.status_code == 201, response.text
+    body = response.json()
+    payload = body["document"]
+    assert body["report"]["hunt_id"] == str(hunt_id)
+    assert payload["investigation"]["id"] == str(hunt_id)
+    assert [row["job_id"] for row in payload["endpoint_results"]] == [str(ids[2])]
+    assert payload["endpoint_results"][0]["hostname"] == "TEST-ONLY"
+    assert payload["source"]["text"] == "test protocol bytes"
+    assert payload["source"]["source_hash"] == source_hash
+    assert payload["findings"][0]["id"] == str(finding_id)
+    assert str(unrelated_id) not in json.dumps(payload)
+    assert payload["evidence_integrity"]["manifests"][0]["signature_verification"] == "VERIFIED"
+    assert payload["evidence_integrity"]["manifests"][0]["job_id"] == str(ids[2])
+    assert payload["evidence_integrity"]["artifacts"][0]["content_hash"] == evidence_hash
+    assert payload["evidence_integrity"]["artifacts"][0]["job_id"] == str(ids[2])
+    assert [step["collector"] for step in payload["semantic_plan"]["operations"]] == [
+        "system",
+        "processes",
+    ]
+    artifact_id = body["artifact"]["id"]
+    downloaded = client.get(f"/api/artifacts/{artifact_id}/content")
+    assert digest(downloaded.content) == body["artifact"]["content_hash"]
+    assert json.loads(downloaded.content)["investigation"]["id"] == str(hunt_id)
+    assert client.get(f"/api/hunts/{hunt_id}/report").status_code == 200
+
+
+def test_hunt_report_preserves_sandbox_zero_findings_and_failures(runtime):
+    factory, _, client, org_id, _ = runtime
+    ids = setup_job(factory, org_id, simulation=True)
+    with factory.begin() as db:
+        hunt = db.get(Hunt, ids[1])
+        job = db.get(Job, ids[2])
+        hunt.status = State.FAILED
+        job.status = State.FAILED
+        job.reason = "Persisted test failure"
+    response = client.post(f"/api/hunts/{ids[1]}/report")
+    assert response.status_code == 201, response.text
+    payload = response.json()["document"]
+    assert payload["simulation"] is True
+    assert payload["simulation_label"] == "TEST_FIXTURE"
+    assert payload["findings"] == []
+    assert "does not establish the absence" in payload["executive_summary"]["text"]
+    assert any("did not complete successfully" in item for item in payload["limitations"])
+    assert payload["endpoint_results"][0]["status"] == "FAILED"
 
 
 @pytest.fixture
