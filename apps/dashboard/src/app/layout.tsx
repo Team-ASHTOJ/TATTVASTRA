@@ -46,8 +46,9 @@ export default function RootLayout({
                   unoptimized
                   priority
                 />
-                <small>
-                  JOCKY Framework · Cross-Platform Forensic Scripting Language
+                <small className="brand-tagline">
+                  <span>JOCKY</span> · Cross-Platform Forensic Scripting
+                  Language
                 </small>
               </span>
             </Link>
