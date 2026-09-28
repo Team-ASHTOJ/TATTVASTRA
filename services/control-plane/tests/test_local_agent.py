@@ -164,3 +164,132 @@ def test_local_slots_are_bounded_and_isolated(runtime, monkeypatch):
         assert db.scalar(select(func.count()).select_from(EndpointEnrollment)) == 3
     assert len({row["enrollment_id"] for row in client.get("/api/local-agents").json()}) == 3
     assert client.post("/api/local-agent/start?slot=4").status_code == 422
+
+
+def enrolled_endpoint(db, org_id, slot):
+    """One durable endpoint identity for a single local slot."""
+    endpoint = Endpoint(
+        organization_id=org_id,
+        simulation=False,
+        hostname=f"LOCAL-LINUX-0{slot}",
+        target_os="linux",
+        target_arch="aarch64",
+        agent_version="test",
+        identity=digest(f"local-{slot}".encode()),
+        public_key="key",
+        certificate_fingerprint=digest(f"local-cert-{slot}".encode()),
+        capabilities=["system.read"],
+        status=State.OFFLINE,
+    )
+    db.add(endpoint)
+    db.flush()
+    return endpoint.id
+
+
+def test_three_slots_reach_online_independently_and_stay_isolated(runtime, monkeypatch):
+    factory, _, client, org_id, _ = runtime
+    started = datetime.now(UTC)
+    states = {slot: {"state": "STOPPED", "needs_enrollment": True} for slot in range(1, 4)}
+    calls = []
+
+    def boundary(settings, route, body=None, slot=1):
+        calls.append((slot, route))
+        if route == "/start":
+            states[slot].update(
+                state="ENROLLING", organization_id=str(org_id), enrollment_id=body["enrollment_id"]
+            )
+        return dict(states[slot])
+
+    monkeypatch.setattr(local_agent, "runtime", boundary)
+    for slot in range(1, 4):
+        assert client.post(f"/api/local-agent/start?slot={slot}").status_code == 200
+    with factory.begin() as db:
+        identities = {slot: enrolled_endpoint(db, org_id, slot) for slot in range(1, 4)}
+    assert len(set(identities.values())) == 3
+    for slot in range(1, 4):
+        states[slot].update(
+            state="WAITING_FOR_HEARTBEAT",
+            connected_at=started.isoformat(),
+            endpoint_id=str(identities[slot]),
+            needs_enrollment=False,
+        )
+    # No slot is promoted by another slot's launcher report.
+    assert [row["state"] for row in client.get("/api/local-agents").json()] == [
+        "WAITING_FOR_HEARTBEAT"
+    ] * 3
+    assert len({row["endpoint_id"] for row in client.get("/api/local-agents").json()}) == 3
+    # Only the slot holding its own authenticated heartbeat becomes ONLINE.
+    with factory.begin() as db:
+        db.get(Endpoint, identities[2]).last_seen = datetime.now(UTC)
+    assert [row["state"] for row in client.get("/api/local-agents").json()] == [
+        "WAITING_FOR_HEARTBEAT",
+        "ONLINE",
+        "WAITING_FOR_HEARTBEAT",
+    ]
+    # All three can hold fresh heartbeats at the same time.
+    with factory.begin() as db:
+        for slot in (1, 3):
+            db.get(Endpoint, identities[slot]).last_seen = datetime.now(UTC)
+    assert [row["state"] for row in client.get("/api/local-agents").json()] == ["ONLINE"] * 3
+    # A start against an already ONLINE slot is idempotent and never touches
+    # another slot's runtime.
+    before = len(calls)
+    assert client.post("/api/local-agent/start?slot=1").json()["state"] == "ONLINE"
+    assert [call for call in calls[before:] if call[1] in {"/start", "/stop"}] == []
+
+
+def test_failed_slot_retry_reuses_its_identity_and_recovers(runtime, monkeypatch):
+    factory, _, client, org_id, _ = runtime
+    calls = []
+
+    def boundary(settings, route, body=None, slot=1):
+        calls.append((slot, route))
+        if route == "/stop":
+            state.update(state="STOPPED", error=None)
+        if route == "/start":
+            state.update(state="WAITING_FOR_HEARTBEAT", connected_at=datetime.now(UTC).isoformat())
+        return dict(state)
+
+    state = {"state": "FAILED", "needs_enrollment": False}
+    monkeypatch.setattr(local_agent, "runtime", boundary)
+    with factory.begin() as db:
+        state["endpoint_id"] = str(enrolled_endpoint(db, org_id, 2))
+    state["error"] = "Authenticated heartbeat timed out. Check AgentControl, then retry."
+    status = client.get("/api/local-agent/status?slot=2").json()
+    assert status["state"] == "FAILED"
+    assert "heartbeat timed out" in status["error"]
+    recovered = client.post("/api/local-agent/start?slot=2")
+    assert recovered.status_code == 200
+    assert recovered.json()["state"] == "WAITING_FOR_HEARTBEAT"
+    # The retry restarts the same slot instead of spawning a second lifecycle.
+    assert [call for call in calls if call[1] in {"/start", "/stop"}] == [
+        (2, "/stop"),
+        (2, "/start"),
+    ]
+    with factory() as db:
+        assert db.scalar(select(func.count()).select_from(Endpoint)) == 1
+        assert db.scalar(select(func.count()).select_from(EndpointEnrollment)) == 0
+
+
+def test_windows_not_configured_leaves_local_slots_untouched(runtime, monkeypatch):
+    factory, _, client, org_id, _ = runtime
+    states = {slot: {"state": "STOPPED", "needs_enrollment": True} for slot in range(1, 4)}
+    calls = []
+
+    def boundary(settings, route, body=None, slot=1):
+        calls.append((slot, route))
+        if route == "/start":
+            states[slot].update(
+                state="ENROLLING", organization_id=str(org_id), enrollment_id=body["enrollment_id"]
+            )
+        return dict(states[slot])
+
+    monkeypatch.setattr(local_agent, "runtime", boundary)
+    windows = client.get("/api/windows-endpoint/status").json()
+    assert windows["configured"] is False
+    assert windows["state"] == "NOT_CONFIGURED"
+    # An unconfigured Windows endpoint is a statement about Windows only: it
+    # never contacts or blocks a local Linux runtime.
+    assert calls == []
+    assert client.post("/api/local-agent/start?slot=2").json()["state"] == "ENROLLING"
+    assert [call for call in calls if call[1] in {"/start", "/stop"}] == [(2, "/start")]

@@ -27,6 +27,12 @@ Repeated starts reuse the agent, enrollment and persistent identity. Stop Local 
 
 The bundled Linux endpoints run inside Docker; LOCAL identifies this location and REAL identifies its genuine agent data. It is not a simulated fixture and does not collect the macOS host.
 
+## Preconfigured Windows endpoint
+
+A prepared Windows VM needs no terminal during a recording. Open **Endpoints → Connect Endpoint → Windows → Start Windows Endpoint**. The UI reports the service's bounded lifecycle and changes to ONLINE only when the native agent's mTLS heartbeat is persisted. Show `WINDOWS-01`, platform, architecture and last heartbeat only when an actual Windows VM is connected.
+
+If the VM has not been prepared, the dialog reports **WINDOWS ENDPOINT NOT CONFIGURED** and exposes Advanced Setup; do not present it as an online endpoint. This development environment has no Windows VM, so omit a live Windows claim from the recording.
+
 ## External Endpoint / Advanced Setup
 
 Connect Endpoint → Generate Enrollment retains one-time tokens, public CA download, expiry and native commands. Save the token to a protected file and use the same agent state directory for init, enroll and connect. Use the control-plane CA; never replace it with an untrusted certificate. Native external machines need their own compatible worker and a reachable control-plane TLS address.

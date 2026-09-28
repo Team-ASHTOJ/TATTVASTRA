@@ -7,7 +7,7 @@ import json
 import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -736,6 +736,51 @@ def test_grpc_tls_enrollment_heartbeat_replay_and_wrong_identity(
         for server, _ in servers:
             server.stop(0).wait()
     assert client.get("/api/endpoints").json()[0]["status"] == "ONLINE"
+
+
+def test_replayed_stale_heartbeat_never_wedges_the_ordered_stream(runtime):
+    """A spooled heartbeat replays late; it must not stall the endpoint's stream.
+
+    The agent spools frames durably and replays whatever the control plane has
+    not acknowledged, so a heartbeat can arrive long after it was stamped.
+    Refusing it would reject every later sequence too, leaving the endpoint
+    permanently OFFLINE and unable to recover by retrying.
+    """
+    factory, settings, _, org_id, _ = runtime
+    ids = list(setup_job(factory, org_id))
+    service = AgentControl(factory, settings)
+    with factory() as db:
+        fingerprint = db.get(Endpoint, ids[3]).certificate_fingerprint
+
+    def heartbeat(sequence, timestamp):
+        return wire.AgentFrame(
+            schema_version="1.0.0",
+            endpoint_id=str(ids[3]),
+            sequence=sequence,
+            simulation=False,
+            heartbeat=wire.Heartbeat(timestamp=timestamp, state="IDLE"),
+        )
+
+    stale = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
+    accepted = service.accept(heartbeat(1, stale), fingerprint)
+    assert accepted.acknowledgement.accepted_sequence == 1
+    with factory() as db:
+        endpoint = db.get(Endpoint, ids[3])
+        assert endpoint.last_sequence == 1
+        assert endpoint.last_seen is None
+        assert endpoint.status != State.ONLINE
+    # The identical bytes replay idempotently, so a reconnect never disturbs
+    # the ordered stream.
+    assert service.accept(heartbeat(1, stale), fingerprint) == accepted
+    # A later sequence still advances, which is what lets the spool drain.
+    with factory() as db:
+        assert db.get(Endpoint, ids[3]).last_seen is None
+    service.accept(heartbeat(2, datetime.now(UTC).isoformat()), fingerprint)
+    with factory() as db:
+        endpoint = db.get(Endpoint, ids[3])
+        assert endpoint.last_sequence == 2
+        assert endpoint.last_seen is not None
+        assert endpoint.status == State.ONLINE
 
 
 def test_transaction_rollback_does_not_publish_events(runtime):

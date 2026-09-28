@@ -674,6 +674,18 @@ function Fields({ data }: { data: Record<string, unknown> }) {
     </dl>
   );
 }
+function saveTextFile(name: string, content: string) {
+  const url = URL.createObjectURL(new Blob([content], { type: "text/plain" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.rel = "noopener";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function Enrollment({
   close,
   refresh,
@@ -685,7 +697,9 @@ function Enrollment({
   refresh: () => Promise<void>;
 }) {
   const queryClient = useQueryClient();
-  const [path, setPath] = useState<"local" | "external" | null>(null);
+  const [path, setPath] = useState<"local" | "windows" | "external" | null>(
+    null,
+  );
   const [slot, setSlot] = useState(1);
   const pool = useQuery({
     queryKey: ["local-agent"],
@@ -694,6 +708,12 @@ function Enrollment({
     retry: false,
   });
   const local = { ...pool, data: pool.data?.find((r) => r.slot === slot) };
+  const windowsEndpoint = useQuery({
+    queryKey: ["windows-endpoint"],
+    queryFn: () => api<Row>("domain/windows-endpoint/status"),
+    refetchInterval: path === "windows" ? 1500 : false,
+    retry: false,
+  });
   const active =
     pool.data?.filter((r) =>
       [
@@ -734,8 +754,8 @@ function Enrollment({
     refetchInterval: 3000,
     queryFn: () => api<Row>(`domain/endpoints/enrollments/${token!.id}`),
   });
-  async function externalAction() {
-    setPath("external");
+  async function externalAction(next: "windows" | "external") {
+    setPath(next);
     setError("");
 
     setBusy(true);
@@ -763,12 +783,128 @@ function Enrollment({
     }
   }
   const connected = enrollment.data?.state === "ONLINE";
+  const connectionState = connected
+    ? "ONLINE · Agent connected"
+    : token
+      ? enrollment.data?.state === "EXPIRED"
+        ? "EXPIRED"
+        : enrollment.data?.state === "STALE"
+          ? "STALE · Agent enrolled, heartbeat overdue"
+          : "WAITING FOR AGENT"
+      : "WAITING FOR ENROLLMENT";
   const command = `jocky-agent --state-dir .jocky-agent init\njocky-agent --state-dir .jocky-agent enroll --enrollment-server https://localhost:15052 --server https://localhost:15051 --ca control-plane-ca.pem --token-file enrollment.token --worker /usr/local/bin/jocky-worker\njocky-agent --state-dir .jocky-agent connect`;
+  const host =
+    typeof window === "undefined" ? "localhost" : window.location.hostname;
+  const windowsCommand = `powershell -ExecutionPolicy Bypass -File .\\connect-jocky.ps1 -Server https://${host}:15051 -CaFile .\\control-plane-ca.pem -TokenFile .\\enrollment.token`;
+  const windowsAdvanced = `jocky-agent.exe --state-dir "$env:ProgramData\\JOCKY" init --organization-id local-development\njocky-agent.exe --state-dir "$env:ProgramData\\JOCKY" enroll --enrollment-server https://${host}:15052 --server https://${host}:15051 --ca control-plane-ca.pem --token-file enrollment.token --transport-key transport.key --csr transport.csr --worker "$env:ProgramData\\JOCKY\\jocky-worker.exe"\njocky-agent.exe --state-dir "$env:ProgramData\\JOCKY" connect`;
+  const enrollmentLinks = token && (
+    <>
+      <a
+        className="button secondary"
+        download="control-plane-ca.pem"
+        href={`/api/control/domain/endpoints/enrollments/${token.id}/ca`}
+      >
+        Download control plane CA
+      </a>
+      <a
+        className="button secondary"
+        download="connect-jocky.ps1"
+        href={`/api/control/domain/endpoints/enrollments/${token.id}/bootstrap`}
+      >
+        Download PowerShell bootstrap
+      </a>
+    </>
+  );
+  async function windowsAction(action: "start" | "stop") {
+    setPath("windows");
+    setBusy(true);
+    setError("");
+    try {
+      const state = await submit<Row>(`windows-endpoint/${action}`);
+      queryClient.setQueryData(["windows-endpoint"], state);
+      await windowsEndpoint.refetch();
+      await refresh();
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Windows endpoint operation failed",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function prepareWindowsBootstrap() {
+    setBusy(true);
+    setError("");
+    try {
+      const configuration = await submit<Row>("windows-endpoint/bootstrap");
+      saveTextFile(
+        "jocky-bootstrap.json",
+        `${JSON.stringify(configuration, null, 2)}\n`,
+      );
+      await windowsEndpoint.refetch();
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Bootstrap registration failed",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  const generateExternalEnrollment = () => void externalAction("external");
+  const copyWindowsCommand = () =>
+    void navigator.clipboard.writeText(windowsCommand);
+  function downloadEnrollmentTokenFile() {
+    if (!token) return;
+    saveTextFile("enrollment.token", `${str(token.one_time_token)}\n`);
+  }
+  const windowsAdvancedSetup = (
+    <details className="advanced-setup">
+      <summary>Advanced Setup</summary>
+      <p>
+        Use this once to prepare WINDOWS-01, or to onboard a new Windows
+        machine.
+      </p>
+      {windowsEndpoint.data?.state === "NOT_CONFIGURED" && (
+        <button disabled={busy} onClick={() => void prepareWindowsBootstrap()}>
+          Download supervisor configuration
+        </button>
+      )}
+      <p>Connect a new Windows machine</p>
+      {!token ? (
+        <button
+          className="secondary"
+          disabled={busy}
+          onClick={() => void externalAction("windows")}
+        >
+          Generate manual enrollment
+        </button>
+      ) : (
+        <>
+          <button className="secondary" onClick={downloadEnrollmentTokenFile}>
+            Download enrollment token
+          </button>
+          {enrollmentLinks}
+          <pre className="compiler-output">{windowsCommand}</pre>
+          <button className="secondary" onClick={copyWindowsCommand}>
+            Copy command
+          </button>
+          <details>
+            <summary>Raw agent commands</summary>
+            <pre className="compiler-output">{windowsAdvanced}</pre>
+          </details>
+        </>
+      )}
+    </details>
+  );
   return (
     <Drawer title="Endpoint Enrollment" close={close}>
-      <div className="metric-grid">
+      <div className="connect-options">
         <section className="panel">
-          <h3>Local Endpoint</h3>
+          <h3>Local Linux</h3>
           <p>Local endpoints: {active.length} / 3 running</p>
           <p>Start a JOCKY agent locally using the bundled runtime.</p>
           <button disabled={busy} onClick={() => void localAction("start")}>
@@ -827,12 +963,33 @@ function Enrollment({
           )}
         </section>
         <section className="panel">
-          <h3>External Endpoint</h3>
-          <p>Connect a Windows or Linux machine running the JOCKY Agent.</p>
+          <h3>Windows</h3>
+          <p>Native Windows endpoint</p>
+          <p className="resource-label">
+            {windowsEndpoint.data?.configured
+              ? str(windowsEndpoint.data?.state ?? "Checking…")
+              : "Not configured"}
+          </p>
+          {!windowsEndpoint.data?.configured && (
+            <p>No Windows host has been prepared yet.</p>
+          )}
+          {windowsEndpoint.data?.state === "READY" ? (
+            <button disabled={busy} onClick={() => void windowsAction("start")}>
+              Start Windows Endpoint
+            </button>
+          ) : (
+            <button className="secondary" onClick={() => setPath("windows")}>
+              Advanced Setup
+            </button>
+          )}
+        </section>
+        <section className="panel">
+          <h3>External Linux</h3>
+          <p>Connect a Linux machine running the JOCKY Agent.</p>
           <button
             className="secondary"
             disabled={busy}
-            onClick={() => void externalAction()}
+            onClick={generateExternalEnrollment}
           >
             Generate Enrollment
           </button>
@@ -889,9 +1046,93 @@ function Enrollment({
                 {error || local.error?.message || str(local.data?.error)}
               </p>
               <button disabled={busy} onClick={() => void localAction("start")}>
-                Retry
+                Retry Endpoint
               </button>
             </>
+          )}
+        </section>
+      )}
+      {path === "windows" && (
+        <section className="panel" aria-label="Windows endpoint connection">
+          <h3>Windows endpoint</h3>
+          <p role="status">
+            {busy
+              ? "Contacting Windows host…"
+              : windowsEndpoint.data?.state === "ONLINE"
+                ? "Connected"
+                : windowsEndpoint.data?.state === "STARTING"
+                  ? "Starting JOCKY Agent…"
+                  : windowsEndpoint.data?.state === "ENROLLING"
+                    ? "Enrolling…"
+                    : windowsEndpoint.data?.state === "WAITING_FOR_HEARTBEAT"
+                      ? "Waiting for authenticated heartbeat…"
+                      : str(
+                          windowsEndpoint.data?.state ?? "Checking bootstrap…",
+                        )}
+          </p>
+          {!!windowsEndpoint.data?.endpoint && (
+            <Fields
+              data={{
+                hostname: obj(windowsEndpoint.data.endpoint).hostname,
+                connection: windowsEndpoint.data.state,
+                platform: obj(windowsEndpoint.data.endpoint).target_os,
+                architecture: obj(windowsEndpoint.data.endpoint).target_arch,
+                transport: obj(windowsEndpoint.data.endpoint).transport_mode,
+                last_heartbeat: date(
+                  obj(windowsEndpoint.data.endpoint).last_seen,
+                ),
+                source: "EXTERNAL",
+              }}
+            />
+          )}
+          {windowsEndpoint.data?.state === "ONLINE" && (
+            <button
+              onClick={() =>
+                openEndpoint(windowsEndpoint.data!.endpoint as Row)
+              }
+            >
+              Open Endpoint
+            </button>
+          )}
+          {Boolean(windowsEndpoint.data?.configured) &&
+            ![
+              "ONLINE",
+              "STARTING",
+              "ENROLLING",
+              "WAITING_FOR_HEARTBEAT",
+            ].includes(str(windowsEndpoint.data?.state)) && (
+              <button
+                disabled={busy}
+                onClick={() => void windowsAction("start")}
+              >
+                Start Windows Endpoint
+              </button>
+            )}
+          {[
+            "ONLINE",
+            "STARTING",
+            "ENROLLING",
+            "WAITING_FOR_HEARTBEAT",
+          ].includes(str(windowsEndpoint.data?.state)) && (
+            <button
+              className="secondary"
+              disabled={busy}
+              onClick={() => void windowsAction("stop")}
+            >
+              Stop Windows Endpoint
+            </button>
+          )}
+          {windowsAdvancedSetup}
+          {!!(
+            error ||
+            windowsEndpoint.error ||
+            windowsEndpoint.data?.error
+          ) && (
+            <p role="alert">
+              {error ||
+                windowsEndpoint.error?.message ||
+                str(windowsEndpoint.data?.error)}
+            </p>
           )}
         </section>
       )}
@@ -902,19 +1143,12 @@ function Enrollment({
             authorized endpoint, and provide the control plane CA certificate.
             Tokens expire in ten minutes.
           </p>
-          <p className="resource-label">
-            {connected
-              ? "ONLINE · Agent connected"
-              : token
-                ? enrollment.data?.state === "EXPIRED"
-                  ? "EXPIRED"
-                  : enrollment.data?.state === "STALE"
-                    ? "STALE · Agent enrolled, heartbeat overdue"
-                    : "WAITING FOR AGENT"
-                : "WAITING FOR ENROLLMENT"}
-          </p>
+          <p className="resource-label">{connectionState}</p>
           {!token && (
-            <button disabled={busy} onClick={() => void externalAction()}>
+            <button
+              disabled={busy}
+              onClick={() => void externalAction("external")}
+            >
               Retry Enrollment
             </button>
           )}
@@ -940,9 +1174,9 @@ function Enrollment({
                 Download control plane CA
               </a>
               <p>
-                Install the existing JOCKY Agent and compiler worker on Linux or
-                Windows. Use the CA from the control plane; never replace it
-                with an untrusted certificate.
+                Install the existing JOCKY Agent and compiler worker on Linux.
+                Use the CA from the control plane; never replace it with an
+                untrusted certificate.
               </p>
               <pre className="compiler-output">{command}</pre>
               <button

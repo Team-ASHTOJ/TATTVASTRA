@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     object_root: Path = Path(".local/objects")
     signing_key_path: Path = Path(".local/control-plane.key")
     tls_ca_path: Path = Path(".local/tls/ca.pem")
+    # Served to an operator so a Windows host can run the existing native
+    # enrollment flow without copying scripts by hand.
+    bootstrap_script_path: Path = Path("scripts/windows/connect-jocky.ps1")
+    windows_api_url: str | None = None
+    windows_control_server: str | None = None
+    windows_enrollment_server: str | None = None
     tls_ca_key_path: Path = Path(".local/tls/ca.key")
     tls_cert_path: Path = Path(".local/tls/server.pem")
     tls_key_path: Path = Path(".local/tls/server.key")

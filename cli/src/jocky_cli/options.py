@@ -9,7 +9,7 @@ forwarded.
 from __future__ import annotations
 
 import re
-from typing import Collection
+from collections.abc import Collection
 
 _HEX = re.compile(r"[0-9a-fA-F]{1,16}")
 _DECIMAL = re.compile(r"[0-9]{1,20}")
@@ -71,9 +71,7 @@ def parse_seed(text: str, name: str = "--seed") -> int:
         base = 16
     pattern = _HEX if base == 16 else _DECIMAL
     if not pattern.fullmatch(digits):
-        raise UsageError(
-            f"{name}: seed must be an unsigned 64-bit decimal or hexadecimal value"
-        )
+        raise UsageError(f"{name}: seed must be an unsigned 64-bit decimal or hexadecimal value")
     value = int(digits, base)
     if value > _MAX_SEED:
         raise UsageError(f"{name}: seed does not fit in 64 bits")

@@ -44,6 +44,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: make verify-agent-container
+  # Pinned to windows-2022 rather than windows-latest so the agent build stays
+  # reproducible, like the ubuntu-24.04 and postgres 17.6 pins above.
   windows-agent:
     runs-on: windows-2022
     steps:
@@ -55,10 +57,91 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: jocky-agent-windows-x86_64
-          path: target/release/jocky-agent.exe
+          path: |
+            target/release/jocky-agent.exe
+            target/release/jocky-bootstrap.exe
+            scripts/windows/connect-jocky.ps1
+            scripts/windows/install-jocky-bootstrap.ps1
           if-no-files-found: error
       - run: cargo test --workspace --locked
       - run: cargo clippy --workspace --locked --all-targets -- -D warnings
+      - name: Validate the Windows bootstrap script
+        shell: pwsh
+        run: |
+          $errors = $null
+          $tokens = $null
+          @(
+            "$env:GITHUB_WORKSPACE/scripts/windows/connect-jocky.ps1",
+            "$env:GITHUB_WORKSPACE/scripts/windows/install-jocky-bootstrap.ps1"
+          ) | ForEach-Object {
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $_, [ref]$tokens, [ref]$errors) | Out-Null
+          }
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object {
+              Write-Host "::error file=scripts/windows/connect-jocky.ps1::$($_.Message)"
+            }
+            exit 1
+          }
+          Write-Host "Windows bootstrap scripts parse with no syntax errors."
+
+  # The LLVM execution worker is a best-effort artifact. GitHub's Windows images
+  # do not guarantee an LLVM >= 18 development package, and JOCKY never
+  # substitutes a fake compiler, so this job publishes jocky-worker.exe when the
+  # toolchain is present and otherwise records ENVIRONMENT DEPENDENT on the job
+  # summary. It never reports a worker it did not build.
+  windows-worker:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Attempt the LLVM execution worker build
+        id: worker
+        shell: pwsh
+        run: |
+          $config = @(
+            'C:\Program Files\LLVM\lib\cmake\llvm\LLVMConfig.cmake',
+            'C:\Program Files (x86)\LLVM\lib\cmake\llvm\LLVMConfig.cmake'
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $config) {
+            "built=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "Windows compiler-artifact execution: ENVIRONMENT DEPENDENT - the runner has no LLVM development package, so no jocky-worker.exe was produced and none is claimed." |
+              Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            exit 0
+          }
+          $version = if ((Get-Content -Raw $config) -match 'LLVM_PACKAGE_VERSION\s+([0-9][0-9.]*)') { $Matches[1] } else { '0' }
+          $major = if ($version -match '^(\d+)') { [int]$Matches[1] } else { 0 }
+          if ($major -lt 18) {
+            "built=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "Windows compiler-artifact execution: ENVIRONMENT DEPENDENT - the runner provides LLVM $version, below the required 18, so no jocky-worker.exe was produced." |
+              Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            exit 0
+          }
+          cmake -S . -B build/windows -G "Visual Studio 17 2022" -A x64 `
+            -DBUILD_TESTING=OFF -DLLVM_DIR="$(Split-Path $config)"
+          if ($LASTEXITCODE -ne 0) {
+            "built=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "Windows compiler-artifact execution: ENVIRONMENT DEPENDENT - configuring the LLVM $version worker build failed on this runner; no jocky-worker.exe is claimed. The configure output is above." |
+              Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            exit 0
+          }
+          cmake --build build/windows --config Release --target jocky-worker
+          $binary = 'build/windows/native/compiler/Release/jocky-worker.exe'
+          if ($LASTEXITCODE -eq 0 -and (Test-Path $binary)) {
+            "built=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "Windows compiler-artifact execution: jocky-worker.exe built against LLVM $version and published." |
+              Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          }
+          else {
+            "built=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "Windows compiler-artifact execution: ENVIRONMENT DEPENDENT - the LLVM $version worker build failed on this runner; no jocky-worker.exe is claimed." |
+              Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          }
+      - uses: actions/upload-artifact@v4
+        if: steps.worker.outputs.built == 'true'
+        with:
+          name: jocky-worker-windows-x86_64
+          path: build/windows/native/compiler/Release/jocky-worker.exe
+          if-no-files-found: error
   infrastructure:
     runs-on: ubuntu-24.04
     steps:

@@ -10,11 +10,11 @@ For installing the compiler and the launcher, see [INSTALL.md](INSTALL.md).
 
 ## What runs where
 
-| | Local compiler / fixture | Real endpoint / control plane |
-| --- | --- | --- |
-| What it is | `jockyc` lowering, AOT objects and in-process LLVM ORC execution | The Rust agent on an enrolled host and the FastAPI control plane |
-| Which commands reach it | Everything in this document | Nothing in this document |
-| Evidence status | `SIMULATED` deterministic compiler fixture — **not endpoint evidence** | Not reachable from `jocky` today |
+|                         | Local compiler / fixture                                               | Real endpoint / control plane                                    |
+| ----------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| What it is              | `jockyc` lowering, AOT objects and in-process LLVM ORC execution       | The Rust agent on an enrolled host and the FastAPI control plane |
+| Which commands reach it | Everything in this document                                            | Nothing in this document                                         |
+| Evidence status         | `SIMULATED` deterministic compiler fixture — **not endpoint evidence** | Not reachable from `jocky` today                                 |
 
 `jocky run` executes compiler-generated code in this process against a clearly labelled
 deterministic fixture collector. It does not contact an endpoint, does not enlist an agent, and its
@@ -25,45 +25,45 @@ authenticated tenant session the launcher does not carry — see
 
 ## Status table
 
-| Command | Purpose | Backend / source | Status |
-| --- | --- | --- | --- |
-| `jocky <file.jky>` | Compile and run a hunt file | `jockyc run --execution memory` | AVAILABLE |
-| `jocky doctor` | Report environment readiness | local probes only | AVAILABLE |
-| `jocky check <file.jky>` | Frontend validation | `jockyc check` | AVAILABLE |
-| `jocky tokens <file.jky>` | Token stream | `jockyc tokens` | AVAILABLE |
-| `jocky ast <file.jky>` | Parsed program | `jockyc ast` | AVAILABLE |
-| `jocky jir <file.jky>` | Typed JIR module | `jockyc jir` | AVAILABLE |
-| `jocky plan <file.jky>` | Static execution plan | `jockyc plan` | AVAILABLE |
-| `jocky llvm <file.jky>` | Lowered LLVM IR + manifest | `jockyc llvm` | AVAILABLE |
-| `jocky compile <file.jky> --output <p>` | Emit an AOT object + manifest | `jockyc compile` | AVAILABLE |
-| `jocky run <file.jky>` | Lower and execute in process | `jockyc run` | AVAILABLE |
-| `jocky variants <file.jky> --count N` | Persist N variants and manifests | `jockyc variants` | AVAILABLE |
-| `jocky variant-info <path>` | Read an artifact's manifest | `jockyc variant-info` | AVAILABLE |
-| `jocky benchmark <file.jky> --count N` | Bounded fixture benchmark | `jockyc benchmark` | AVAILABLE |
-| `jocky caps <file.jky>` | Declared capabilities | `jockyc jir` | COMPOSED |
-| `jocky budget <file.jky>` | Effective budgets, marked declared/default | `jockyc jir` + `jockyc ast` | COMPOSED |
-| `jocky types <file.jky>` | Declared result schema per instruction | `jockyc plan` | COMPOSED |
-| `jocky metrics <file.jky>` | Structural lowering metrics | `jockyc llvm` | COMPOSED |
-| `jocky fingerprint <file.jky>` | Compiler-emitted hashes and structural fingerprint | `jockyc llvm` | COMPOSED |
-| `jocky diverge <file.jky> --count N` | N variants with the evidence they differ | `jockyc variants` | COMPOSED |
-| `jocky diff <file.jky> --seed-a A --seed-b B` | Two seeds compared structurally | `jockyc llvm` ×2 | COMPOSED |
-| `jocky equivalence <file.jky> --count N` | Fixture semantic-equivalence evidence | `jockyc variants` | COMPOSED |
-| `jocky forge <file.jky> --count N` | One AOT object per deterministic seed | `jockyc compile` ×N | COMPOSED |
-| `jocky pipeline <file.jky> --count N` | End-to-end demo sequence | composition | COMPOSED |
-| `jocky verify <path>` | Artifact bytes against the manifest SHA-256 | `jockyc variant-info` | COMPOSED |
-| `jocky manifest <path>` | Print a variant manifest | `jockyc variant-info` | ALIAS |
-| `--execution jit` | Spelled alias of `memory` | `jockyc` option | ALIAS |
-| `--dry-run` | Maps `run` onto the existing `plan` stage | `jockyc plan` | ALIAS |
-| `--target linux\|windows\|arm64` | Target aliases | `jockyc` option | ALIAS |
-| `--target all` | Both cross targets (`forge`, `pipeline`) | composition | COMPOSED |
-| `jocky compile --target <cross>` | Cross-target object emission | `jockyc compile` | ENVIRONMENT DEPENDENT |
-| `jocky pipeline --target <cross>` | Cross-target compilation stages | composition | ENVIRONMENT DEPENDENT |
-| `jocky cfg <file.jky>` | Control-flow graph | — | NOT EXPOSED YET |
-| `jocky symbols <file.jky>` | Symbol table | — | NOT EXPOSED YET |
-| `jocky seal <path>` | Sign a manifest | — | NOT EXPOSED YET |
-| `jocky endpoints\|findings\|timeline\|drivers\|relay` | Control-plane inspection | — | NOT EXPOSED YET |
-| `jocky hunt\|collect` | Endpoint dispatch and collection | — | NOT EXPOSED YET |
-| `--endpoint`, `--transport` | Endpoint and relay execution | — | NOT EXPOSED YET |
+| Command                                               | Purpose                                            | Backend / source                | Status                |
+| ----------------------------------------------------- | -------------------------------------------------- | ------------------------------- | --------------------- |
+| `jocky <file.jky>`                                    | Compile and run a hunt file                        | `jockyc run --execution memory` | AVAILABLE             |
+| `jocky doctor`                                        | Report environment readiness                       | local probes only               | AVAILABLE             |
+| `jocky check <file.jky>`                              | Frontend validation                                | `jockyc check`                  | AVAILABLE             |
+| `jocky tokens <file.jky>`                             | Token stream                                       | `jockyc tokens`                 | AVAILABLE             |
+| `jocky ast <file.jky>`                                | Parsed program                                     | `jockyc ast`                    | AVAILABLE             |
+| `jocky jir <file.jky>`                                | Typed JIR module                                   | `jockyc jir`                    | AVAILABLE             |
+| `jocky plan <file.jky>`                               | Static execution plan                              | `jockyc plan`                   | AVAILABLE             |
+| `jocky llvm <file.jky>`                               | Lowered LLVM IR + manifest                         | `jockyc llvm`                   | AVAILABLE             |
+| `jocky compile <file.jky> --output <p>`               | Emit an AOT object + manifest                      | `jockyc compile`                | AVAILABLE             |
+| `jocky run <file.jky>`                                | Lower and execute in process                       | `jockyc run`                    | AVAILABLE             |
+| `jocky variants <file.jky> --count N`                 | Persist N variants and manifests                   | `jockyc variants`               | AVAILABLE             |
+| `jocky variant-info <path>`                           | Read an artifact's manifest                        | `jockyc variant-info`           | AVAILABLE             |
+| `jocky benchmark <file.jky> --count N`                | Bounded fixture benchmark                          | `jockyc benchmark`              | AVAILABLE             |
+| `jocky caps <file.jky>`                               | Declared capabilities                              | `jockyc jir`                    | COMPOSED              |
+| `jocky budget <file.jky>`                             | Effective budgets, marked declared/default         | `jockyc jir` + `jockyc ast`     | COMPOSED              |
+| `jocky types <file.jky>`                              | Declared result schema per instruction             | `jockyc plan`                   | COMPOSED              |
+| `jocky metrics <file.jky>`                            | Structural lowering metrics                        | `jockyc llvm`                   | COMPOSED              |
+| `jocky fingerprint <file.jky>`                        | Compiler-emitted hashes and structural fingerprint | `jockyc llvm`                   | COMPOSED              |
+| `jocky diverge <file.jky> --count N`                  | N variants with the evidence they differ           | `jockyc variants`               | COMPOSED              |
+| `jocky diff <file.jky> --seed-a A --seed-b B`         | Two seeds compared structurally                    | `jockyc llvm` ×2                | COMPOSED              |
+| `jocky equivalence <file.jky> --count N`              | Fixture semantic-equivalence evidence              | `jockyc variants`               | COMPOSED              |
+| `jocky forge <file.jky> --count N`                    | One AOT object per deterministic seed              | `jockyc compile` ×N             | COMPOSED              |
+| `jocky pipeline <file.jky> --count N`                 | End-to-end demo sequence                           | composition                     | COMPOSED              |
+| `jocky verify <path>`                                 | Artifact bytes against the manifest SHA-256        | `jockyc variant-info`           | COMPOSED              |
+| `jocky manifest <path>`                               | Print a variant manifest                           | `jockyc variant-info`           | ALIAS                 |
+| `--execution jit`                                     | Spelled alias of `memory`                          | `jockyc` option                 | ALIAS                 |
+| `--dry-run`                                           | Maps `run` onto the existing `plan` stage          | `jockyc plan`                   | ALIAS                 |
+| `--target linux\|windows\|arm64`                      | Target aliases                                     | `jockyc` option                 | ALIAS                 |
+| `--target all`                                        | Both cross targets (`forge`, `pipeline`)           | composition                     | COMPOSED              |
+| `jocky compile --target <cross>`                      | Cross-target object emission                       | `jockyc compile`                | ENVIRONMENT DEPENDENT |
+| `jocky pipeline --target <cross>`                     | Cross-target compilation stages                    | composition                     | ENVIRONMENT DEPENDENT |
+| `jocky cfg <file.jky>`                                | Control-flow graph                                 | —                               | NOT EXPOSED YET       |
+| `jocky symbols <file.jky>`                            | Symbol table                                       | —                               | NOT EXPOSED YET       |
+| `jocky seal <path>`                                   | Sign a manifest                                    | —                               | NOT EXPOSED YET       |
+| `jocky endpoints\|findings\|timeline\|drivers\|relay` | Control-plane inspection                           | —                               | NOT EXPOSED YET       |
+| `jocky hunt\|collect`                                 | Endpoint dispatch and collection                   | —                               | NOT EXPOSED YET       |
+| `--endpoint`, `--transport`                           | Endpoint and relay execution                       | —                               | NOT EXPOSED YET       |
 
 ## Backend selection
 
@@ -79,13 +79,13 @@ pulls or installs anything, including the fallback image.
 
 ## Exit status
 
-| Status | Meaning |
-| --- | --- |
-| 0 | Success |
-| 1 | jockyc ran and rejected the program or the stage (its own status) |
-| 2 | Bad arguments, or a command documented as NOT EXPOSED YET |
-| 70 | No usable compiler backend |
-| 130 | Interrupted |
+| Status | Meaning                                                           |
+| ------ | ----------------------------------------------------------------- |
+| 0      | Success                                                           |
+| 1      | jockyc ran and rejected the program or the stage (its own status) |
+| 2      | Bad arguments, or a command documented as NOT EXPOSED YET         |
+| 70     | No usable compiler backend                                        |
+| 130    | Interrupted                                                       |
 
 ## Forwarded commands
 
@@ -277,27 +277,27 @@ is printed.
 Aliases translate an argument onto an existing compiler capability. They add no new target, mode or
 behaviour.
 
-| Alias | Becomes | Notes |
-| --- | --- | --- |
-| `--execution jit` | `--execution memory` | only for `run`; the existing ORC in-process mode |
-| `--dry-run` | `plan <file.jky>` | only for `jocky <file.jky>` and `jocky run <file.jky>`; never executes |
-| `--target linux` | `--target linux-x86_64` | |
-| `--target windows` | `--target windows-x86_64` | |
-| `--target arm64`, `--target linux-arm64` | `--target linux-aarch64` | |
-| `--target all` | both cross targets | `forge` and `pipeline` only |
+| Alias                                    | Becomes                   | Notes                                                                  |
+| ---------------------------------------- | ------------------------- | ---------------------------------------------------------------------- |
+| `--execution jit`                        | `--execution memory`      | only for `run`; the existing ORC in-process mode                       |
+| `--dry-run`                              | `plan <file.jky>`         | only for `jocky <file.jky>` and `jocky run <file.jky>`; never executes |
+| `--target linux`                         | `--target linux-x86_64`   |                                                                        |
+| `--target windows`                       | `--target windows-x86_64` |                                                                        |
+| `--target arm64`, `--target linux-arm64` | `--target linux-aarch64`  |                                                                        |
+| `--target all`                           | both cross targets        | `forge` and `pipeline` only                                            |
 
 `--dry-run` with any other command is rejected with exit status 2 rather than silently ignored.
 
 ## Environment-dependent behaviour
 
-* **Cross-target linking and execution.** `jockyc compile --target linux-x86_64` and
+- **Cross-target linking and execution.** `jockyc compile --target linux-x86_64` and
   `--target windows-x86_64` emit real ELF and COFF objects, and `jocky forge --target all` drives
   both. Linking or running those objects needs a toolchain for the target, which this host may not
   have. Compilation is claimed; linking and execution are not. `pipeline` prints the same caveat.
-* **Windows.** The repo has never built or run the compiler natively on Windows, and this launcher
+- **Windows.** The repo has never built or run the compiler natively on Windows, and this launcher
   reaches it through Docker Desktop or WSL2 on that platform. `scripts/jockey` and `jocky` are POSIX
   entry points.
-* **Fixture vs endpoint.** `jocky run`, `diverge`, `equivalence` and `pipeline` execute against the
+- **Fixture vs endpoint.** `jocky run`, `diverge`, `equivalence` and `pipeline` execute against the
   deterministic compiler fixture in this process. They are labelled as such in their own output.
 
 ## NOT EXPOSED YET
@@ -306,13 +306,13 @@ Each of these is a real capability of the JOCKY platform that `jocky` cannot bac
 data today. Invoking one prints the reason and exits 2. None of them is stubbed with placeholder
 output.
 
-| Command | Why it is not here |
-| --- | --- |
-| `cfg` | No `jockyc` command emits control-flow-graph edges. The compiler reports basic-block counts only, and the launcher invokes `jockyc` alone rather than external LLVM tooling. A `cfg` built from a hand-written parse of LLVM IR text would be a guess, not compiler data. |
-| `symbols` | No `jockyc` command emits a symbol table or name-binding structure. `jocky types` reports the declared JIR result schema per instruction, which is not the same thing. |
-| `seal` | No local artifact signing exists. The compiler writes unsigned manifests; signing lives in the control-plane evidence service and the Rust agent's evidence key. `jocky verify` therefore checks integrity only and says so. |
+| Command                                                 | Why it is not here                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cfg`                                                   | No `jockyc` command emits control-flow-graph edges. The compiler reports basic-block counts only, and the launcher invokes `jockyc` alone rather than external LLVM tooling. A `cfg` built from a hand-written parse of LLVM IR text would be a guess, not compiler data.                                                                                                            |
+| `symbols`                                               | No `jockyc` command emits a symbol table or name-binding structure. `jocky types` reports the declared JIR result schema per instruction, which is not the same thing.                                                                                                                                                                                                               |
+| `seal`                                                  | No local artifact signing exists. The compiler writes unsigned manifests; signing lives in the control-plane evidence service and the Rust agent's evidence key. `jocky verify` therefore checks integrity only and says so.                                                                                                                                                         |
 | `endpoints`, `findings`, `timeline`, `drivers`, `relay` | The control plane serves these under `/api/v1` (`/endpoints`, `/findings`, `/timeline`, `/artifacts/{id}/verify`, …), but every domain route requires a bearer session obtained by logging in with a user, password and organization. The launcher has no HTTP client, no credential source and no session, and this task explicitly forbids changing the backend routes to suit it. |
-| `hunt`, `collect` | Mutating operations over enrolled endpoints, gated the same way. `--endpoint` and `--transport relay` are refused for the same reason. |
+| `hunt`, `collect`                                       | Mutating operations over enrolled endpoints, gated the same way. `--endpoint` and `--transport relay` are refused for the same reason.                                                                                                                                                                                                                                               |
 
 Adding any of these requires either a new authoritative compiler output, or an authenticated
 control-plane client with credentials the operator supplies — not a change to the compiler or the
@@ -320,8 +320,8 @@ backend contract.
 
 ## See also
 
-* [INSTALL.md](INSTALL.md) — building the compiler and installing the launcher
-* [JIR_SPEC.md](JIR_SPEC.md) — the JIR document the composed commands read
-* [LANGUAGE_SPEC.md](LANGUAGE_SPEC.md) — the `.jky` grammar
-* [BUILD_STATUS.md](BUILD_STATUS.md) — what is verified where, and on which toolchain
-* [API.md](API.md) — the control-plane contracts the launcher does not yet reach
+- [INSTALL.md](INSTALL.md) — building the compiler and installing the launcher
+- [JIR_SPEC.md](JIR_SPEC.md) — the JIR document the composed commands read
+- [LANGUAGE_SPEC.md](LANGUAGE_SPEC.md) — the `.jky` grammar
+- [BUILD_STATUS.md](BUILD_STATUS.md) — what is verified where, and on which toolchain
+- [API.md](API.md) — the control-plane contracts the launcher does not yet reach

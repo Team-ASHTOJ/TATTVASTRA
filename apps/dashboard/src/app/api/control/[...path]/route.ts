@@ -20,6 +20,8 @@ const domains = new Set([
   "endpoints",
   "local-agent",
   "local-agents",
+  "windows-endpoint",
+  "windows-bootstrap",
   "hunts",
   "artifacts",
   "manifests",

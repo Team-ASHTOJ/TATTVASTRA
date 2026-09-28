@@ -14,11 +14,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import __version__
-from . import build
-from . import compiler
+from . import __version__, build, compiler, evidence
 from . import container as container_backend
-from . import evidence
 from . import inspect as inspect_commands
 from . import variants as variant_commands
 from .backend import (
@@ -286,7 +283,7 @@ def _composed(handler, argv: list[str]) -> int:
 
 def _not_exposed(name: str, detail: str) -> int:
     print(f"{PROGRAM}: `{name}` is NOT EXPOSED YET — {detail}.", file=sys.stderr)
-    print(f"See docs/JOCKY_CLI.md for the command reference.", file=sys.stderr)
+    print("See docs/JOCKY_CLI.md for the command reference.", file=sys.stderr)
     return EXIT_USAGE
 
 

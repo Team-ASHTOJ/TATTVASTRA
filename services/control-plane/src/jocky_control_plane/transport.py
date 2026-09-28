@@ -160,23 +160,34 @@ class AgentControl:
                     timestamp = datetime.fromisoformat(
                         frame.heartbeat.timestamp.replace("Z", "+00:00")
                     )
-                    if (
-                        timestamp.tzinfo is None
-                        or abs((datetime.now(UTC) - timestamp).total_seconds()) > 300
-                    ):
-                        raise HTTPException(422, "Heartbeat timestamp exceeds clock skew")
+                    if timestamp.tzinfo is None:
+                        raise HTTPException(422, "Heartbeat timestamp has no timezone")
+                    # Transport provenance comes from the authenticated connection,
+                    # not from the liveness claim.
                     endpoint.transport_mode = self.transport_mode
-                    endpoint.last_seen = datetime.now(UTC)
-                    endpoint.status = State.ONLINE
-                    publish(
-                        db,
-                        user,
-                        "agent.state",
-                        endpoint.id,
-                        {"state": "ONLINE"},
-                        simulation=endpoint.simulation,
-                        simulation_label=endpoint.simulation_label,
-                    )
+                    # The endpoint spools frames durably and replays the
+                    # unacknowledged ones, so a heartbeat legitimately arrives
+                    # long after it was stamped. Rejecting it would stall that
+                    # ordered stream permanently, because the sequence after it
+                    # can never be accepted either. A claim outside the skew
+                    # window is therefore still acknowledged as a frame but is
+                    # not liveness evidence: it never refreshes last_seen. That
+                    # gates liveness exactly as the previous rejection did --
+                    # an endpoint whose clock is out of window stays
+                    # WAITING_FOR_HEARTBEAT until it stamps a claim inside it --
+                    # without also costing the endpoint its other frames.
+                    if abs((datetime.now(UTC) - timestamp).total_seconds()) <= 300:
+                        endpoint.last_seen = datetime.now(UTC)
+                        endpoint.status = State.ONLINE
+                        publish(
+                            db,
+                            user,
+                            "agent.state",
+                            endpoint.id,
+                            {"state": "ONLINE"},
+                            simulation=endpoint.simulation,
+                            simulation_label=endpoint.simulation_label,
+                        )
                 elif body in {"observation", "evidence_manifest", "job_progress", "artifact"}:
                     payload = json.loads(getattr(frame, body).json_utf8)
                     if body == "observation":

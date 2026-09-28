@@ -33,8 +33,68 @@ struct Binding {
     worker: PathBuf,
 }
 
+/// Operator-supplied transport material.
+///
+/// The default enrollment path shells out to the OpenSSL CLI to create a
+/// P-256 key and PKCS#10 request. A Windows host has no such binary, so the
+/// bootstrap generates an equivalent P-256 key and PKCS#10 request with the
+/// platform crypto provider and hands the PEM files to the agent instead. The
+/// TLS identity, the CSR contents and every server-side check are unchanged:
+/// the control plane still signs the request and the endpoint still proves
+/// possession of the matching private key in the mTLS handshake.
+pub struct SuppliedTransport {
+    pub key: PathBuf,
+    pub csr: PathBuf,
+}
+
+pub fn supplied_transport(
+    key: Option<PathBuf>,
+    csr: Option<PathBuf>,
+) -> Result<Option<SuppliedTransport>> {
+    match (key, csr) {
+        (None, None) => Ok(None),
+        (Some(key), Some(csr)) => Ok(Some(SuppliedTransport { key, csr })),
+        _ => Err(AgentError::rejected(
+            "INCOMPLETE_TRANSPORT_MATERIAL",
+            "--transport-key and --csr must be supplied together",
+        )),
+    }
+}
+
 fn failure(detail: impl ToString) -> AgentError {
     AgentError::rejected("REMOTE_TRANSPORT", detail.to_string())
+}
+
+/// Install operator-supplied PEM material into the state directory, refusing
+/// anything that is not a PEM private key plus a PEM PKCS#10 request. A key
+/// that does not match the request is rejected by the mTLS handshake, so no
+/// verification is skipped here.
+fn install_supplied_transport(root: &Path, key_path: &Path, csr_path: &Path) -> Result<Vec<u8>> {
+    let key = fs::read(key_path)?;
+    let csr = fs::read(csr_path)?;
+    let key_is_pem = key.starts_with(b"-----BEGIN ") && contains(&key, b"PRIVATE KEY-----");
+    let csr_is_pem = csr.starts_with(b"-----BEGIN CERTIFICATE REQUEST-----");
+    if !key_is_pem || !csr_is_pem {
+        return Err(AgentError::rejected(
+            "INVALID_TRANSPORT_MATERIAL",
+            "supplied transport key must be a PEM private key and the CSR a PEM PKCS#10 request",
+        ));
+    }
+    let destination = root.join("transport.key");
+    fs::write(&destination, &key)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&destination, fs::Permissions::from_mode(0o600))?;
+    }
+    fs::write(root.join("transport.csr"), &csr)?;
+    Ok(csr)
+}
+
+fn contains(haystack: &[u8], needle: &[u8]) -> bool {
+    haystack
+        .windows(needle.len())
+        .any(|window| window == needle)
 }
 
 async fn channel(server: &str, root: &Path, mutual: bool) -> Result<Channel> {
@@ -66,12 +126,10 @@ pub async fn enroll(
     ca: &Path,
     token_file: &Path,
     worker: &Path,
+    supplied: Option<SuppliedTransport>,
 ) -> Result<Value> {
     if !cfg!(any(target_os = "linux", windows)) {
         return Err(failure("Unsupported endpoint platform"));
-    }
-    if !worker.is_file() {
-        return Err(failure("LLVM execution worker is unavailable"));
     }
     let state = AgentState::load(root)?;
     if root.join("remote.json").exists() {
@@ -84,34 +142,10 @@ pub async fn enroll(
             "Transport key already exists; preserve it and inspect incomplete enrollment",
         ));
     }
-    let status = Command::new("openssl")
-        .args([
-            "req",
-            "-new",
-            "-newkey",
-            "ec",
-            "-pkeyopt",
-            "ec_paramgen_curve:P-256",
-            "-nodes",
-            "-subj",
-            "/CN=jocky-agent",
-        ])
-        .arg("-keyout")
-        .arg(&key)
-        .arg("-out")
-        .arg(root.join("transport.csr"))
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()?;
-    if !status.success() {
-        return Err(failure("ECDSA CSR generation failed"));
-    }
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(&key, fs::Permissions::from_mode(0o600))?;
-    }
-    let csr = fs::read(root.join("transport.csr"))?;
+    let csr = match supplied {
+        Some(material) => install_supplied_transport(root, &material.key, &material.csr)?,
+        None => generate_transport_csr(root, &key)?,
+    };
     let mut proof = b"JOCKY:enroll:v1\n".to_vec();
     proof.extend(&csr);
     let signed = state.sign_identity(&proof)?;
@@ -154,9 +188,50 @@ pub async fn enroll(
         root.join("remote.json"),
         serde_json::to_vec_pretty(&binding)?,
     )?;
-    Ok(
-        json!({"endpoint_id":response.endpoint_id,"remote_transport_configured":true,"simulation":false}),
-    )
+    // Compiler-artifact execution needs the LLVM worker, which some endpoint
+    // platforms legitimately cannot build. Enrollment records whether it is
+    // present instead of refusing to connect; job admission enforces it.
+    Ok(json!({
+        "endpoint_id": response.endpoint_id,
+        "remote_transport_configured": true,
+        "execution_worker_available": worker.is_file(),
+        "simulation": false
+    }))
+}
+
+/// Default Linux path: the OpenSSL CLI creates a P-256 key and PKCS#10 request.
+fn generate_transport_csr(root: &Path, key: &Path) -> Result<Vec<u8>> {
+    let status = Command::new("openssl")
+        .args([
+            "req",
+            "-new",
+            "-newkey",
+            "ec",
+            "-pkeyopt",
+            "ec_paramgen_curve:P-256",
+            "-nodes",
+            "-subj",
+            "/CN=jocky-agent",
+        ])
+        .arg("-keyout")
+        .arg(key)
+        .arg("-out")
+        .arg(root.join("transport.csr"))
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map_err(|_| {
+            failure("OpenSSL is unavailable; supply --transport-key and --csr instead")
+        })?;
+    if !status.success() {
+        return Err(failure("ECDSA CSR generation failed"));
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(key, fs::Permissions::from_mode(0o600))?;
+    }
+    Ok(fs::read(root.join("transport.csr"))?)
 }
 
 fn verify(state: &AgentState, binding: &Binding, value: &Value, domain: &str) -> Result<()> {
@@ -200,6 +275,7 @@ fn verify(state: &AgentState, binding: &Binding, value: &Value, domain: &str) ->
 
 fn admit(state: &AgentState, binding: &Binding, job: &Value) -> Result<()> {
     verify(state, binding, job, "JOCKY:job:v1\n")?;
+    require_worker(binding)?;
     if job["enforcement_mode"] != "MONITORED" {
         return Err(failure("Strict budget enforcement unavailable"));
     }
@@ -241,6 +317,18 @@ fn admit(state: &AgentState, binding: &Binding, job: &Value) -> Result<()> {
         return Err(failure("Invalid nonce"));
     }
     Ok(())
+}
+
+/// Compiler-artifact execution needs the LLVM worker. Some endpoint platforms
+/// genuinely cannot build it, and a missing worker must not stop the endpoint
+/// from enrolling and heartbeating, so it is enforced when a job is admitted
+/// rather than when the endpoint connects.
+fn require_worker(binding: &Binding) -> Result<()> {
+    if binding.worker.is_file() {
+        Ok(())
+    } else {
+        Err(failure("LLVM execution worker is unavailable"))
+    }
 }
 
 fn frame(endpoint: &str, body: agent_frame::Body) -> wire::AgentFrame {
@@ -323,6 +411,12 @@ pub async fn connect(root: &Path) -> Result<()> {
         let (sender, receiver) = mpsc::channel(32);
         let mut last_sent = 0;
         let mut heartbeat_at = std::time::Instant::now() - Duration::from_secs(30);
+        // This opening heartbeat is sent before the exchange starts, and the
+        // control plane only answers once it has accepted a frame. Opening the
+        // stream with nothing to send therefore deadlocks rather than merely
+        // delaying liveness, so the endpoint always queues this frame first.
+        // It is also the oldest frame the spool can hold across a restart,
+        // which is why an unacknowledged heartbeat must stay replayable.
         spool.queue_remote(
             &mut [frame(
                 &binding.endpoint_id,
@@ -476,5 +570,90 @@ pub async fn connect(root: &Path) -> Result<()> {
             }
         }
         tokio::time::sleep(Duration::from_secs(2)).await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const KEY: &str = "-----BEGIN PRIVATE KEY-----\nAA\n-----END PRIVATE KEY-----";
+    const CSR: &str = "-----BEGIN CERTIFICATE REQUEST-----\nAA\n-----END CERTIFICATE REQUEST-----";
+
+    fn stage(root: &Path, key: &str, csr: &str) -> (PathBuf, PathBuf) {
+        let key_path = root.join("staged.key");
+        let csr_path = root.join("staged.csr");
+        fs::write(&key_path, key).unwrap();
+        fs::write(&csr_path, csr).unwrap();
+        (key_path, csr_path)
+    }
+
+    fn binding(worker: &Path) -> Binding {
+        Binding {
+            endpoint_id: "endpoint-test".into(),
+            organization_id: "org-test".into(),
+            server: "https://127.0.0.1:50051".into(),
+            authority: "unused".into(),
+            worker: worker.to_path_buf(),
+        }
+    }
+
+    #[test]
+    fn supplied_transport_requires_both_halves() {
+        assert!(supplied_transport(None, None).unwrap().is_none());
+        assert!(supplied_transport(Some("key.pem".into()), None).is_err());
+        assert!(supplied_transport(None, Some("csr.pem".into())).is_err());
+        assert!(
+            supplied_transport(Some("key.pem".into()), Some("csr.pem".into()))
+                .unwrap()
+                .is_some()
+        );
+    }
+
+    #[test]
+    fn supplied_material_is_installed_or_rejected() {
+        let root = tempfile::tempdir().unwrap();
+        let (key_path, csr_path) = stage(root.path(), KEY, CSR);
+        assert_eq!(
+            install_supplied_transport(root.path(), &key_path, &csr_path).unwrap(),
+            CSR.as_bytes()
+        );
+        assert_eq!(
+            fs::read(root.path().join("transport.csr")).unwrap(),
+            CSR.as_bytes()
+        );
+        assert_eq!(
+            fs::read(root.path().join("transport.key")).unwrap(),
+            KEY.as_bytes()
+        );
+        assert!(
+            install_supplied_transport(root.path(), &key_path, &csr_path).is_err(),
+            "an existing transport key must never be overwritten"
+        );
+    }
+
+    #[test]
+    fn non_pem_material_is_rejected() {
+        let root = tempfile::tempdir().unwrap();
+        let (key_path, csr_path) = stage(root.path(), "not a key", CSR);
+        assert!(install_supplied_transport(root.path(), &key_path, &csr_path).is_err());
+        assert!(!root.path().join("transport.key").exists());
+
+        let (key_path, csr_path) = stage(root.path(), KEY, "not a request");
+        assert!(install_supplied_transport(root.path(), &key_path, &csr_path).is_err());
+        assert!(!root.path().join("transport.csr").exists());
+    }
+
+    #[test]
+    fn admission_requires_a_present_execution_worker() {
+        let root = tempfile::tempdir().unwrap();
+        let missing = root.path().join("jocky-worker");
+        let error = require_worker(&binding(&missing)).unwrap_err();
+        assert!(
+            error.to_string().contains("LLVM execution worker is unavailable"),
+            "{error}"
+        );
+        fs::write(&missing, b"worker").unwrap();
+        assert!(require_worker(&binding(&missing)).is_ok());
     }
 }

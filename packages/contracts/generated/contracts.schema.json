@@ -5224,6 +5224,66 @@
       ],
       "title": "VersionCreate",
       "type": "object"
+    },
+    "WindowsBootstrapPoll": {
+      "additionalProperties": false,
+      "properties": {
+        "endpoint_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Endpoint Id"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "maxLength": 4096,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        },
+        "needs_enrollment": {
+          "default": true,
+          "title": "Needs Enrollment",
+          "type": "boolean"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "READY",
+            "STARTING",
+            "ENROLLING",
+            "WAITING_FOR_HEARTBEAT",
+            "ONLINE",
+            "FAILED",
+            "STOPPED"
+          ],
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "state"
+      ],
+      "title": "WindowsBootstrapPoll",
+      "type": "object"
     }
   },
   "$id": "https://jocky.invalid/contracts/v1.0.0",
@@ -5425,6 +5485,9 @@
     },
     "VersionCreate": {
       "$ref": "#/$defs/VersionCreate"
+    },
+    "WindowsBootstrapPoll": {
+      "$ref": "#/$defs/WindowsBootstrapPoll"
     }
   },
   "title": "JockyContracts",

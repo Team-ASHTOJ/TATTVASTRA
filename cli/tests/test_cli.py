@@ -11,7 +11,6 @@ import shutil
 from pathlib import Path
 
 import pytest
-
 from jocky_cli import backend, container, main
 
 

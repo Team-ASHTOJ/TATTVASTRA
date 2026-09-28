@@ -29,6 +29,9 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 COPY packages/contracts/ packages/contracts/
 COPY services/control-plane/ services/control-plane/
+# The Windows bootstrap is served from the authenticated enrollment API, so the
+# image must carry the same script the repository ships.
+COPY scripts/windows/ scripts/windows/
 RUN uv sync --frozen --all-packages --no-dev --no-editable \
     && useradd --system --uid 10001 jocky \
     && mkdir -p /app/.local && chown -R 10001:10001 /app/.local

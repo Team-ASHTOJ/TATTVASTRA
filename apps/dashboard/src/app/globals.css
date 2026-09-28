@@ -2050,6 +2050,59 @@ pre,
   gap: 16px;
 }
 
+/* Three connect paths side by side: local Linux, Windows, external Linux. */
+.operator-drawer .connect-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.operator-drawer .connect-options > .panel {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px;
+}
+
+.operator-drawer .connect-options > .panel > h3 {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.operator-drawer .connect-options > .panel > p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.operator-drawer .connect-options > .panel > button:last-child {
+  margin-top: auto;
+  width: 100%;
+}
+
+.operator-drawer details.advanced-setup {
+  border-top: 1px solid var(--border-default);
+  margin-top: 14px;
+  padding-top: 12px;
+}
+
+.operator-drawer details.advanced-setup > summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.operator-drawer details.advanced-setup[open] > summary {
+  margin-bottom: 10px;
+}
+
 .operator-drawer .metric-grid > .panel {
   min-width: 0;
   min-height: 230px;
@@ -2113,6 +2166,10 @@ pre,
   }
 
   .operator-drawer .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .operator-drawer .connect-options {
     grid-template-columns: 1fr;
   }
 

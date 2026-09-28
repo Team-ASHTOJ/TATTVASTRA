@@ -43,6 +43,13 @@ enum Command {
         token_file: PathBuf,
         #[arg(long, default_value = "/usr/local/bin/jocky-worker")]
         worker: PathBuf,
+        /// PEM P-256 transport private key. Supplying it (with --csr) replaces
+        /// the OpenSSL helper, which is absent on a stock Windows host.
+        #[arg(long, requires = "csr")]
+        transport_key: Option<PathBuf>,
+        /// PEM PKCS#10 request matching --transport-key.
+        #[arg(long, requires = "transport_key")]
+        csr: Option<PathBuf>,
     },
     /// Connect with mTLS, replay durable frames and execute authorized compiler jobs.
     Connect,
@@ -162,6 +169,8 @@ async fn execute(cli: Cli) -> Result<()> {
             ca,
             token_file,
             worker,
+            transport_key,
+            csr,
         } => print_json(
             &jocky_agent::remote::enroll(
                 &cli.state_dir,
@@ -170,6 +179,7 @@ async fn execute(cli: Cli) -> Result<()> {
                 &ca,
                 &token_file,
                 &worker,
+                jocky_agent::remote::supplied_transport(transport_key, csr)?,
             )
             .await?,
         ),

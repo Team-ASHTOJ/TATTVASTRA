@@ -114,6 +114,22 @@ class EndpointEnrollment(Scoped, Base):
     capabilities: Mapped[list[str]] = mapped_column(JSON, default=list)
 
 
+class WindowsBootstrap(Scoped, Base):
+    """Preinstalled Windows supervisor registration and bounded desired state."""
+
+    __tablename__ = "windows_bootstraps"
+    __table_args__ = (UniqueConstraint("organization_id", "hostname"),)
+    hostname: Mapped[str] = mapped_column(String(255), default="WINDOWS-01")
+    credential_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    desired_state: Mapped[str] = mapped_column(String(32), default="STOPPED")
+    reported_state: Mapped[str] = mapped_column(String(32), default="READY")
+    activation_id: Mapped[UUID | None]
+    endpoint_id: Mapped[UUID | None] = mapped_column(ForeignKey("endpoints.id"))
+    enrollment_id: Mapped[UUID | None] = mapped_column(ForeignKey("endpoint_enrollments.id"))
+    last_poll_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(Text)
+
+
 class Script(Scoped, Base):
     __tablename__ = "scripts"
     name: Mapped[str] = mapped_column(String(200))

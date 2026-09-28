@@ -138,8 +138,7 @@ def source_and_options(
     positionals, values, present = options_module.parse(argv, valued, flags)
     if len(positionals) != 1:
         raise UsageError(
-            f"usage: jocky {command} <file.jky> [options] "
-            "(exactly one .jky file is required)"
+            f"usage: jocky {command} <file.jky> [options] (exactly one .jky file is required)"
         )
     return positionals[0], values, present
 

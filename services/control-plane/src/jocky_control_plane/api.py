@@ -7,7 +7,7 @@ import threading
 from collections.abc import AsyncIterator, Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query, Request
 from fastapi.encoders import jsonable_encoder
@@ -16,7 +16,7 @@ from jocky_contracts import control as contracts
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from jocky_control_plane import forge, hunts, investigation, local_agent
+from jocky_control_plane import forge, hunts, investigation, local_agent, windows_bootstrap
 from jocky_control_plane.builds import build_variants, compile_version
 from jocky_control_plane.config import Settings
 from jocky_control_plane.models import (
@@ -43,6 +43,7 @@ from jocky_control_plane.models import (
     TimelineEvent,
     User,
     Variant,
+    WindowsBootstrap,
 )
 from jocky_control_plane.objects import ObjectStore
 from jocky_control_plane.security import (
@@ -515,6 +516,235 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
         )
         return {"id": row.id, "one_time_token": token, "expires_at": row.expires_at}
 
+    def windows_status(db: Session, user: User) -> dict[str, Any]:
+        row = db.scalar(
+            select(WindowsBootstrap).where(
+                WindowsBootstrap.organization_id == user.organization_id,
+                WindowsBootstrap.hostname == "WINDOWS-01",
+            )
+        )
+        if row is None:
+            return {"state": "NOT_CONFIGURED", "configured": False, "hostname": "WINDOWS-01"}
+        endpoint = db.get(Endpoint, row.endpoint_id) if row.endpoint_id else None
+        state = row.reported_state
+        if endpoint is None and state == "ONLINE":
+            state = "WAITING_FOR_HEARTBEAT"
+        if (
+            endpoint is not None
+            and endpoint.last_seen is not None
+            and endpoint.status != State.REVOKED
+        ):
+            age = datetime.now(UTC) - aware(endpoint.last_seen)
+            state = "ONLINE" if age <= timedelta(seconds=90) else "STALE"
+        elif row.desired_state == "STOPPED" and state not in {"FAILED", "READY"}:
+            state = "STOPPED"
+        elif (
+            row.desired_state != "START"
+            and row.last_poll_at is not None
+            and not windows_bootstrap.polled(row)
+            and state not in {"FAILED", "STOPPED"}
+        ):
+            # OFFLINE is a supervisor that was being heard and then went quiet.
+            # A host that has registered but never polled is READY: prepared,
+            # not connected, and never described as anything more.
+            state = "OFFLINE"
+        return {
+            "id": row.id,
+            "configured": True,
+            "hostname": row.hostname,
+            "state": state,
+            "reported_state": row.reported_state,
+            "desired_state": row.desired_state,
+            "last_poll_at": row.last_poll_at,
+            "error": row.last_error,
+            "endpoint_id": row.endpoint_id,
+            "endpoint": document(endpoint) if endpoint else None,
+        }
+
+    @router.get("/windows-endpoint/status")
+    def get_windows_endpoint(db: DB, user: Admin) -> Any:
+        return windows_status(db, user)
+
+    @router.post("/windows-endpoint/bootstrap", status_code=201)
+    def register_windows_bootstrap(db: DB, user: Admin) -> Any:
+        existing = db.scalar(
+            select(WindowsBootstrap).where(
+                WindowsBootstrap.organization_id == user.organization_id,
+                WindowsBootstrap.hostname == "WINDOWS-01",
+            )
+        )
+        if existing is not None:
+            raise HTTPException(409, "WINDOWS-01 bootstrap is already registered")
+        configured = (
+            settings.windows_api_url,
+            settings.windows_control_server,
+            settings.windows_enrollment_server,
+        )
+        if not all(configured) or not all(
+            str(value).startswith("https://") for value in configured
+        ):
+            raise HTTPException(
+                503,
+                "Configure HTTPS JOCKY_WINDOWS_API_URL, JOCKY_WINDOWS_CONTROL_SERVER, "
+                "and JOCKY_WINDOWS_ENROLLMENT_SERVER for the Windows VM",
+            )
+        secret = secrets.token_urlsafe(48)
+        row = WindowsBootstrap(
+            organization_id=user.organization_id,
+            simulation=False,
+            hostname="WINDOWS-01",
+            credential_hash=digest(secret.encode()),
+            desired_state="STOPPED",
+            reported_state="READY",
+        )
+        db.add(row)
+        db.flush()
+        publish(db, user, "windows.bootstrap.registered", row.id)
+        return {
+            "schema_version": "1.0.0",
+            "api_url": settings.windows_api_url,
+            "control_server": settings.windows_control_server,
+            "enrollment_server": settings.windows_enrollment_server,
+            "organization_id": str(user.organization_id),
+            "bootstrap_id": str(row.id),
+            "bootstrap_secret": secret,
+            "ca_pem": settings.tls_ca_path.read_text(),
+        }
+
+    @router.post("/windows-endpoint/start")
+    def start_windows_endpoint(db: DB, user: Admin) -> Any:
+        row = db.scalar(
+            select(WindowsBootstrap)
+            .where(
+                WindowsBootstrap.organization_id == user.organization_id,
+                WindowsBootstrap.hostname == "WINDOWS-01",
+            )
+            .with_for_update()
+        )
+        if row is None:
+            raise HTTPException(
+                409, "Windows bootstrap is not configured; complete Advanced Setup once"
+            )
+        current = windows_status(db, user)
+        if row.desired_state == "START" and current["state"] in {
+            "STARTING",
+            "ENROLLING",
+            "WAITING_FOR_HEARTBEAT",
+            "ONLINE",
+        }:
+            return current
+        row.desired_state = "START"
+        row.reported_state = "STARTING"
+        row.last_error = None
+        if row.endpoint_id is None:
+            row.activation_id = uuid4()
+            row.enrollment_id = None
+        publish(db, user, "windows.endpoint.start_requested", row.id)
+        db.flush()
+        return windows_status(db, user)
+
+    @router.post("/windows-endpoint/stop")
+    def stop_windows_endpoint(db: DB, user: Admin) -> Any:
+        row = db.scalar(
+            select(WindowsBootstrap)
+            .where(
+                WindowsBootstrap.organization_id == user.organization_id,
+                WindowsBootstrap.hostname == "WINDOWS-01",
+            )
+            .with_for_update()
+        )
+        if row is None:
+            raise HTTPException(409, "Windows bootstrap is not configured")
+        if row.desired_state != "STOPPED":
+            row.desired_state = "STOPPED"
+            publish(db, user, "windows.endpoint.stop_requested", row.id)
+        db.flush()
+        return windows_status(db, user)
+
+    @router.post("/windows-bootstrap/poll")
+    def poll_windows_bootstrap(
+        payload: contracts.WindowsBootstrapPoll,
+        request: Request,
+        db: DB,
+        authorization: Annotated[str | None, Header()] = None,
+    ) -> Any:
+        forwarded = request.headers.get("x-forwarded-proto", "").split(",", 1)[0].strip()
+        if (
+            settings.environment != "test"
+            and request.url.scheme != "https"
+            and forwarded != "https"
+        ):
+            raise HTTPException(426, "Windows bootstrap polling requires HTTPS")
+        row = windows_bootstrap.credential(db, authorization)
+        row.last_poll_at = datetime.now(UTC)
+        row.reported_state = payload.state
+        row.last_error = payload.error
+        if payload.endpoint_id is not None:
+            endpoint = db.scalar(
+                select(Endpoint).where(
+                    Endpoint.id == payload.endpoint_id,
+                    Endpoint.organization_id == row.organization_id,
+                )
+            )
+            if endpoint is None or endpoint.target_os != "windows":
+                raise HTTPException(
+                    409, "Bootstrap endpoint identity is not an owned Windows endpoint"
+                )
+            if row.endpoint_id is not None and row.endpoint_id != endpoint.id:
+                raise HTTPException(409, "WINDOWS-01 identity is already bound")
+            row.endpoint_id = endpoint.id
+        if row.enrollment_id is not None and row.endpoint_id is None:
+            issued = db.get(EndpointEnrollment, row.enrollment_id)
+            if issued is not None and issued.endpoint_id is not None:
+                row.endpoint_id = issued.endpoint_id
+        response: dict[str, Any] = {
+            "action": "START" if row.desired_state == "START" else "STOP",
+            "authoritative_state": "WAITING_FOR_HEARTBEAT",
+        }
+        if row.endpoint_id is not None:
+            endpoint = db.get(Endpoint, row.endpoint_id)
+            if endpoint and endpoint.last_seen and endpoint.status != State.REVOKED:
+                response["authoritative_state"] = (
+                    "ONLINE"
+                    if datetime.now(UTC) - aware(endpoint.last_seen) <= timedelta(seconds=90)
+                    else "STALE"
+                )
+        elif row.desired_state == "START" and payload.needs_enrollment:
+            if row.activation_id is None:
+                row.activation_id = uuid4()
+            issued = db.get(EndpointEnrollment, row.enrollment_id) if row.enrollment_id else None
+            if issued is None or aware(issued.expires_at) <= datetime.now(UTC):
+                if issued is not None:
+                    row.activation_id = uuid4()
+                token = windows_bootstrap.activation_token(settings, row)
+                issued = EndpointEnrollment(
+                    organization_id=row.organization_id,
+                    token_hash=digest(token.encode()),
+                    expires_at=datetime.now(UTC) + timedelta(minutes=10),
+                    capabilities=[
+                        "system.read",
+                        "users.read",
+                        "process.read",
+                        "network.read",
+                        "persistence.read",
+                        "logs.read",
+                        "drivers.read",
+                    ],
+                    simulation=False,
+                )
+                db.add(issued)
+                db.flush()
+                row.enrollment_id = issued.id
+            else:
+                token = windows_bootstrap.activation_token(settings, row)
+            response["enrollment"] = {
+                "id": str(issued.id),
+                "one_time_token": token,
+                "expires_at": issued.expires_at,
+                "ca_pem": settings.tls_ca_path.read_text(),
+            }
+        return response
+
     def local_status(db: Session, user: User, slot: int = 1) -> dict[str, Any]:
         status = local_agent.runtime(settings, "/status", slot=slot)
         status["slot"] = slot
@@ -653,6 +883,22 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
             media_type="application/x-pem-file",
             headers={
                 "Content-Disposition": "attachment; filename=control-plane-ca.pem",
+                "Cache-Control": "no-store",
+            },
+        )
+
+    @router.get("/endpoints/enrollments/{identifier}/bootstrap")
+    def enrollment_bootstrap(identifier: UUID, db: DB, user: Admin) -> Response:
+        """Serve the Windows bootstrap that drives the existing enrollment flow."""
+        owned(db, EndpointEnrollment, identifier, user)
+        path = settings.bootstrap_script_path
+        if not path.is_file():
+            raise HTTPException(404, "Windows bootstrap script is not present in this deployment")
+        return Response(
+            path.read_bytes(),
+            media_type="text/plain; charset=utf-8",
+            headers={
+                "Content-Disposition": "attachment; filename=connect-jocky.ps1",
                 "Cache-Control": "no-store",
             },
         )

@@ -400,9 +400,7 @@ def pipeline(argv: list[str]) -> int:
             report.field("source hash", identity.get("source_hash") or "-")
             report.field("jir hash", identity.get("jir_hash") or "-")
             report.field("llvm ir hash", identity.get("llvm_ir_hash") or "-")
-            report.field(
-                "structural fingerprint", identity.get("structural_fingerprint") or "-"
-            )
+            report.field("structural fingerprint", identity.get("structural_fingerprint") or "-")
             report.field("artifact hashes", len(identity.get("artifact_hashes") or []))
             if identity.get("semantic_result_hash"):
                 report.field("fixture result hash", identity["semantic_result_hash"])

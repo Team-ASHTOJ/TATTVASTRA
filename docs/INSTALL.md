@@ -80,6 +80,14 @@ Rust agent only, not `native/compiler`. `scripts/jockey` is POSIX `sh` and will 
 Use Route A (Docker Desktop) or Route B inside WSL2. A native MSVC build is untested territory,
 not a supported configuration.
 
+## Windows endpoint bootstrap
+
+The Windows agent is built by the `windows-agent` CI job as `jocky-agent.exe` and `jocky-bootstrap.exe`. A Windows LLVM worker is published only when its LLVM 18+ CI prerequisite exists.
+
+For the normal prototype flow, prepare a Windows VM once using `scripts/windows/install-jocky-bootstrap.ps1` and a bootstrap configuration issued by an ADMIN. Configure HTTPS addresses that are reachable from the guest for the control-plane API, AgentControl and enrollment services. Afterwards use **Endpoints → Connect Endpoint → Start Windows Endpoint**; the preinstalled service performs the fixed JOCKY lifecycle and ONLINE remains an authenticated heartbeat claim.
+
+For a newly introduced machine, use **Advanced Setup → Connect a new Windows machine** in the same dialog. That retains token, CA and PowerShell bootstrap downloads. It is onboarding, not the normal operator flow. A live Windows VM was not available for this repository validation, so live Windows heartbeat, collectors and compiled-job execution remain environment-blocked.
+
 ## Using it
 
 ```sh

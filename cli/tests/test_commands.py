@@ -13,7 +13,6 @@ import sys
 from pathlib import Path
 
 import pytest
-
 from jocky_cli import backend, container, main, options
 
 SOURCE_HASH = "5d43781568ec7fe1da1c695184f717bb13aa026596075bd4cce589e888b3b2a8"
@@ -23,7 +22,7 @@ RESULT_HASH = "25052cb72bd9d7eb5496c4fe18e07ac9420dc7613c3ace8b8208bfccf242f4d3"
 #: A stand-in for jockyc. It answers the same subcommands with documents that
 #: carry the same fields, so jocky's own parsing and presentation are tested
 #: rather than the compiler's.
-STUB = '''\
+STUB = """\
 import hashlib
 import json
 import os
@@ -272,7 +271,7 @@ def main():
 
 
 sys.exit(main())
-'''
+"""
 
 
 @pytest.fixture
@@ -341,12 +340,8 @@ def test_target_aliases_are_translated():
         "--target",
         "linux-x86_64",
     ]
-    assert main.normalize(["llvm", "hunt.jky", "--target", "windows"])[-1] == (
-        "windows-x86_64"
-    )
-    assert main.normalize(["compile", "hunt.jky", "--target", "arm64"])[-1] == (
-        "linux-aarch64"
-    )
+    assert main.normalize(["llvm", "hunt.jky", "--target", "windows"])[-1] == ("windows-x86_64")
+    assert main.normalize(["compile", "hunt.jky", "--target", "arm64"])[-1] == ("linux-aarch64")
 
 
 def test_canonical_targets_are_left_alone():
@@ -670,8 +665,8 @@ def test_composed_commands_work_through_the_docker_fallback(tmp_path, monkeypatc
     docker.write_text(
         "#!/bin/sh\n"
         "# Drop docker's own arguments and run the containerised compiler.\n"
-        "while [ -n \"$1\" ]; do\n"
-        "  case \"$1\" in\n"
+        'while [ -n "$1" ]; do\n'
+        '  case "$1" in\n'
         "    -v|-w) shift 2 ;;\n"
         "    run|--rm) shift ;;\n"
         "    *) break ;;\n"

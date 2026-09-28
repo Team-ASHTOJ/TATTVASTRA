@@ -1,5 +1,93 @@
 # Build status
-# Build status
+
+## Local Linux endpoint lifecycle regression — 2026-09-28
+
+Status: **ROOT CAUSE FOUND AND FIXED. All three local Linux endpoints were verified ONLINE at the same time, from their own authenticated heartbeats, on a stack rebuilt from this tree.**
+
+Symptom: after `make demo-up`, the Endpoint Enrollment UI showed `LOCAL-LINUX-01 FAILED`, `LOCAL-LINUX-02 ONLINE`, `LOCAL-LINUX-03 FAILED`. The control plane, AgentControl and the enrolled endpoint 2 were all healthy, so the fault was per-endpoint, not a control-plane outage.
+
+Diagnosis, from the running stack (no guessing, no data wiped):
+
+- `endpoints` held `LOCAL-LINUX-01` and `LOCAL-LINUX-03` at `OFFLINE` with `last_seen` frozen at 10:56:31 and 10:56:32, while `LOCAL-LINUX-02` kept advancing. All three `jocky-agent` processes were alive and each launcher held exactly one established TLS connection to its AgentControl listener, so neither the process supervisor nor the network was the fault.
+- Each agent's durable spool was decrypted read-only with its own `spool.key`. Slot 1 held 556 unacknowledged records whose head was sequence 1688 — exactly `endpoints.last_sequence + 1` (1687) — and every pending record was a `heartbeat` body. Slot 3 was the same shape (head 819, server 818). Slot 2's spool was empty; it was the one endpoint in step.
+- A live probe against the DIRECT AgentControl stream, using slot 1's own mTLS identity and a frame at sequence 1688, returned `FAILED_PRECONDITION 422: Heartbeat timestamp exceeds clock skew`. The identical probe at sequence 1 returned `409: Sequence replay contains changed bytes`, which confirms the certificate identity path was healthy and that the 422 came from the frame itself.
+
+Root cause: the endpoint spools frames durably and replays whatever the control plane has not acknowledged, but a heartbeat is the one frame type with time-bounded validity. Once an unacknowledged heartbeat aged past the 300-second skew window — which happens whenever an endpoint is down longer than five minutes with anything pending, including a plain stack recreation — it could never be accepted again. Because the control plane requires `sequence == last_sequence + 1`, that one frame blocked every later frame: the head never advanced, `last_seen` never refreshed, and each reconnect attempt appended another heartbeat, leaving the 554- and 518-record backlogs. Restarting or retrying the slot could not clear it, so the UI showed FAILED for a healthy agent process. `LOCAL-LINUX-02` was merely the endpoint whose spool happened to be empty when the stack restarted.
+
+Fixes in this continuation:
+
+- `services/control-plane/src/jocky_control_plane/transport.py`: a heartbeat whose claim falls outside the skew window is still acknowledged as a frame, so the endpoint's ordered stream keeps draining, but it no longer refreshes `last_seen` or `status`. Liveness is gated exactly as strictly as before — an endpoint whose clock is out of window stays `WAITING_FOR_HEARTBEAT` until it stamps a claim inside it — while a replayed heartbeat can never make a dead endpoint look ONLINE and can never wedge the stream. The previous behaviour also cost the endpoint its unrelated frames; this does not.
+- `services/control-plane/src/jocky_control_plane/api.py`: a registered Windows bootstrap that has never polled now reports `READY` rather than `OFFLINE`. "Registered but never heard from" and "was being heard and went quiet" are different facts, and only the second is `OFFLINE`. This is what makes `NOT_CONFIGURED → READY → Start Windows Endpoint` reachable at all.
+- `services/agent/src/remote.rs`: an attempted agent-side change was reverted. Removing the heartbeat that the endpoint queues _before_ the exchange deadlocks the stream — the control plane answers only once it has accepted a frame, so opening with nothing to send never returns. The queueing is restored and now carries a comment stating the invariant, because it looks removable and is not.
+
+Verification executed on the rebuilt stack:
+
+- `GET /api/local-agents` (the call the dashboard makes) returned `slot 1 ONLINE LOCAL-LINUX-01 linux DIRECT`, `slot 2 ONLINE LOCAL-LINUX-02 linux TRUSTED_RELAY`, `slot 3 ONLINE LOCAL-LINUX-03 linux DIRECT`, all `error: None`, with heartbeat ages of 2.5 s measured at the same instant. The two wedged endpoints drained their entire backlog (slot 1 from sequence 1687 to 2544) and recovered without any state being deleted.
+- Idempotency and isolation: repeating start on an ONLINE slot returned `ONLINE` and left the other two untouched; stopping slot 2 moved only slot 2 to `STOPPED` while 1 and 3 stayed `ONLINE`; restarting slot 2 returned `WAITING_FOR_HEARTBEAT` and reached `ONLINE` again with the other two unaffected.
+- Windows reads `NOT_CONFIGURED` on this stack, which is correct: no preconfigured Windows host has registered. Nothing was emulated and no Windows heartbeat was seeded.
+
+Tests executed for this regression (in the control-plane image, with the working tree's `services/control-plane` mounted, and the compose environment variables unset so the suite sees the same configuration as a host run):
+
+- `test_replayed_stale_heartbeat_never_wedges_the_ordered_stream` (new, `test_distributed.py`): a heartbeat stamped an hour ago is acknowledged and advances `last_sequence`, is replayed idempotently, and leaves `last_seen` null and the endpoint not `ONLINE`; the next in-window heartbeat sets both.
+- `test_three_slots_reach_online_independently_and_stay_isolated`, `test_failed_slot_retry_reuses_its_identity_and_recovers`, `test_windows_not_configured_leaves_local_slots_untouched` (new, `test_local_agent.py`), plus the existing slot-isolation and idempotency tests.
+- `test_registration_start_is_idempotent_and_online_requires_heartbeat` (`test_windows_bootstrap.py`) gained the `READY`-after-registration assertion.
+- Result: **14 passed, 7 deselected** across `test_local_agent.py`, `test_windows_bootstrap.py` and the transport subset of `test_distributed.py`. Two unrelated tests in `test_distributed.py` fail inside this image only because it ships a real `jockyc` at `JOCKY_COMPILER_PATH`, which makes a compilation succeed where those tests expect an absent compiler; they are not affected by this change and were not run by this subset.
+- `npx tsc --noEmit -p apps/dashboard/tsconfig.json`: PASS. `npx next build apps/dashboard --webpack`: PASS. `git diff --check`: clean.
+- `npx playwright test --config playwright.prototype.config.ts tests/prototype/local-endpoint.spec.ts --project video-desktop` — the browser acceptance test for this exact flow, "one-click local Rust endpoint connects, survives refresh, reuses identity and restarts" — **PASS (1 passed, 1.7 m)** against the rebuilt stack through the real dashboard at `127.0.0.1:13000`.
+
+Residual risk, stated rather than fixed: the protocol has no way to skip a frame, so any frame body that can never be accepted would still stall that endpoint's ordered stream the same way — for example an observation stamped more than five minutes in the future, or an artifact for a job whose evidence is already sealed. None of those occurred in this incident and none was exercised; changing it properly means adding a protocol-level poison or skip path, which is a redesign and was deliberately not attempted here.
+
+## Windows one-click endpoint bootstrap — 2026-09-28
+
+Status: **IMPLEMENTED in the repository. Live Windows acceptance remains ENVIRONMENT BLOCKED: this session had no Windows host or VM, and none was emulated.**
+
+- `services/agent/src/bin/jocky-bootstrap.rs` builds `jocky-bootstrap.exe`, the native Windows endpoint supervisor. Every line of it is behind `cfg(windows)`, so the binary on any other platform is a stub that prints that it is Windows-only and exits. As the `JockyBootstrap` service it polls the control plane outward over HTTPS with a per-host bootstrap credential, accepts only the START/STOP lifecycle actions, enrols through the existing one-time mTLS flow when the endpoint has no binding yet, and starts only the colocated `jocky-agent.exe connect`. It issues no arbitrary command the control plane asks for, and it never records a state of its own: the state it reports is the control plane's.
+- `scripts/windows/install-jocky-bootstrap.ps1` is the one-time, elevation-required machine preparation. It copies `jocky-bootstrap.exe`, `jocky-agent.exe` and `connect-jocky.ps1` (plus `jocky-worker.exe` when present) from the signed source directory, strips inherited ACLs from `%ProgramFiles%\JOCKY` and `%ProgramData%\JOCKY` so only `NT AUTHORITY\SYSTEM` and `BUILTIN\Administrators` retain access, validates every bootstrap-configuration field and requires HTTPS for all three service URLs, writes `bootstrap.json`, and registers the automatic `JockyBootstrap` service.
+- The control plane owns the lifecycle. Migration `0008_windows_bootstrap` adds `windows_bootstraps` (organization-scoped, one row per hostname, credential stored only as a SHA-256 hash). ADMIN-only `GET /windows-endpoint/status`, `POST /windows-endpoint/bootstrap`, `POST /windows-endpoint/start` and `POST /windows-endpoint/stop` drive the desired state, and the credential-authenticated `POST /windows-bootstrap/poll` answers with `START`/`STOP` plus the authoritative state. Start is idempotent, the bootstrap credential is compared with `secrets.compare_digest`, and a supervisor report is never accepted as connectivity: the endpoint is ONLINE only while its own authenticated heartbeat `last_seen` is inside 90 seconds, a report of ONLINE without that heartbeat is shown as `WAITING_FOR_HEARTBEAT`, and an idle or stale host is shown `STALE`/`OFFLINE`/`STOPPED`.
+- The dashboard's Windows panel (Endpoints → Connect Endpoint) exposes **Start Windows Endpoint** / **Stop Windows Endpoint** and renders READY / STARTING / ENROLLING / WAITING_FOR_HEARTBEAT / ONLINE / FAILED / STALE from that backend state, with the endpoint's own hostname, platform, architecture, transport, last heartbeat and source `EXTERNAL` once a heartbeat exists. Manual onboarding — supervisor configuration download, one-time enrollment generation, CA and token files, the PowerShell drive and the raw agent commands — stays available under **Advanced Setup**. No frontend timer or placeholder can produce ONLINE.
+- The four Windows claims remain four separate claims and are not collapsed: Windows **target compilation** VERIFIED; Windows **agent and supervisor build** VERIFIED by Windows CI; Windows **live endpoint** NOT EXECUTED; Windows **compiled-job execution** ENVIRONMENT DEPENDENT.
+- Windows build in this continuation: **CI-ONLY / ENVIRONMENT BLOCKED**. `.github/workflows/ci.yml` runs the `windows-agent` job on `windows-2022`, which builds the workspace, runs the tests, denies clippy warnings, publishes `jocky-agent.exe` and `jocky-bootstrap.exe`, and parses both Windows scripts with the real PowerShell parser; the `windows-worker` job publishes `jocky-worker.exe` only when the runner ships LLVM ≥ 18 and otherwise records ENVIRONMENT DEPENDENT on the job summary. No Windows target can be compiled on this macOS host: there is no Rust toolchain on `PATH`, no Cargo home, no `rustfmt` in the pinned 1.90.0 toolchain, and no MSVC or mingw target.
+
+Executed in this continuation:
+
+- `git grep --no-index -nE '^.{101}' services/agent/src/bin/jocky-bootstrap.rs`: **no matches** — the new Windows supervisor source is inside rustfmt's 100-column default width.
+- Two formatting defects in that file were corrected by hand, because `cargo fmt` cannot run here: a `use` tree rustfmt joins into one line, and a `return Err(...)` that measured 104 columns. Both are pure formatting; no behaviour changed.
+- `git diff --check`: PASS (clean).
+- `npx tsc --noEmit -p apps/dashboard/tsconfig.json` — the dashboard's own `typecheck` script — **PASS**: the Windows lifecycle panel, the `windows-endpoint` API client and the new `WindowsBootstrapPoll` contract typecheck with no errors.
+- `npx next build apps/dashboard --webpack` — the dashboard's own production build — **PASS**: compiled, typechecked and prerendered 20 routes with no errors, including the `/api/control/[...path]` proxy that now admits the `windows-endpoint` and `windows-bootstrap` domains.
+- The Python lifecycle tests were reported PASS by the session that wrote them; they were **not re-executed in this continuation**. Every interpreter invocation for them was refused by this sandbox with "deepseek-v4-flash is temporarily unavailable, so auto mode cannot determine the safety of Bash right now", so no new Python evidence is claimed here.
+- `cargo fmt` / `cargo build` / `cargo test` / `cargo clippy`: **not run** — no Rust toolchain is installed on this host. The Windows and Linux CI jobs are the only builders of this code, so the Windows supervisor's compile is CI-only evidence.
+
+Live Windows state, stated exactly:
+
+- Real native Windows heartbeat: **ENVIRONMENT BLOCKED** — no Windows host or VM was available, and no Linux emulation was attempted.
+- Real Windows collectors: **ENVIRONMENT BLOCKED** — every Windows collector in `services/agent/src/collectors/windows.rs` is compile-checked by Windows CI only; no Windows observation exists and none was seeded.
+- Windows JOCKY job: **ENVIRONMENT BLOCKED** — needs a Windows `jocky-worker.exe`, which needs an LLVM 18+ toolchain on Windows.
+
+## Native Windows endpoint and requirement reconciliation — 2026-09-28
+
+Status: **IMPLEMENTED for the Windows connection path. Windows live endpoint acceptance was NOT executed: no Windows host and no Windows LLVM toolchain were available to this session. Windows compiled-job execution remains ENVIRONMENT DEPENDENT.**
+
+- Enrollment no longer depends on a binary the endpoint may not have. `jocky-agent enroll` accepts operator-supplied `--transport-key`/`--csr` PEM material and falls back to the OpenSSL CLI only when neither is given, so a stock Windows host (which ships no OpenSSL) enrolls with the same ECDSA P-256 PKCS#10 request, the same Ed25519 evidence-key proof bound over the CSR bytes, and the same mTLS handshake. The control plane still signs the request and the endpoint must still prove possession of the matching private key, so no verification step was relaxed. The default Linux path is byte-for-byte the previous behavior.
+- The LLVM worker precondition moved from enrollment to job admission. Before this change a host without `jocky-worker` could not enroll at all; now it enrolls, heartbeats and reports `ONLINE` from the authenticated heartbeat, and a compiler-artifact job sent to it is refused with `LLVM execution worker is unavailable` at admission instead. Linux behavior is unchanged because the worker is present there.
+- `scripts/windows/connect-jocky.ps1` automates the existing flow: it creates or reuses a protected `%ProgramData%\JOCKY` state directory (inherited ACEs removed, SYSTEM and Administrators only), resolves the CA from `-CaFile` or an HTTPS `-CaUrl`, reads the one-time token from a file without echoing it, generates the P-256 key and PKCS#10 request with the Windows CNG provider, then runs the existing `init` → `enroll` → `connect` commands. It requires elevation, refuses a non-HTTPS server, refuses a non-PEM CA, and never disables certificate validation.
+- Windows CI gained `windows-agent` (build, test, warnings-denied clippy, publish `jocky-agent.exe` and the bootstrap, and parse the bootstrap with the real PowerShell parser) and `windows-worker`, which publishes `jocky-worker.exe` only when the runner provides LLVM ≥ 18 and otherwise records ENVIRONMENT DEPENDENT on the job summary and publishes nothing. Linux CI jobs are unchanged.
+- The Connect Endpoint drawer now offers LOCAL LINUX / WINDOWS / EXTERNAL LINUX. The Windows path mints the same one-time enrollment, downloads the CA, the token file and the bootstrap, prints one PowerShell command, and reports WAITING FOR AGENT until the real authenticated heartbeat arrives; the raw agent CLI moved behind Advanced Setup.
+- Windows status is deliberately tracked as four separate claims rather than one: Windows **target compilation** VERIFIED (real COFF, `LANG-05`); Windows **agent build** VERIFIED by Windows CI; Windows **live endpoint** NOT EXECUTED (needs a real Windows host); Windows **compiled-job execution** ENVIRONMENT DEPENDENT (needs the LLVM worker and a Windows link toolchain).
+- Requirement reconciliation used the recorded evidence in this file and the named tests as authority. Source records in `services/control-plane/src/jocky_control_plane/data/requirements.json` were corrected and `docs/REQUIREMENT_TRACEABILITY.md` was regenerated from them with `scripts/generate_coverage.py`. The catalog now reads 24 VERIFIED, 60 IMPLEMENTED, 11 PARTIAL, 5 SCAFFOLDED and 22 PLANNED. Upgrades were limited to rows whose recorded evidence directly proves them; `LLVM-03`, `DIV-06`, `AGT-01`, `AGT-03`, `AGT-04`, `SEC-02`, `SAFE-11` and `COL-15` were deliberately left below VERIFIED because their stated acceptance (each target OS, endpoint key provisioning, live Windows, rotation, or DNS) is genuinely unmet.
+
+Windows build and static checks, and the reader-facing status, are the only Windows claims made here. No Windows observation, heartbeat or job is reported anywhere.
+
+Executed checks on this macOS development host:
+
+- `make verify-foundation`: **EXIT 0** — generated contract/protobuf/coverage drift, Ruff formatting (119 files), Prettier, Ruff/ESLint, strict mypy (36 source files), all four workspace typechecks, the host Python suite (**96 passed, 4 native-only LLVM cases skipped**), the Python package builds and the Next.js production build (20 generated pages).
+- Nine new `tests/integration/test_windows_endpoint.py` cases PASS: they assert the bootstrap drives `init`/`enroll`/`connect` with a token file, one protected state directory and `--transport-key`/`--csr`; that it contains no TLS-weakening construct, no embedded credential and no OpenSSL invocation; that Windows CI parses and publishes it; that the control-plane API and image carry it; and that the console offers the Windows path with no fabricated ONLINE state.
+- `git diff --check`: PASS.
+- `scripts/test_postgres.py` against the running PostgreSQL: **18 passed** — migrations from empty, TLS enrollment/heartbeat/replay/wrong-identity under DIRECT and TRUSTED_RELAY, evidence and audit regressions are unaffected by the enrollment and worker-admission change.
+
+Not executed here, and therefore not claimed: `cargo fmt`/`build`/`test`/`clippy` (no Rust toolchain on this host — the Linux and Windows CI jobs cover them), the LLVM/CTest container suites and the Playwright suites. No Windows live acceptance ran: this session had no Windows host and no Windows LLVM toolchain, so the four Windows claims above remain exactly as stated.
+
+One correction was required outside the sprint scope: `make format-check` and `make lint` were already failing on this branch before the sprint (`docs/JOCKY_CLI.md` plus six `cli/` findings introduced by the recent CLI commits). Those files were normalized with the repository's own `ruff format`, `ruff check --fix` and `prettier --write`; no behavior changed. Without that, the aggregate gate could not be run to a truthful result.
 
 ## PS-coverage sprint 2 — cross-target compilation, real execution and relay transport — 2026-09-28
 
@@ -49,6 +137,7 @@ Executed checks, LLVM 22.1.8, `cmake -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Relea
 Known limitations: the LLVM 18 path through `llvm_compat.h` compiles against signatures read from the `release/18.x` headers but was not executed — only LLVM 22 is installed on this host, so LLVM 18 CI remains the first real test of that branch. `jockey <file>` executes against the deterministic SIMULATED fixture collector; it is not endpoint evidence and no Agent host is involved. Passing a second `--execution` flag alongside a `.jky` path is rejected as a duplicate option rather than overridden.
 
 ## PS-coverage sprint 1 — Build Forge delivery — 2026-09-27
+
 ## PS-coverage sprint 1 — Build Forge delivery — 2026-09-27
 
 Status: **IMPLEMENTED and verified within the bounded delivery scope below**.

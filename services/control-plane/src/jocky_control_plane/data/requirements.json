@@ -137,10 +137,10 @@
     "title": "Typed platform-independent JIR",
     "implementation": "Versioned SSA-style dataset handles and effect/capability metadata",
     "subsystem": "Compiler",
-    "demo_evidence": "Same semantic JIR on Windows and Ubuntu",
-    "status": "IMPLEMENTED",
+    "demo_evidence": "LLVM 18 container ctest cross_target_objects_and_rejections: one JIR to both triples, equal source_hash/jir_hash, distinct datalayouts, real ELF (7f 45 4c 46) versus real COFF (machine 0x8664), plus the prototype three-target build API; see docs/BUILD_STATUS.md",
+    "status": "VERIFIED",
     "phase": "P1",
-    "safety_environment_note": "One semantic JIR lowers to real ELF (x86_64-unknown-linux-gnu) and real COFF (x86_64-pc-windows-msvc) objects under the same jir_hash, with distinct datalayouts, llvm_ir hashes and object bytes, verified by the Linux LLVM 18 container suite and by the prototype target-build API. Windows linking and Windows runtime execution remain unexecuted on this host."
+    "safety_environment_note": "One semantic JIR lowers to real ELF (x86_64-unknown-linux-gnu) and real COFF (x86_64-pc-windows-msvc) objects under the same jir_hash, with distinct datalayouts, llvm_ir hashes and object bytes, verified by the Linux LLVM 18 container suite and by the prototype target-build API. This verifies target compilation only: Windows linking and Windows runtime execution remain unexecuted."
   },
   {
     "schema_version": "1.0.0",
@@ -189,10 +189,10 @@
     "title": "LLVM compiler backend",
     "implementation": "Typed JIR lowering to verified LLVM IR and optimization pipeline",
     "subsystem": "LLVM / Runtime",
-    "demo_evidence": "Dump real IR and reject invalid module/type signatures",
-    "status": "IMPLEMENTED",
+    "demo_evidence": "LLVM 18 container ctest LLVMBackend.* lowers typed JIR to verified optimized IR and rejects invalid module/type signatures; verified IR hashes are persisted per variant and per build",
+    "status": "VERIFIED",
     "phase": "P2\u2013P3",
-    "safety_environment_note": "LLVM remains a P0 product priority; phase numbers represent implementation order."
+    "safety_environment_note": "LLVM remains a P0 product priority; phase numbers represent implementation order. Verified on the Linux LLVM 18 container suite for host and cross-target lowering."
   },
   {
     "schema_version": "1.0.0",
@@ -228,10 +228,10 @@
     "title": "Memory-resident execution",
     "implementation": "ORC LLJIT in JOCKY Agent-owned isolated execution worker",
     "subsystem": "LLVM / Runtime",
-    "demo_evidence": "Actual JIT result with no unrelated-process access",
-    "status": "IMPLEMENTED",
+    "demo_evidence": "Executed on three enrolled Linux endpoints: every memory job reached SUCCESS with execution_engine LLVM_ORC_JIT, real worker_pid > 0 and execution_duration_ms > 0; see docs/BUILD_STATUS.md",
+    "status": "VERIFIED",
     "phase": "P2\u2013P3",
-    "safety_environment_note": "LLVM ORC LLJIT runs compiler-generated IR inside JOCKY's own agent-owned worker process; no foreign-process execution, injection or process hollowing is used. Verified end-to-end with execution_engine LLVM_ORC_JIT and real worker_pid > 0 and execution_duration_ms > 0 on three enrolled endpoints."
+    "safety_environment_note": "LLVM ORC LLJIT runs compiler-generated IR inside JOCKY's own agent-owned worker process; no foreign-process execution, injection or process hollowing is used. Verified end-to-end with execution_engine LLVM_ORC_JIT and real worker_pid > 0 and execution_duration_ms > 0 on three enrolled Linux endpoints; a Windows endpoint has no verified memory execution."
   },
   {
     "schema_version": "1.0.0",
@@ -267,8 +267,8 @@
     "title": "Seed-driven build diversity",
     "implementation": "Deterministic lowering template selection and generated helper layout",
     "subsystem": "Build Diversity / Forge",
-    "demo_evidence": "Same source/seed/toolchain produces same bytes",
-    "status": "IMPLEMENTED",
+    "demo_evidence": "Same source/seed/toolchain/key reproduces artifact identities across repeated Build Forge runs, and the native suite reproduces a byte-identical AOT object for the same seed",
+    "status": "VERIFIED",
     "phase": "P4",
     "safety_environment_note": "Only JOCKY-generated benign wrappers. Never arbitrary payloads or AV-directed optimization."
   },
@@ -280,8 +280,8 @@
     "title": "Control-flow and binary variation",
     "implementation": "Equivalent compiler-generated wrapper branches, internal symbols and ordering",
     "subsystem": "Build Diversity / Forge",
-    "demo_evidence": "Compare disassembly/CFG and explain transformations",
-    "status": "IMPLEMENTED",
+    "demo_evidence": "Build Forge persists measured basic-block/function/helper metrics and a distinct structural fingerprint per selected variant, and the Variant Explorer compares them side by side",
+    "status": "VERIFIED",
     "phase": "P4",
     "safety_environment_note": "Only JOCKY-generated benign wrappers. Never arbitrary payloads or AV-directed optimization."
   },
@@ -293,8 +293,8 @@
     "title": "Semantically equivalent diversified variants",
     "implementation": "Stable fixture collector execution with normalized result comparison",
     "subsystem": "Build Diversity / Forge",
-    "demo_evidence": "Three variants have equal semantic test hashes",
-    "status": "IMPLEMENTED",
+    "demo_evidence": "Native semantic-equivalence tests and the Build Forge EQUIVALENCE gate report one normalized semantic result hash across selected variants; a supplied expected result hash can reject delivery",
+    "status": "VERIFIED",
     "phase": "P4",
     "safety_environment_note": "Only JOCKY-generated benign wrappers. Never arbitrary payloads or AV-directed optimization."
   },
@@ -306,8 +306,8 @@
     "title": "Distinct per-build artifact hashes",
     "implementation": "SHA-256 of actual object/shared-module bytes",
     "subsystem": "Build Diversity / Forge",
-    "demo_evidence": "Three different seeds yield distinct artifacts, not manifest-only fake hashes",
-    "status": "IMPLEMENTED",
+    "demo_evidence": "Different seeds yield distinct stored object bytes and distinct artifact hashes; verification recomputes the hash of the stored bytes and rejects tampering",
+    "status": "VERIFIED",
     "phase": "P4",
     "safety_environment_note": "Only JOCKY-generated benign wrappers. Never arbitrary payloads or AV-directed optimization."
   },
@@ -319,8 +319,8 @@
     "title": "Variant manifest and provenance",
     "implementation": "Source/JIR/LLVM hashes, seed, versions, target, mode, actual artifact, semantic result, timestamps and signature",
     "subsystem": "Build Diversity / Forge",
-    "demo_evidence": "Signed Build Forge manifest binds source/JIR/LLVM, selected seed, object bytes, fixture result and target; byte/provenance verification fails on tampering",
-    "status": "IMPLEMENTED",
+    "demo_evidence": "Build Forge manifests bind source/JIR/LLVM, the selected seed, target/mode, object bytes and the fixture result in a separate Ed25519 domain; byte and provenance verification fail on tampering",
+    "status": "VERIFIED",
     "phase": "P4",
     "safety_environment_note": "Only JOCKY-generated benign wrappers. Never arbitrary payloads or AV-directed optimization."
   },
@@ -345,8 +345,8 @@
     "title": "First-class Build Forge",
     "implementation": "Persistent BuildRun stages, bounded seeded native pipeline, real fixture equivalence and Ed25519 signed registry manifest",
     "subsystem": "Build Diversity / Forge",
-    "demo_evidence": "Build Forge: compile one source, select three structurally distinct real artifacts, verify hashes/manifest and refresh persisted status",
-    "status": "IMPLEMENTED",
+    "demo_evidence": "Build Forge: compile one source, select three structurally distinct real artifacts, verify hashes/manifest and refresh persisted status; desktop and mobile browser acceptance passed",
+    "status": "VERIFIED",
     "phase": "P4",
     "safety_environment_note": "Bounded deterministic compiler fixtures, not universal or endpoint equivalence. Host-target memory worker objects only."
   },
@@ -358,8 +358,8 @@
     "title": "Continuous build and deployment",
     "implementation": "Repeatable source \u2192 validate \u2192 JIR \u2192 diversify \u2192 LLVM \u2192 object \u2192 fixture \u2192 equivalence \u2192 signed manifest \u2192 READY delivery",
     "subsystem": "Build Diversity / Forge",
-    "demo_evidence": "Repeat with the same base seed to reproduce actual hashes; stage failure remains FAILED and blocks READY",
-    "status": "IMPLEMENTED",
+    "demo_evidence": "Repeat with the same base seed to reproduce actual hashes; a failed stage remains FAILED and blocks READY; persisted stage history is inspected in the UI",
+    "status": "VERIFIED",
     "phase": "P4",
     "safety_environment_note": "Continuous delivery to the existing artifact registry; production rollout, cross-compilation and native packaging are not certified."
   },
@@ -369,12 +369,12 @@
     "simulation_label": null,
     "id": "AGT-01",
     "title": "Windows endpoint support",
-    "implementation": "Rust windows-rs documented APIs and Windows worker lifecycle",
+    "implementation": "Rust windows-rs documented APIs, fixed PowerShell/CIM collector adapters and the packaged native Windows agent, with a PowerShell bootstrap for the existing enrollment flow",
     "subsystem": "Agent / Control plane",
-    "demo_evidence": "Windows CI plus authorized Windows lab endpoint",
+    "demo_evidence": "Windows CI builds, tests and publishes jocky-agent.exe and statically validates the bootstrap script; a real Windows host is enrolled with scripts/windows/connect-jocky.ps1",
     "status": "IMPLEMENTED",
     "phase": "P5",
-    "safety_environment_note": "Windows adapter and worker code cross-compile successfully; live Windows execution and remote mTLS acceptance remain open."
+    "safety_environment_note": "Four distinct Windows claims are tracked separately: Windows target compilation is VERIFIED (real COFF, LANG-05); the Windows agent build is VERIFIED by Windows CI; Windows live endpoint enrollment/heartbeat/collection requires an actual Windows host and is not claimed until it runs; Windows compiled-job execution additionally requires the LLVM worker, which GitHub Windows runners do not guarantee, so it stays ENVIRONMENT DEPENDENT."
   },
   {
     "schema_version": "1.0.0",
@@ -527,10 +527,10 @@
     "title": "Core control-plane entities",
     "implementation": "Organization/User/Case/Endpoint/Script/ScriptVersion/Compilation/Variant/ExecutionPlan/Job/Observation/Artifact/Finding/TimelineEvent/AuditEvent/Report/BenchmarkRun/CompatibilityRun",
     "subsystem": "Agent / Control plane",
-    "demo_evidence": "Database migrations and API lifecycle tests",
-    "status": "PLANNED",
+    "demo_evidence": "Alembic migrations build every entity from empty and the API lifecycle tests persist each one; PostgreSQL integration runs the same migrations in isolated schemas",
+    "status": "IMPLEMENTED",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "Every listed entity is migrated and exercised through the authenticated API. Dispatch is no longer gated on the original admission prerequisites: mTLS, endpoint identity, policy, signing and replay checks are implemented and covered by acceptance."
   },
   {
     "schema_version": "1.0.0",
@@ -553,10 +553,10 @@
     "title": "Simultaneous multi-endpoint hunts",
     "implementation": "Parent hunt with per-endpoint child jobs and assigned variants",
     "subsystem": "Agent / Control plane",
-    "demo_evidence": "Concurrent Windows and Ubuntu collection with independent outcomes",
+    "demo_evidence": "Concurrent collection with independent per-endpoint variants and outcomes",
     "status": "IMPLEMENTED",
     "phase": "P5",
-    "safety_environment_note": "One hunt dispatches independent child jobs with per-endpoint variants to three enrolled Linux endpoints concurrently, each carrying its own status, variant_id, transport and evidence. A concurrent Windows endpoint is not demonstrated: no Windows host is enrolled."
+    "safety_environment_note": "One hunt dispatches independent child jobs with per-endpoint variants to three enrolled Linux endpoints concurrently, each carrying its own status, variant_id, transport and evidence. A Windows endpoint can now enroll and heartbeat through the shipped native bootstrap, but a concurrent mixed Linux/Windows hunt has not been executed, so no cross-platform concurrency is claimed."
   },
   {
     "schema_version": "1.0.0",
@@ -566,10 +566,10 @@
     "title": "Job state machine",
     "implementation": "CREATED through COMPILED/VALIDATED/QUEUED/DISPATCHED/RUNNING/SUCCESS/VERIFIED/ARCHIVED; FAILED/CANCELLED branches",
     "subsystem": "Agent / Control plane",
-    "demo_evidence": "Reject illegal transitions; verification requires evidence",
-    "status": "PLANNED",
+    "demo_evidence": "Focused tests reject illegal transitions, require evidence before verification, and accept a late SUCCESS after a cancellation request instead of leaving a job stuck",
+    "status": "IMPLEMENTED",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "The persisted transition table rejects illegal moves, endpoint-scoped retries create fresh jobs, and cancellation preserves already-persisted evidence. Archived-state retention and long-running multi-operator scheduling remain unexercised."
   },
   {
     "schema_version": "1.0.0",
@@ -579,10 +579,10 @@
     "title": "Scheduling, retries and partial success",
     "implementation": "Persistent schedules, fresh retry job/nonces, aggregate child outcomes",
     "subsystem": "Agent / Control plane",
-    "demo_evidence": "One endpoint failure preserves others and retries safely",
-    "status": "PLANNED",
+    "demo_evidence": "test_multi_endpoint_hunt_isolates_variants_failures_retries_and_evidence: one endpoint fails, receives exactly one endpoint-scoped retry with a fresh job/nonce, and the hunt becomes PARTIAL while the other endpoints keep their evidence",
+    "status": "PARTIAL",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "Endpoint-scoped retry, fresh job identity and aggregate SUCCESS/PARTIAL/FAILED/CANCELLED outcomes are implemented and tested, and the deadline sweeper reclaims a dispatch that stops responding. Persistent recurring schedules are not implemented, so this row is not VERIFIED."
   },
   {
     "schema_version": "1.0.0",
@@ -592,10 +592,10 @@
     "title": "Result streaming and live progress",
     "implementation": "Resumable SSE from committed events with sequence cursor",
     "subsystem": "Agent / Control plane",
-    "demo_evidence": "Reconnect resumes with no invented or lost job transitions",
-    "status": "PLANNED",
+    "demo_evidence": "Committed-event outbox cursor/resumption tests pass and a live dashboard smoke received a persisted case.created event over the authenticated SSE proxy before refetching the same case",
+    "status": "IMPLEMENTED",
     "phase": "P5",
-    "safety_environment_note": "Dispatch remains closed until mTLS, identities, policy, signing and replay checks are complete."
+    "safety_environment_note": "SSE is served from the committed transactional outbox with durable event IDs; the client ignores duplicate and out-of-order events and reconnects with a cursor. Long-running deployment and multi-operator stream load remain unexercised."
   },
   {
     "schema_version": "1.0.0",
@@ -774,7 +774,7 @@
     "title": "Loaded drivers/kernel modules",
     "implementation": "Linux modules/sysfs and documented Windows driver enumeration",
     "subsystem": "Collectors",
-    "demo_evidence": "Real driver inventory with unavailable signature metadata labeled",
+    "demo_evidence": "Real driver/module inventory with unavailable signature metadata labelled; the Windows adapter enumerates Win32_SystemDriver and is compile-tested by Windows CI",
     "status": "IMPLEMENTED",
     "phase": "P6",
     "safety_environment_note": "Real observations only on supported endpoints. Permission failures are explicit PARTIAL/DENIED, not empty success."
@@ -826,8 +826,8 @@
     "title": "Trusted cloud/API transport",
     "implementation": "DIRECT and legitimate TRUSTED_RELAY through configured API gateway/reverse proxy",
     "subsystem": "Transport / Security",
-    "demo_evidence": "TLS chain/hostname tests in direct and relay modes",
-    "status": "IMPLEMENTED",
+    "demo_evidence": "TLS enrollment, heartbeat, replay and wrong-identity acceptance runs over both DIRECT and TRUSTED_RELAY, and a three-endpoint hunt completes one relayed job and two direct jobs with transport_mode persisted from the authenticated connection",
+    "status": "VERIFIED",
     "phase": "P5 / P10",
     "safety_environment_note": "No cloud concealment, global credentials, privilege escalation or operational attack routing. TRUSTED_RELAY is a fixed-destination TLS byte pass-through, so the endpoint still terminates end-to-end mTLS with the control plane; it does not terminate TLS, re-originate traffic or present a gateway hostname, and is therefore not an HTTP API gateway or reverse proxy."
   },
@@ -852,10 +852,10 @@
     "title": "RBAC and tenancy",
     "implementation": "Server-enforced roles and organization/case scoping",
     "subsystem": "Transport / Security",
-    "demo_evidence": "Cross-tenant reads, writes, streams and object access denied",
-    "status": "PLANNED",
+    "demo_evidence": "Acceptance covers ADMIN/ANALYST/VIEWER enforcement, unauthenticated rejection, viewer mutation denial and tenant-scoped lookup/list isolation",
+    "status": "IMPLEMENTED",
     "phase": "P5 / P10",
-    "safety_environment_note": "No cloud concealment, global credentials, privilege escalation or operational attack routing."
+    "safety_environment_note": "Prototype API boundaries are tested, not a production security review. Endpoint lifecycle, abuse/rate limiting and multi-operator concurrency remain unexercised."
   },
   {
     "schema_version": "1.0.0",
@@ -865,10 +865,10 @@
     "title": "Audit and short-lived credentials",
     "implementation": "Append-only hash chain, key rotation and expiring session/enrollment tokens",
     "subsystem": "Transport / Security",
-    "demo_evidence": "Verify audit chain and reject expired credentials",
-    "status": "PLANNED",
+    "demo_evidence": "Audit-chain verification detects mutation and reordering, and expired or reused session/enrollment tokens are rejected",
+    "status": "PARTIAL",
     "phase": "P5 / P10",
-    "safety_environment_note": "No cloud concealment, global credentials, privilege escalation or operational attack routing."
+    "safety_environment_note": "The durable append-only audit hash chain and expiring session/enrollment tokens are implemented and tested. Key rotation and an external audit checkpoint are not implemented, so rollback protection is not claimed."
   },
   {
     "schema_version": "1.0.0",
@@ -917,10 +917,10 @@
     "title": "Complete observation provenance",
     "implementation": "Required case/endpoint/job/collector/source time/type/data/variant/source/JIR/integrity fields",
     "subsystem": "Evidence / Investigation",
-    "demo_evidence": "Round-trip Windows/Linux observations with simulation label intact",
-    "status": "PLANNED",
+    "demo_evidence": "Persisted simulation=false observations from enrolled endpoints carry every required provenance field and recompute their integrity hash; the Windows collector adapter emits the same schema and is compile-tested by Windows CI",
+    "status": "IMPLEMENTED",
     "phase": "P7",
-    "safety_environment_note": "Integrity does not imply authenticity; trust needs verified identity, signatures and anchored audit checkpoints."
+    "safety_environment_note": "Integrity does not imply authenticity; trust needs verified identity, signatures and anchored audit checkpoints. Provenance is exercised with real Linux endpoint observations; no Windows observation has been collected on a live Windows host."
   },
   {
     "schema_version": "1.0.0",
@@ -930,10 +930,10 @@
     "title": "Evidence manifests",
     "implementation": "Source/JIR/LLVM/variant/seed/artifact/mode/times/observation hashes and signature",
     "subsystem": "Evidence / Investigation",
-    "demo_evidence": "Verify complete manifest membership and collection boundaries",
-    "status": "PLANNED",
+    "demo_evidence": "Each completed job persists one Ed25519-signed manifest whose observation and artifact hashes match the stored evidence; POST /manifests/{id}/verify reports signature_valid, integrity_valid and provenance_valid and fails on tampering",
+    "status": "IMPLEMENTED",
     "phase": "P7",
-    "safety_environment_note": "Integrity does not imply authenticity; trust needs verified identity, signatures and anchored audit checkpoints."
+    "safety_environment_note": "Integrity does not imply authenticity; trust needs verified identity, signatures and anchored audit checkpoints. Manifests are verified against the enrolled endpoint identity; no external timestamping or anchored checkpoint exists."
   },
   {
     "schema_version": "1.0.0",
@@ -943,10 +943,10 @@
     "title": "Evidence ingestion and storage",
     "implementation": "Idempotent ingestion, hash-addressed MinIO/S3 objects and PostgreSQL metadata",
     "subsystem": "Evidence / Investigation",
-    "demo_evidence": "Reject corrupt/mismatched/cross-case ingestion and persist valid evidence",
-    "status": "PLANNED",
+    "demo_evidence": "Ingestion rejects corrupt, mismatched and cross-case evidence and persists valid evidence; the same object re-ingested is not duplicated",
+    "status": "PARTIAL",
     "phase": "P7",
-    "safety_environment_note": "Integrity does not imply authenticity; trust needs verified identity, signatures and anchored audit checkpoints."
+    "safety_environment_note": "Ingestion, hash addressing and PostgreSQL metadata are implemented and tested. Objects live in the local content-addressed store rather than a MinIO/S3 adapter, so the object-store half of this requirement is not implemented."
   },
   {
     "schema_version": "1.0.0",
@@ -956,10 +956,10 @@
     "title": "Evidence Vault trusted verification",
     "implementation": "Fetch stored bytes, recompute hashes, validate manifest and signatures",
     "subsystem": "Evidence / Investigation",
-    "demo_evidence": "Alter object and show failed verification with evidence click-through",
-    "status": "PLANNED",
+    "demo_evidence": "The Evidence Vault re-reads stored artifact bytes and recomputes their SHA-256 through POST /artifacts/{id}/verify, verifies manifests separately, and the operator console opens the failed verification result for a tampered object",
+    "status": "IMPLEMENTED",
     "phase": "P7",
-    "safety_environment_note": "Integrity does not imply authenticity; trust needs verified identity, signatures and anchored audit checkpoints."
+    "safety_environment_note": "Integrity does not imply authenticity. Stored bytes and endpoint-signed manifests are re-verified, but an uploaded artifact hash is not itself an independent producer signature, and no external checkpoint exists."
   },
   {
     "schema_version": "1.0.0",
@@ -969,10 +969,10 @@
     "title": "Durable tamper-evident audits",
     "implementation": "Transactional append and externally anchored signed checkpoints",
     "subsystem": "Evidence / Investigation",
-    "demo_evidence": "Detect tampering and rollback against trusted checkpoint",
-    "status": "PLANNED",
+    "demo_evidence": "Audit entries append transactionally and verification detects mutation, deletion and reordering",
+    "status": "PARTIAL",
     "phase": "P7",
-    "safety_environment_note": "Integrity does not imply authenticity; trust needs verified identity, signatures and anchored audit checkpoints."
+    "safety_environment_note": "The audit log is a durable append-only hash chain whose integrity check is tested. There is no external checkpoint, so rollback of the whole chain cannot be detected and is not claimed."
   },
   {
     "schema_version": "1.0.0",
@@ -982,10 +982,10 @@
     "title": "Malicious/suspicious activity investigation",
     "implementation": "Benign fixture process/network/file correlations and evidence-backed findings",
     "subsystem": "Evidence / Investigation",
-    "demo_evidence": "A harmless fixture generates the specified suspicious relationship",
-    "status": "PLANNED",
+    "demo_evidence": "Persisted observations produce an unsigned-process/external-connection finding with severity and linked evidence, and the Findings page opens its originating observations",
+    "status": "IMPLEMENTED",
     "phase": "P7",
-    "safety_environment_note": "Integrity does not imply authenticity; trust needs verified identity, signatures and anchored audit checkpoints."
+    "safety_environment_note": "Correlation runs over persisted observations and reports evidence-linked findings without manufacturing suspicion. The walkthrough finding uses explicitly labelled backend sandbox observations; ordinary Linux endpoint inventory does not manufacture findings."
   },
   {
     "schema_version": "1.0.0",
@@ -995,10 +995,10 @@
     "title": "Cross-platform normalization and correlation",
     "implementation": "NetworkX graph with stable entity keys and tenant/case filters",
     "subsystem": "Evidence / Investigation",
-    "demo_evidence": "Endpoint-Process, User-Process, Process-File/Connection/Service, Connection-IP, Endpoint-Driver, Observation-Finding links",
-    "status": "PLANNED",
+    "demo_evidence": "Persisted observations produce all eight required relationships (Endpoint-Process, User-Process, Process-File/Connection/Service, Connection-IP, Endpoint-Driver, Observation-Finding) in a tenant/case-scoped graph",
+    "status": "IMPLEMENTED",
     "phase": "P7",
-    "safety_environment_note": "Integrity does not imply authenticity; trust needs verified identity, signatures and anchored audit checkpoints."
+    "safety_environment_note": "Correlation is exercised over real Linux endpoint observations and labelled fixture records. Live cross-platform (mixed Windows/Linux) correlation has not been run because no Windows observation has been collected."
   },
   {
     "schema_version": "1.0.0",
@@ -1008,10 +1008,10 @@
     "title": "Timeline",
     "implementation": "Normalized source/collection times, filtering, search and evidence links",
     "subsystem": "Evidence / Investigation",
-    "demo_evidence": "Chronology with endpoint/source/severity filters and missing time indication",
-    "status": "PLANNED",
+    "demo_evidence": "Persisted timeline records support endpoint, collector, severity, type and timezone-aware start/end filters, and the Timeline page opens the linked evidence",
+    "status": "IMPLEMENTED",
     "phase": "P7",
-    "safety_environment_note": "Integrity does not imply authenticity; trust needs verified identity, signatures and anchored audit checkpoints."
+    "safety_environment_note": "Collection times are real and a missing source time is reported as null rather than inferred. PID-reuse edge cases and large-case ordering performance remain unexercised."
   },
   {
     "schema_version": "1.0.0",
@@ -1021,10 +1021,10 @@
     "title": "Report export",
     "implementation": "JSON/PDF report with timeline/evidence/audit and verification summary",
     "subsystem": "Evidence / Investigation",
-    "demo_evidence": "Export actual case content with simulation status and signatures",
-    "status": "PLANNED",
+    "demo_evidence": "POST generation persists a SUCCESS status and artifact, GET returns the metadata, download returns the stored JSON bytes and the action is audited",
+    "status": "PARTIAL",
     "phase": "P7",
-    "safety_environment_note": "Integrity does not imply authenticity; trust needs verified identity, signatures and anchored audit checkpoints."
+    "safety_environment_note": "JSON report generation, status and download are implemented, persisted and audited. PDF export and browser-level report acceptance are absent."
   },
   {
     "schema_version": "1.0.0",
@@ -1034,10 +1034,10 @@
     "title": "Driver intelligence and BYOVD awareness",
     "implementation": "Vendor/version/path/hash/signature inventory plus risk classification",
     "subsystem": "Driver Intelligence / Safe Lab",
-    "demo_evidence": "REAL DRIVER ANALYSIS with source-attributed risk matches",
-    "status": "PLANNED",
+    "demo_evidence": "Real driver/module inventory is collected on Linux and on Windows through the driver collector, and the Driver Intelligence page separates inventory from risk classification",
+    "status": "PARTIAL",
     "phase": "P8",
-    "safety_environment_note": "No vulnerable-driver loading, kernel tampering, callback removal or EDR blinding."
+    "safety_environment_note": "Driver inventory is real; risk classification reports UNKNOWN for a driver without supporting metadata, and no blocklist or CVE source is imported. This is inventory and risk awareness only: no vulnerable driver is loaded and no BYOVD technique is implemented."
   },
   {
     "schema_version": "1.0.0",
@@ -1151,10 +1151,10 @@
     "title": "Arbitrary process injection requirement",
     "implementation": "Authorized ORC code in Agent-owned worker memory",
     "subsystem": "Safe requirement mapping",
-    "demo_evidence": "JIT memory confined to its own execution process",
-    "status": "PLANNED",
+    "demo_evidence": "Memory execution runs with execution_engine LLVM_ORC_JIT inside the agent-owned worker process, evidenced by a real worker_pid; no unrelated process is opened, injected or hollowed",
+    "status": "IMPLEMENTED",
     "phase": "P3 / P8 / P10",
-    "safety_environment_note": "Restricted attack capability is intentionally excluded. Only the stated safe mapped demonstration may be implemented."
+    "safety_environment_note": "Restricted attack capability is intentionally excluded. Only the stated safe mapped demonstration exists: compiler-generated code executes in the endpoint agent's own supervised worker process, never in a foreign process. Verified on Linux endpoints; a Windows endpoint has no verified memory execution."
   },
   {
     "schema_version": "1.0.0",
@@ -1177,10 +1177,10 @@
     "title": "Reflective DLL injection requirement",
     "implementation": "ORC JIT or OS loader for signed compiler-generated native module",
     "subsystem": "Safe requirement mapping",
-    "demo_evidence": "Authorized runtime executes without reflective third-party injection",
-    "status": "PLANNED",
+    "demo_evidence": "An authorized compiler artifact is hash-verified and executed by the JOCKY worker (LLVM_ORC_JIT) or as a linked standalone executable (NATIVE_AOT); no reflective third-party injection is performed",
+    "status": "IMPLEMENTED",
     "phase": "P3 / P8 / P10",
-    "safety_environment_note": "Restricted attack capability is intentionally excluded. Only the stated safe mapped demonstration may be implemented."
+    "safety_environment_note": "Restricted attack capability is intentionally excluded. Only the stated safe mapped demonstration exists: the artifact is verified against its signed manifest hash before the JOCKY-owned worker loads it, and the worker binds only the versioned runtime C ABI rather than a process-wide symbol resolver."
   },
   {
     "schema_version": "1.0.0",
@@ -1398,10 +1398,10 @@
     "title": "Build Forge page",
     "implementation": "First-class build lifecycle and artifact registry",
     "subsystem": "Dashboard",
-    "demo_evidence": "Inspect fixture execution, manifest and signing status",
-    "status": "PLANNED",
+    "demo_evidence": "The Forge page shows the persisted stage history, three delivered artifacts, fixture execution, manifest and signing status, comparison and refresh; desktop and mobile browser acceptance passed",
+    "status": "IMPLEMENTED",
     "phase": "P7\u2013P9",
-    "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
+    "safety_environment_note": "The page renders only persisted backend state; unavailable values remain null rather than zero. Fixture equivalence is bounded ORC execution of compiler-produced lowering, not endpoint execution."
   },
   {
     "schema_version": "1.0.0",
@@ -1411,10 +1411,10 @@
     "title": "Endpoints page and detail",
     "implementation": "Hostname/OS/IP/version/status/last-seen/resources/job/trust plus collector tabs",
     "subsystem": "Dashboard",
-    "demo_evidence": "Actual Windows/Ubuntu endpoint observations",
+    "demo_evidence": "Online-first inventory and endpoint detail render actual platform, architecture, execution capability, transport, connection, last-seen and current investigation from persisted state, with per-collector record tabs",
     "status": "IMPLEMENTED",
     "phase": "P7\u2013P9",
-    "safety_environment_note": "Prototype: compiler artifacts, integrity checks and the enrolled local Linux fleet are real, and the console reports each endpoint's true platform, status, transport, execution mode, worker PID and duration. Pre-existing OFFLINE Windows fixture rows are labelled as such and no Windows endpoint is reported ONLINE. Full production acceptance remains scoped by BUILD_STATUS.md."
+    "safety_environment_note": "Compiler artifacts, integrity checks and the enrolled Linux fleet are real, and the console reports each endpoint's true platform, status, transport, execution mode, worker PID and duration. The Windows panel creates a real enrollment and serves the CA, the token file and the bootstrap; an endpoint is shown ONLINE only after its authenticated heartbeat. Pre-existing OFFLINE fixture rows remain labelled and a simulated row is never labelled EXTERNAL."
   },
   {
     "schema_version": "1.0.0",
@@ -1424,10 +1424,10 @@
     "title": "Hunts / Jobs page",
     "implementation": "Multi-endpoint plans, scheduling, cancellation, partial success and retry",
     "subsystem": "Dashboard",
-    "demo_evidence": "Independent child job states and authorized controls",
-    "status": "PLANNED",
+    "demo_evidence": "The investigation wizard selects authorized online endpoints and the hunt detail shows independent child job states, per-endpoint variants, partial aggregate outcomes and the authorized cancel control",
+    "status": "IMPLEMENTED",
     "phase": "P7\u2013P9",
-    "safety_environment_note": "Route shell exists in P0; operational UI acceptance requires real backend state and explicit simulation badges."
+    "safety_environment_note": "Only endpoints that are currently ONLINE and pass admission can be dispatched. Recurring persistent schedules are not implemented, so only operator-started hunts appear here."
   },
   {
     "schema_version": "1.0.0",

@@ -24,8 +24,7 @@ CROSS_TARGET_REFUSAL = (
 )
 
 FIXTURE_NOTE = (
-    "SIMULATED deterministic compiler fixture — local ORC execution, "
-    "not endpoint evidence"
+    "SIMULATED deterministic compiler fixture — local ORC execution, not endpoint evidence"
 )
 
 _HEX_DIGITS = set("0123456789abcdef")
@@ -226,9 +225,7 @@ def equivalence(argv: list[str]) -> int:
         print(f"jocky equivalence — {source}")
         report.field("variants", len(manifests))
         report.field("semantic equivalence", "PASS" if equivalence else "FAIL")
-        report.field(
-            "result hash", results[0] if shared else "not shared across variants"
-        )
+        report.field("result hash", results[0] if shared else "not shared across variants")
         report.field("evidence source", "jockyc variants fixture runtime")
         report.heading("per-variant fixture result")
         report.table(

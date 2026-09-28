@@ -33,6 +33,8 @@ uuid = { version = "1", features = ["v4", "serde"] }
 zeroize = "1"
 
 [target.'cfg(windows)'.dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls-native-roots"] }
+windows-service = "0.8"
 windows = { version = "0.62", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_System_ProcessStatus", "Win32_NetworkManagement_IpHelper", "Win32_System_SystemInformation"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]

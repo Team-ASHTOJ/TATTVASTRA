@@ -1,5 +1,18 @@
 # Phase 4 control-plane gap matrix — 2026-09-20
 
+> **Windows and status reconciliation — 2026-09-28.** The tables below are the
+> frozen Phase 4 checkpoint of 2026-09-20 and are kept as a historical record.
+> Current status lives in `docs/BUILD_STATUS.md` and in the requirement catalog
+> (`services/control-plane/src/jocky_control_plane/data/requirements.json`),
+> from which `docs/REQUIREMENT_TRACEABILITY.md` is generated. Since this
+> checkpoint: the Windows agent is built, tested and published by Windows CI,
+> a Windows bootstrap drives the existing enrollment flow, Windows target
+> compilation is VERIFIED against real COFF output, and the requirement catalog
+> was reconciled with recorded evidence. Every remaining "Windows live
+> execution" limitation below still stands: no Windows host ran enrollment,
+> heartbeat, collection or a compiled job, and Windows compiled-job execution
+> stays ENVIRONMENT DEPENDENT because it needs an LLVM worker.
+
 ## Stabilization checkpoint
 
 The current remote execution bridge is **IMPLEMENTED + VERIFIED** for one REAL

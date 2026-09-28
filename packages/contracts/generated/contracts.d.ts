@@ -642,6 +642,11 @@ export type VariantId8 = string;
 export type VariantSeed2 = string;
 export type SchemaVersion64 = "1.0.0";
 export type Source3 = string;
+export type EndpointId11 = string | null;
+export type Error = string | null;
+export type NeedsEnrollment = boolean;
+export type SchemaVersion65 = "1.0.0";
+export type State3 = "READY" | "STARTING" | "ENROLLING" | "WAITING_FOR_HEARTBEAT" | "ONLINE" | "FAILED" | "STOPPED";
 
 /**
  * Generated from Pydantic; do not edit. Refinement rules also apply in Python.
@@ -712,6 +717,7 @@ export interface JockyContracts {
   VariantCreate?: VariantCreate;
   VariantManifest?: VariantManifest;
   VersionCreate?: VersionCreate;
+  WindowsBootstrapPoll?: WindowsBootstrapPoll;
 }
 /**
  * This interface was referenced by `JockyContracts`'s JSON-Schema
@@ -1790,4 +1796,15 @@ export interface VariantManifest {
 export interface VersionCreate {
   schema_version?: SchemaVersion64;
   source: Source3;
+}
+/**
+ * This interface was referenced by `JockyContracts`'s JSON-Schema
+ * via the `definition` "WindowsBootstrapPoll".
+ */
+export interface WindowsBootstrapPoll {
+  endpoint_id?: EndpointId11;
+  error?: Error;
+  needs_enrollment?: NeedsEnrollment;
+  schema_version?: SchemaVersion65;
+  state: State3;
 }

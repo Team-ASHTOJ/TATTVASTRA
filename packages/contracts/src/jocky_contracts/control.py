@@ -70,6 +70,21 @@ class EnrollmentCreate(Provenance):
     validity_seconds: int = Field(default=600, ge=60, le=3600)
 
 
+class WindowsBootstrapPoll(Contract):
+    state: Literal[
+        "READY",
+        "STARTING",
+        "ENROLLING",
+        "WAITING_FOR_HEARTBEAT",
+        "ONLINE",
+        "FAILED",
+        "STOPPED",
+    ]
+    endpoint_id: UUID | None = None
+    needs_enrollment: bool = True
+    error: str | None = Field(default=None, max_length=4096)
+
+
 class HuntCreate(Contract):
     case_id: UUID
     compilation_id: UUID
