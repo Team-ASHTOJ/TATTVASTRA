@@ -4077,6 +4077,9 @@ pre,
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 15px 22px;
 }
+.hypothesis-analysis-copy {
+  grid-column: 1 / -1;
+}
 .hypothesis-grid h4 {
   margin: 0 0 4px;
   color: var(--text-muted);

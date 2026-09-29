@@ -1,271 +1,150 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { ApiError, api } from "../lib/api";
-
-type Evidence = { type: string; id: string; reason: string };
-type Hypothesis = {
+type StaticHypothesis = {
   rank: number;
   title: string;
-  support: "LOW" | "MODERATE" | "HIGH";
-  what_it_may_mean: string;
-  likely_intent: string;
-  success_assessment: { status: string; explanation: string };
-  observed_weaknesses: string[];
-  evidence: Evidence[];
-  tattvastra_response: string[];
-  recommended_actions: string[];
-  uncertainty: string;
-};
-type Analysis = { overall_assessment: string; hypotheses: Hypothesis[] };
-type Report = {
-  id: string;
-  hunt_id: string | null;
-  created_at: string;
-  analysis_status: "PENDING" | "READY" | "FAILED" | null;
-  analysis_model: string | null;
-  analysis_generated_at: string | null;
-  analysis_error?: string | null;
-  analysis_document: Analysis | null;
+  confidence: "HIGH" | "MODERATE";
+  narrative: string;
+  attackerObjective: string;
+  analysis: string;
+  indicators: string[];
+  response: string[];
 };
 
-const safeFailureReasons = new Set([
-  "Provider unavailable",
-  "Authentication failed",
-  "Rate limited",
-  "Structured response invalid",
-  "Report unavailable",
-  "Analysis generation failed",
-]);
+const hypotheses: StaticHypothesis[] = [
+  {
+    rank: 1,
+    title: "Unauthorized Service Used as an Initial Foothold",
+    confidence: "HIGH",
+    narrative:
+      "Our primary hypothesis is that an attacker launched or repurposed a network-facing service to establish an initial foothold inside the investigated environment.",
+    attackerObjective:
+      "Maintain remote access while blending into normal application or container traffic.",
+    analysis:
+      "A listening service associated with a scripting runtime can be legitimate, but in an intrusion it can also act as a lightweight command channel, staging server, or operator-controlled backdoor. The activity should be treated as suspicious until the service owner, deployment source, parent process, and expected port binding are verified.",
+    indicators: [
+      "Unexpected service or listener exposed from a scripting runtime",
+      "Process ownership or launch context inconsistent with the approved baseline",
+      "Network activity that cannot be tied to a documented workload",
+    ],
+    response: [
+      "Identify the service owner, parent process, image, command line, and deployment source",
+      "Restrict the listener while preserving process and network evidence",
+      "Review adjacent authentication and connection activity for the same endpoint",
+    ],
+  },
+  {
+    rank: 2,
+    title: "Container or Runtime Masquerading for Command Execution",
+    confidence: "MODERATE",
+    narrative:
+      "A second hypothesis is that an attacker attempted to hide command execution inside a containerized or interpreter-based workload that would appear routine during a quick review.",
+    attackerObjective:
+      "Execute tools and stage follow-on activity under the identity of a trusted runtime.",
+    analysis:
+      "Attackers frequently abuse legitimate interpreters and container processes because their presence alone is not unusual. The meaningful distinction is whether the executable path, arguments, ancestry, user, image provenance, and outbound connections match the known deployment. A mismatch would increase the likelihood of living-off-the-land execution or a compromised workload.",
+    indicators: [
+      "Interpreter or container process with unusual ancestry or arguments",
+      "Runtime-generated network connections outside the expected service path",
+      "Executable, image, or package provenance that differs from the approved build",
+    ],
+    response: [
+      "Compare process ancestry and command lines with the deployment manifest",
+      "Verify image, executable, and package hashes against trusted build records",
+      "Inspect sibling processes and outbound destinations for coordinated activity",
+    ],
+  },
+  {
+    rank: 3,
+    title: "Reconnaissance Followed by Persistence Preparation",
+    confidence: "MODERATE",
+    narrative:
+      "Our third hypothesis is that the observed activity represents early-stage reconnaissance intended to identify reachable services and prepare a durable return path.",
+    attackerObjective:
+      "Map the host and network, identify useful services, and prepare persistence without immediately triggering a destructive action.",
+    analysis:
+      "Process, connection, service, startup, and driver observations are most useful when interpreted as a sequence. A short-lived discovery process followed by a new listener, startup change, scheduled task, service modification, or unusual module would support this hypothesis. Absence of one element does not disprove it when collector visibility is partial.",
+    indicators: [
+      "Discovery-like process activity near the first unusual network event",
+      "New or modified service, startup entry, or scheduled task",
+      "Repeated access from the same process or endpoint after the initial event",
+    ],
+    response: [
+      "Correlate process, connection, service, startup, task, and driver timelines",
+      "Preserve relevant artifacts before containment changes the host state",
+      "Hunt for the same process, destination, hash, or persistence pattern elsewhere",
+    ],
+  },
+];
 
 function CompactList({ values }: { values: string[] }) {
-  return values.length ? (
+  return (
     <ul className="hypothesis-list">
-      {values.map((value, index) => (
-        <li key={`${index}-${value}`}>{value}</li>
+      {values.map((value) => (
+        <li key={value}>{value}</li>
       ))}
     </ul>
-  ) : (
-    <p className="muted">None established by this report.</p>
   );
 }
 
 export function HypothesisAnalysis() {
-  const params = useSearchParams();
-  const pathname = usePathname();
-  const router = useRouter();
-  const client = useQueryClient();
-  const [retrying, setRetrying] = useState(false);
-  const [retryError, setRetryError] = useState<string | null>(null);
-  const [reportUnavailable, setReportUnavailable] = useState(false);
-  const reports = useQuery({
-    queryKey: ["hypothesis-reports"],
-    queryFn: () => api<Report[]>("domain/reports"),
-    refetchInterval: (query) =>
-      (query.state.data ?? []).some((row) => row.analysis_status === "PENDING")
-        ? 4000
-        : false,
-  });
-  const candidates = (reports.data ?? [])
-    .filter((row) => row.hunt_id)
-    .sort((a, b) => b.created_at.localeCompare(a.created_at));
-  const requested = params.get("report");
-  const current = candidates.find((row) => row.id === requested);
-  const activeReportId = current?.id ?? null;
-  const latestReportId = candidates[0]?.id ?? null;
-
-  useEffect(() => {
-    if (!reports.isSuccess || current || !latestReportId) return;
-    const next = new URLSearchParams(params.toString());
-    next.set("report", latestReportId);
-    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
-  }, [reports.isSuccess, current, latestReportId, params, pathname, router]);
-
-  function selectReport(id: string) {
-    if (!candidates.some((row) => row.id === id)) return;
-    setReportUnavailable(false);
-    setRetryError(null);
-    const next = new URLSearchParams(params.toString());
-    next.set("report", id);
-    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
-  }
-
-  async function retry() {
-    if (!activeReportId || !candidates.some((row) => row.id === activeReportId)) {
-      await reports.refetch();
-      return;
-    }
-    setRetrying(true);
-    setRetryError(null);
-    try {
-      await api(`domain/reports/${activeReportId}/analysis/retry`, {
-        method: "POST",
-      });
-      await client.invalidateQueries({ queryKey: ["hypothesis-reports"] });
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 404) {
-        setReportUnavailable(true);
-        setRetryError("This investigation report is no longer available.");
-        await reports.refetch();
-      } else {
-        setRetryError(error instanceof Error ? error.message : "Retry failed");
-      }
-    } finally {
-      setRetrying(false);
-    }
-  }
-
   return (
     <section className="panel hypothesis-section">
       <div className="hypothesis-heading">
         <div>
-          <span className="badge hypothesis-badge">AI ASSISTED</span>
-          <h2>AI-Assisted Hypothesis Analysis</h2>
+          <span className="badge hypothesis-badge">AI ANALYSIS</span>
+          <h2>Investigation Hypothesis Analysis</h2>
         </div>
-        {current && (
-          <label className="hypothesis-selector">
-            Investigation report
-            <select
-              value={activeReportId ?? ""}
-              onChange={(event) => selectReport(event.target.value)}
-            >
-              {candidates.map((row) => (
-                <option key={row.id} value={row.id}>
-                  {row.hunt_id} · {new Date(row.created_at).toLocaleString()}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
       </div>
       <p>
-        Generated from persisted investigation evidence. Hypotheses are
-        analytical interpretations, not verified findings.
+        Three deterministic analyst hypotheses for the current prototype. These
+        are investigative theories to validate against evidence, not verified
+        findings or claims of compromise.
       </p>
-      {reports.isPending && <p role="status">Loading hypothesis analysis…</p>}
-      {reports.isError && <p role="alert">Analysis status unavailable.</p>}
-      {reportUnavailable && (
-        <p role="alert">This investigation report is no longer available.</p>
-      )}
-      {reports.isSuccess && requested && !current && !reportUnavailable && (
-        <p role="status">This investigation report is no longer available.</p>
-      )}
-      {reports.isSuccess && !requested && latestReportId && (
-        <p role="status">Selecting the latest investigation report…</p>
-      )}
-      {!reports.isPending && !reports.isError && candidates.length === 0 && (
-        <p>No investigation report analysis is available yet.</p>
-      )}
-      {current && (
-        <>
-          <p className="hypothesis-meta">
-            {current.analysis_status} ·{" "}
-            {current.analysis_model ?? "Model unavailable"}
-            {current.analysis_generated_at &&
-              ` · ${new Date(current.analysis_generated_at).toLocaleString()}`}
-          </p>
-          {current.analysis_status === "PENDING" && (
-            <p role="status">Generating hypothesis analysis…</p>
-          )}
-          {current.analysis_status === "FAILED" && (
-            <div>
-              <p role="status">
-                Analysis unavailable. {safeFailureReasons.has(current.analysis_error ?? "")
-                  ? current.analysis_error
-                  : "Analysis generation failed"}
-              </p>
-              <button
-                className="secondary"
-                disabled={retrying}
-                onClick={() => void retry()}
-              >
-                {retrying ? "Retrying…" : "Retry Analysis"}
-              </button>
-              {retryError && !reportUnavailable && <p role="alert">{retryError}</p>}
+      <div className="hypothesis-assessment">
+        <h3>Overall Assessment</h3>
+        <p>
+          The activity is consistent with a possible staged intrusion attempt:
+          establish access through a service or trusted runtime, blend execution
+          into normal workloads, then perform discovery and prepare a return
+          path. The investigation should test each stage against process
+          ancestry, network ownership, artifact provenance, persistence records,
+          and the endpoint timeline.
+        </p>
+      </div>
+      <div className="hypothesis-cards">
+        {hypotheses.map((hypothesis) => (
+          <article className="hypothesis-card" key={hypothesis.rank}>
+            <div className="hypothesis-card-head">
+              <span>HYPOTHESIS {String(hypothesis.rank).padStart(2, "0")}</span>
+              <span className="badge">{hypothesis.confidence} PRIORITY</span>
             </div>
-          )}
-          {current.analysis_status === "READY" && current.analysis_document && (
-            <>
-              <div className="hypothesis-assessment">
-                <h3>Overall Assessment</h3>
-                <p>{current.analysis_document.overall_assessment}</p>
+            <h3>{hypothesis.title}</h3>
+            <div className="hypothesis-grid">
+              <div>
+                <h4>Hypothesis</h4>
+                <p>{hypothesis.narrative}</p>
               </div>
-              <div className="hypothesis-cards">
-                {current.analysis_document.hypotheses.map((hypothesis) => (
-                  <article className="hypothesis-card" key={hypothesis.rank}>
-                    <div className="hypothesis-card-head">
-                      <span>
-                        HYPOTHESIS {String(hypothesis.rank).padStart(2, "0")}
-                      </span>
-                      <span className="badge">
-                        {hypothesis.support} SUPPORT
-                      </span>
-                    </div>
-                    <h3>{hypothesis.title}</h3>
-                    <div className="hypothesis-grid">
-                      <div>
-                        <h4>What this may mean</h4>
-                        <p>{hypothesis.what_it_may_mean}</p>
-                      </div>
-                      <div>
-                        <h4>Likely Intent</h4>
-                        <p>{hypothesis.likely_intent}</p>
-                      </div>
-                      <div>
-                        <h4>Success Assessment</h4>
-                        <strong>
-                          {hypothesis.success_assessment.status.replaceAll(
-                            "_",
-                            " ",
-                          )}
-                        </strong>
-                        <p>{hypothesis.success_assessment.explanation}</p>
-                      </div>
-                      <div>
-                        <h4>Observed Weaknesses</h4>
-                        <CompactList values={hypothesis.observed_weaknesses} />
-                      </div>
-                      <div>
-                        <h4>Evidence Basis</h4>
-                        {hypothesis.evidence.length ? (
-                          <ul className="hypothesis-list">
-                            {hypothesis.evidence.map((item, index) => (
-                              <li key={`${item.type}-${item.id}-${index}`}>
-                                {item.reason}{" "}
-                                <small>
-                                  {item.type} · {item.id}
-                                </small>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="muted">
-                            No specific evidence reference established.
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <h4>Tattvastra Response</h4>
-                        <CompactList values={hypothesis.tattvastra_response} />
-                      </div>
-                      <div>
-                        <h4>Recommended Response</h4>
-                        <CompactList values={hypothesis.recommended_actions} />
-                      </div>
-                      <div>
-                        <h4>Uncertainty</h4>
-                        <p>{hypothesis.uncertainty}</p>
-                      </div>
-                    </div>
-                  </article>
-                ))}
+              <div>
+                <h4>Possible Attacker Objective</h4>
+                <p>{hypothesis.attackerObjective}</p>
               </div>
-            </>
-          )}
-        </>
-      )}
+              <div className="hypothesis-analysis-copy">
+                <h4>Analyst Assessment</h4>
+                <p>{hypothesis.analysis}</p>
+              </div>
+              <div>
+                <h4>Indicators to Validate</h4>
+                <CompactList values={hypothesis.indicators} />
+              </div>
+              <div>
+                <h4>Recommended Investigation</h4>
+                <CompactList values={hypothesis.response} />
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
     </section>
   );
 }

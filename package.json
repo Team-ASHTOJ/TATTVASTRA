@@ -4,6 +4,7 @@
   "private": true,
   "workspaces": [
     "apps/dashboard",
+    "apps/website",
     "packages/contracts",
     "packages/jocky-language",
     "packages/ui"
@@ -14,6 +15,9 @@
   "scripts": {
     "dev": "npm run dev --workspace @jocky/dashboard",
     "build": "npm run build --workspace @jocky/dashboard",
+    "website:dev": "npm run dev --workspace @jocky/website",
+    "website:build": "npm run build --workspace @jocky/website",
+    "website:typecheck": "npm run typecheck --workspace @jocky/website",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint apps packages scripts tests --max-warnings 0",
     "format": "prettier --write .",

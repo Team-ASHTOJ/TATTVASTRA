@@ -1,5 +1,34 @@
 # Build status
 
+## Standalone TATTVASTRA product website — 2026-09-30
+
+Status: **IMPLEMENTED and VERIFIED as a standalone static Next.js application.**
+
+- Added `apps/website` as a separate npm workspace without changing the existing
+  dashboard entry points. The single-page public site presents JOCKY, typed JIR,
+  mandatory LLVM compilation, Build Forge, authorized Agent execution, evidence,
+  reports, bounded AI hypotheses, local Python interoperability and the CLI using
+  repository-grounded claims and explicit current boundaries.
+- The site has no backend, authentication, environment-variable, Docker or
+  operational-console dependency. It uses the existing TATTVASTRA mark, wordmark,
+  logo and icon copied from the dashboard and is independently deployable with
+  `apps/website` as the Vercel root directory.
+- Client JavaScript is limited to mobile navigation, active-section tracking,
+  one-time scroll reveals, code tabs/copy and pausing decorative SVG motion while
+  the document is hidden. The page is otherwise statically prerendered.
+
+Executed checks:
+
+- `npm run typecheck --workspace @jocky/website`: PASS.
+- `npm run build --workspace @jocky/website`: PASS; `/` is statically prerendered.
+- Website ESLint and scoped Prettier checks: PASS. `git diff --check`: PASS.
+- Headless Chromium at 1440 × 1000, 768 × 1024 and 390 × 844: PASS with 23
+  sections, zero browser errors, working mobile navigation and no page-level
+  horizontal overflow.
+- Existing dashboard typecheck and production build: PASS. The repository-wide
+  Prettier check remains blocked by ten pre-existing/unrelated files outside this
+  website change; all files changed for the website pass the scoped check.
+
 ## Report-grounded AI hypothesis analysis — 2026-09-29
 
 Status: **IMPLEMENTED and VERIFIED with mocked Groq; live Groq generation is not verified.**
