@@ -11,6 +11,21 @@ type ReportResponse = {
   document: Value;
   download_url: string;
 };
+type EndpointTimelineEvent = {
+  time: string;
+  title: string;
+  entity?: string;
+  description: string;
+  category: string;
+  status?: string;
+  tone: "neutral" | "info" | "warning" | "danger" | "success" | "response";
+};
+type AttackPathNode = {
+  label: string;
+  detail: string;
+  tone: "neutral" | "warning" | "danger";
+  inference?: boolean;
+};
 
 const object = (value: unknown): Value =>
   value && typeof value === "object" && !Array.isArray(value)
@@ -25,6 +40,138 @@ const shown = (value: unknown) =>
 const date = (value: unknown) =>
   value ? new Date(String(value)).toLocaleString() : null;
 const words = (value: unknown) => String(value ?? "").replaceAll("_", " ");
+
+const endpointActivityTimeline: readonly EndpointTimelineEvent[] = [
+  {
+    time: "3:07:41 PM",
+    title: "Suspicious email attachment opened",
+    entity: "Employee-PC-147",
+    description:
+      "A user opened an unexpected macro-enabled attachment received through email.",
+    category: "INITIAL ACCESS",
+    status: "SUSPICIOUS",
+    tone: "warning",
+  },
+  {
+    time: "3:07:44 PM",
+    title: "Office process executed document",
+    entity: "Employee-PC-147 · WINWORD.EXE",
+    description:
+      "Microsoft Word opened the attachment and became the parent process for the subsequent activity.",
+    category: "EXECUTION",
+    tone: "neutral",
+  },
+  {
+    time: "3:07:48 PM",
+    title: "Suspicious child process spawned",
+    entity: "WINWORD.EXE → powershell.exe",
+    description:
+      "Word launched an unusual child process with behavior inconsistent with the expected document workflow.",
+    category: "DETECTION",
+    status: "HIGH",
+    tone: "danger",
+  },
+  {
+    time: "3:07:51 PM",
+    title: "External C2 connection established",
+    entity: "Employee-PC-147 → 203.0.113.45",
+    description:
+      "The suspicious process initiated recurring outbound communication to an external destination.",
+    category: "NETWORK",
+    status: "HIGH",
+    tone: "danger",
+  },
+  {
+    time: "3:07:55 PM",
+    title: "Compromised credentials used",
+    entity: "Employee-PC-147 · svc-backup",
+    description:
+      "Previously unseen use of a privileged service account was observed from the affected workstation.",
+    category: "CREDENTIAL ACCESS",
+    status: "HIGH",
+    tone: "danger",
+  },
+  {
+    time: "3:07:59 PM",
+    title: "Authentication to Server-03",
+    entity: "Employee-PC-147 → Server-03",
+    description:
+      "The compromised account successfully authenticated to Server-03.",
+    category: "LATERAL MOVEMENT",
+    status: "HIGH",
+    tone: "danger",
+  },
+  {
+    time: "3:08:04 PM",
+    title: "Server-03 pivoted to Server-08",
+    entity: "Server-03 → Server-08",
+    description:
+      "Administrative access and remote execution activity were observed from the newly accessed server.",
+    category: "LATERAL MOVEMENT",
+    status: "HIGH",
+    tone: "danger",
+  },
+  {
+    time: "3:08:09 PM",
+    title: "Large-scale file modification detected",
+    entity: "Server-08",
+    description:
+      "Thousands of files began changing within a short time window at a rate far above the system baseline.",
+    category: "IMPACT",
+    status: "CRITICAL",
+    tone: "danger",
+  },
+  {
+    time: "3:08:13 PM",
+    title: "Ransomware / destructive activity observed",
+    entity: "Server-08",
+    description:
+      "Shadow-copy deletion and destructive or encryption-like file modifications indicated active impact on the endpoint.",
+    category: "IMPACT",
+    status: "CRITICAL",
+    tone: "danger",
+  },
+  {
+    time: "3:08:18 PM",
+    title: "Tattvastra incident correlation completed",
+    entity: "Employee-PC-147 → Server-03 → Server-08",
+    description:
+      "Tattvastra correlated the endpoint, authentication, process, network and file-system activity into a single investigation chain and preserved it for analyst review.",
+    category: "RESPONSE",
+    tone: "response",
+  },
+];
+
+const attackPath = [
+  { label: "Employee-PC-147", detail: "Initial endpoint", tone: "neutral" },
+  { label: "Email attachment", detail: "Initial access", tone: "neutral" },
+  { label: "WINWORD.EXE", detail: "Document execution", tone: "neutral" },
+  {
+    label: "PowerShell.exe",
+    detail: "Suspicious child process",
+    tone: "warning",
+  },
+  { label: "203.0.113.45", detail: "External C2", tone: "warning" },
+  {
+    label: "svc-backup",
+    detail: "Compromised identity",
+    tone: "warning",
+    inference: true,
+  },
+  { label: "Server-03", detail: "First lateral movement", tone: "danger" },
+  { label: "Server-08", detail: "Second-stage target", tone: "danger" },
+  {
+    label: "Mass file modification",
+    detail: "Impact begins",
+    tone: "danger",
+  },
+  {
+    label: "Ransomware / destructive activity",
+    detail: "Critical impact",
+    tone: "danger",
+    inference: true,
+  },
+] as const satisfies readonly AttackPathNode[];
 
 function FieldList({ values }: { values: Value }) {
   const entries = Object.entries(values).filter(([, value]) => shown(value));
@@ -96,6 +243,22 @@ function Section({
   );
 }
 
+function AttackPathNodeCard({
+  node,
+  className = "",
+}: {
+  node: AttackPathNode;
+  className?: string;
+}) {
+  return (
+    <div className={`attack-path-node ${node.tone} ${className}`}>
+      <strong>{node.label}</strong>
+      <span>{node.detail}</span>
+      <i>{node.inference ? "I" : "O"}</i>
+    </div>
+  );
+}
+
 export function InvestigationReport({ huntId }: { huntId: string }) {
   const report = useQuery({
     queryKey: ["investigation-report", huntId],
@@ -124,7 +287,6 @@ export function InvestigationReport({ huntId }: { huntId: string }) {
   const findings = list(root.findings);
   const endpoints = list(root.endpoint_results);
   const observed = list(root.observation_summary);
-  const timeline = list(root.timeline);
   const compiler = object(root.compiler_provenance);
   const executions = list(compiler.executions);
   const integrity = object(root.evidence_integrity);
@@ -387,20 +549,99 @@ export function InvestigationReport({ huntId }: { huntId: string }) {
         )}
       </Section>
 
-      <Section title="Timeline">
+      <Section title="Endpoint Activity Timeline">
+        <div className="endpoint-timeline-heading">
+          <p>
+            Reconstructed sequence of endpoint activity, detection and
+            investigative response.
+          </p>
+          <span className="endpoint-timeline-demo">DEMO SEQUENCE</span>
+        </div>
+        <aside className="attack-path-reconstruction">
+          <div className="attack-path-heading">
+            <div>
+              <h3>Attack Path Reconstruction</h3>
+              <p>
+                Reconstructed progression of the suspected intrusion across
+                endpoints, processes and identities.
+              </p>
+            </div>
+            <span className="endpoint-timeline-demo">DEMO RECONSTRUCTION</span>
+          </div>
+          <div className="attack-path-legend" aria-label="Attack path legend">
+            <span><b>O</b> OBSERVED</span>
+            <span><b>I</b> INFERRED</span>
+          </div>
+          <div className="attack-path-tree" aria-label="Suspected attack path">
+            <div className="attack-tree-root">
+              <strong>Incident reconstruction</strong>
+              <span>Cross-endpoint attack path</span>
+            </div>
+            <div className="attack-phase-grid">
+              <section className="attack-phase initial-access">
+                <span className="attack-phase-label">Initial access</span>
+                <div className="attack-phase-children">
+                  <AttackPathNodeCard node={attackPath[0]} />
+                  <AttackPathNodeCard node={attackPath[1]} />
+                </div>
+              </section>
+              <section className="attack-phase execution-c2">
+                <span className="attack-phase-label">Execution &amp; C2</span>
+                <div className="attack-phase-children">
+                  <AttackPathNodeCard node={attackPath[2]} />
+                  <AttackPathNodeCard node={attackPath[3]} />
+                  <AttackPathNodeCard node={attackPath[4]} />
+                </div>
+              </section>
+              <section className="attack-phase lateral-movement">
+                <span className="attack-phase-label">Lateral movement</span>
+                <div className="attack-phase-children">
+                  <AttackPathNodeCard node={attackPath[5]} className="lateral" />
+                  <AttackPathNodeCard node={attackPath[6]} className="lateral" />
+                  <AttackPathNodeCard node={attackPath[7]} className="lateral" />
+                </div>
+              </section>
+              <section className="attack-phase impact">
+                <span className="attack-phase-label">Impact</span>
+                <div className="attack-phase-children">
+                  <AttackPathNodeCard node={attackPath[8]} />
+                  <AttackPathNodeCard node={attackPath[9]} />
+                </div>
+              </section>
+            </div>
+          </div>
+          <p className="attack-path-note">
+            Reconstruction combines observed activity with explicitly marked
+            analytical inference.
+          </p>
+        </aside>
         <details className="report-timeline-disclosure">
           <summary>
             <span className="report-timeline-label">
-              Investigation Timeline
+              Endpoint activity timeline
             </span>
-            <span>{timeline.length} events</span>
+            <span>{endpointActivityTimeline.length} events</span>
           </summary>
-          <ol className="report-timeline">
-            {timeline.map((event, index) => (
-              <li key={`${event.timestamp}-${index}`}>
-                <time>{date(event.timestamp)}</time>
-                <strong>{String(event.event)}</strong>
-                <code>{String(event.resource_id)}</code>
+          <ol className="report-timeline endpoint-activity-timeline">
+            {endpointActivityTimeline.map((event) => (
+              <li className={`endpoint-timeline-event ${event.tone}`} key={event.time}>
+                <time>{event.time}</time>
+                <span className="endpoint-timeline-marker" aria-hidden="true" />
+                <div className="endpoint-timeline-content">
+                  <div className="endpoint-timeline-event-heading">
+                    <strong>{event.title}</strong>
+                    <span className="endpoint-timeline-chip">{event.category}</span>
+                    {event.status && (
+                      <span className="endpoint-timeline-chip status">
+                        {event.status}
+                      </span>
+                    )}
+                  </div>
+                  {event.entity && (
+                    <span className="endpoint-timeline-entity">{event.entity}</span>
+                  )}
+                  <p>{event.description}</p>
+                </div>
               </li>
             ))}
           </ol>

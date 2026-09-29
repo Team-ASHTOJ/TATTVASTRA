@@ -3489,14 +3489,13 @@ pre,
   line-height: 1.35;
   white-space: nowrap;
 }
-.semantic-steps,
-.report-timeline {
+.semantic-steps {
   display: grid;
   gap: 8px;
   padding-left: 24px;
 }
 .semantic-steps li,
-.report-timeline li {
+.report-timeline:not(.endpoint-activity-timeline) li {
   padding: 10px 12px;
   border: 1px solid var(--border-default);
   border-radius: 6px;
@@ -3505,18 +3504,18 @@ pre,
 .semantic-steps code {
   float: right;
 }
-.report-timeline li {
+.report-timeline:not(.endpoint-activity-timeline) li {
   display: grid;
   grid-template-columns: 190px minmax(180px, 1fr) minmax(180px, 1fr);
   gap: 16px;
   align-items: center;
 }
-.report-timeline time {
+.report-timeline:not(.endpoint-activity-timeline) time {
   color: var(--text-muted);
   font-family: "Cascadia Code", Consolas, monospace;
   font-size: 10px;
 }
-.report-timeline code {
+.report-timeline:not(.endpoint-activity-timeline) code {
   text-align: right;
   overflow-wrap: anywhere;
 }
@@ -3554,6 +3553,405 @@ pre,
   font-size: 10px;
   font-weight: 400;
   white-space: nowrap;
+}
+.endpoint-timeline-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -6px 0 4px;
+}
+.endpoint-timeline-heading p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.endpoint-timeline-demo,
+.endpoint-timeline-chip {
+  border: 1px solid var(--border-structural);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.endpoint-timeline-demo {
+  padding: 5px 7px;
+}
+.attack-path-reconstruction {
+  margin: 16px 0;
+  padding: 14px;
+  border: 1px solid var(--border-structural);
+  border-radius: 7px;
+  background: var(--surface-2);
+}
+.attack-path-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.attack-path-heading h3 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.attack-path-heading p,
+.attack-path-note {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.attack-path-legend {
+  display: flex;
+  gap: 10px;
+  margin-top: 11px;
+  color: var(--text-muted);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+.attack-path-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.attack-path-legend b,
+.attack-path-node i {
+  display: inline-grid;
+  width: 15px;
+  height: 15px;
+  place-items: center;
+  border: 1px solid var(--border-structural);
+  border-radius: 50%;
+  color: var(--text-muted);
+  font-style: normal;
+  font-weight: 600;
+}
+.attack-path-tree {
+  display: grid;
+  justify-items: center;
+  margin-top: 12px;
+}
+.attack-tree-root,
+.attack-phase-label {
+  position: relative;
+  z-index: 1;
+  border: 1px solid var(--border-structural);
+  border-radius: 5px;
+  background: var(--surface-1);
+}
+.attack-tree-root {
+  width: 190px;
+  padding: 7px 9px;
+  border-color: var(--border-selected);
+  text-align: center;
+}
+.attack-tree-root strong,
+.attack-tree-root span {
+  display: block;
+}
+.attack-tree-root strong {
+  color: var(--text-strong);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.attack-tree-root span {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.attack-tree-root::after {
+  display: block;
+  width: 1px;
+  height: 18px;
+  margin: 7px auto -25px;
+  background: var(--border-structural);
+  content: "";
+}
+.attack-phase-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+  width: 100%;
+  margin-top: 25px;
+  padding-top: 13px;
+}
+.attack-phase-grid::before {
+  position: absolute;
+  top: 0;
+  right: 12.5%;
+  left: 12.5%;
+  border-top: 1px solid var(--border-structural);
+  content: "";
+}
+.attack-phase {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-items: start;
+  gap: 16px;
+  min-width: 0;
+}
+.attack-phase::before {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  width: 1px;
+  height: 13px;
+  background: var(--border-structural);
+  content: "";
+}
+.attack-phase-label {
+  padding: 5px 7px;
+  color: var(--text-muted);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.attack-phase-label::after {
+  display: block;
+  width: 1px;
+  height: 16px;
+  margin: 5px auto -21px;
+  background: var(--border-structural);
+  content: "";
+}
+.attack-phase-children {
+  display: grid;
+  align-items: start;
+  justify-items: stretch;
+  gap: 14px;
+  width: 100%;
+}
+.attack-phase-children .attack-path-node + .attack-path-node::before {
+  position: absolute;
+  z-index: 0;
+  top: -15px;
+  left: 50%;
+  width: 1px;
+  height: 14px;
+  background: var(--border-structural);
+  content: "";
+}
+.attack-path-node {
+  position: relative;
+  z-index: 1;
+  align-self: start;
+  width: 100%;
+  height: auto;
+  min-height: 54px;
+  padding: 8px 25px 8px 9px;
+  border: 1px solid var(--border-default);
+  border-radius: 5px;
+  background: var(--surface-1);
+}
+.attack-path-node strong,
+.attack-path-node span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.attack-path-node strong {
+  color: var(--text-strong);
+  font-size: 10px;
+  letter-spacing: 0.035em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+.attack-path-node span {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.25;
+}
+.attack-path-node i {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 8px;
+}
+.attack-path-node.warning {
+  border-color: var(--warning);
+}
+.attack-path-node.warning i {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+.attack-path-node.danger {
+  border-color: var(--danger);
+}
+.attack-path-node.danger i {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.attack-path-node.lateral {
+  border-color: var(--warning);
+}
+.attack-path-node.lateral i {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+.attack-phase.initial-access .attack-phase-label {
+  border-color: var(--info);
+  color: var(--info);
+}
+.attack-phase.execution-c2 .attack-phase-label,
+.attack-phase.execution-c2 .attack-path-node {
+  border-color: var(--warning);
+}
+.attack-phase.execution-c2 .attack-path-node i {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+.attack-phase.lateral-movement .attack-phase-label {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+.attack-phase.impact .attack-phase-label {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.attack-path-note {
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.endpoint-activity-timeline {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 2px 0 0;
+  list-style: none;
+}
+.endpoint-timeline-event {
+  position: relative;
+  display: grid;
+  grid-template-columns: 78px 18px minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  padding: 8px 0;
+}
+.endpoint-timeline-event::after {
+  position: absolute;
+  top: 20px;
+  bottom: -8px;
+  left: 94px;
+  width: 1px;
+  background: var(--border-structural);
+  content: "";
+}
+.endpoint-timeline-event:last-child::after {
+  display: none;
+}
+.endpoint-timeline-event time {
+  padding-top: 2px;
+  color: var(--text-muted);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.endpoint-timeline-marker {
+  position: relative;
+  width: 9px;
+  height: 9px;
+  margin-top: 4px;
+  border: 2px solid var(--surface-1);
+  border-radius: 50%;
+  background: var(--text-muted);
+  box-shadow: 0 0 0 1px var(--border-structural);
+}
+.endpoint-timeline-content {
+  min-width: 0;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--border-default);
+}
+.endpoint-timeline-event:last-child .endpoint-timeline-content {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.endpoint-timeline-event-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.endpoint-timeline-event-heading strong {
+  color: var(--text-strong);
+  font-size: 12px;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+.endpoint-timeline-chip {
+  padding: 3px 5px;
+}
+.endpoint-timeline-chip.status {
+  border-color: currentColor;
+}
+.endpoint-timeline-entity {
+  display: block;
+  margin-top: 3px;
+  color: var(--ice);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.endpoint-timeline-content p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.endpoint-timeline-event.info .endpoint-timeline-marker {
+  background: var(--info);
+}
+.endpoint-timeline-event.info .endpoint-timeline-chip {
+  border-color: var(--info);
+  background: var(--info-soft);
+  color: var(--info);
+}
+.endpoint-timeline-event.warning .endpoint-timeline-marker {
+  background: var(--warning);
+}
+.endpoint-timeline-event.warning .endpoint-timeline-chip {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.endpoint-timeline-event.danger .endpoint-timeline-marker {
+  background: var(--danger);
+}
+.endpoint-timeline-event.danger .endpoint-timeline-chip {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.endpoint-timeline-event.success .endpoint-timeline-marker {
+  background: var(--success);
+}
+.endpoint-timeline-event.success .endpoint-timeline-chip {
+  border-color: var(--success);
+  background: var(--success-soft);
+  color: var(--success);
+}
+.endpoint-timeline-event.response .endpoint-timeline-marker {
+  background: var(--muted-blue);
+}
+.endpoint-timeline-event.response .endpoint-timeline-chip {
+  border-color: var(--muted-blue);
+  background: var(--primary-muted);
+  color: var(--silver-blue);
 }
 .observation-sample {
   margin-top: 10px;
@@ -3724,14 +4122,45 @@ pre,
   .report-section {
     padding: 20px 16px;
   }
-  .report-timeline li {
+  .report-timeline:not(.endpoint-activity-timeline) li {
     grid-template-columns: 1fr;
   }
-  .report-timeline code {
+  .report-timeline:not(.endpoint-activity-timeline) code {
     text-align: left;
+  }
+  .endpoint-timeline-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .attack-path-heading {
+    align-items: flex-start;
+    flex-direction: column;
   }
   .integrity-callout {
     display: grid;
+  }
+}
+
+@media (max-width: 980px) {
+  .attack-phase-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
+  }
+  .attack-phase-grid::before {
+    display: none;
+  }
+  .attack-phase::before {
+    height: 12px;
+  }
+}
+
+@media (max-width: 560px) {
+  .attack-phase-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .attack-phase-children {
+    width: min(100%, 260px);
   }
 }
 
