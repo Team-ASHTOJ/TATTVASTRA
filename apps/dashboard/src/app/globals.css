@@ -3492,6 +3492,103 @@ pre,
   background: var(--bg-secondary);
 }
 
+.hypothesis-section {
+  margin-top: 22px;
+}
+.hypothesis-heading,
+.hypothesis-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.hypothesis-heading h2 {
+  margin-top: 7px;
+}
+.hypothesis-badge {
+  color: var(--ice);
+  border-color: var(--border-hover);
+}
+.hypothesis-selector {
+  display: grid;
+  gap: 5px;
+  max-width: 100%;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.hypothesis-selector select {
+  max-width: min(420px, 80vw);
+}
+.hypothesis-meta {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.hypothesis-assessment {
+  margin: 18px 0;
+  padding: 16px 18px;
+  border: 1px solid var(--border-default);
+  border-radius: 7px;
+  background: var(--surface-2);
+}
+.hypothesis-assessment p {
+  margin: 7px 0 0;
+}
+.hypothesis-cards {
+  display: grid;
+  gap: 14px;
+}
+.hypothesis-card {
+  padding: 20px;
+  border: 1px solid var(--border-structural);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.hypothesis-card-head {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+.hypothesis-card > h3 {
+  margin: 8px 0 16px;
+}
+.hypothesis-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px 22px;
+}
+.hypothesis-grid h4 {
+  margin: 0 0 4px;
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.hypothesis-grid p,
+.hypothesis-list {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.hypothesis-list {
+  padding-left: 18px;
+}
+.hypothesis-list li + li {
+  margin-top: 4px;
+}
+.hypothesis-list small {
+  display: block;
+  color: var(--text-subtle);
+  font-family: "Cascadia Code", Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 720px) {
+  .hypothesis-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 1050px) {
   .report-metrics {
     grid-template-columns: repeat(3, minmax(0, 1fr));

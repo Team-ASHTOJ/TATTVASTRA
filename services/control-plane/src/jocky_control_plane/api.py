@@ -786,11 +786,36 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
         }
 
     @router.post("/hunts/{identifier}/report", status_code=201)
-    def create_hunt_report(identifier: UUID, db: DB, user: Writer) -> Any:
+    def create_hunt_report(
+        identifier: UUID, background: BackgroundTasks, db: DB, user: Writer
+    ) -> Any:
+        from jocky_control_plane.hypotheses import execute_analysis, queue_analysis
         from jocky_control_plane.reporting import generate_hunt_report
 
         row = generate_hunt_report(db, owned(db, Hunt, identifier, user), user, store)
-        return report_document(row, db, user)
+        payload = report_document(row, db, user)
+        assert row.artifact_id is not None
+        artifact = owned(db, Artifact, row.artifact_id, user)
+        if queue_analysis(row, artifact):
+            db.commit()
+            background.add_task(execute_analysis, factory, store, row.id)
+        payload["report"] = document(row)
+        return payload
+
+    @router.post("/reports/{identifier}/analysis/retry", status_code=202)
+    def retry_report_analysis(
+        identifier: UUID, background: BackgroundTasks, db: DB, user: Writer
+    ) -> Any:
+        from jocky_control_plane.hypotheses import execute_analysis, queue_analysis
+
+        row = owned(db, Report, identifier, user)
+        if row.hunt_id is None or row.artifact_id is None:
+            raise HTTPException(409, "Investigation report required")
+        artifact = owned(db, Artifact, row.artifact_id, user)
+        if queue_analysis(row, artifact):
+            db.commit()
+            background.add_task(execute_analysis, factory, store, row.id)
+        return document(row)
 
     @router.get("/hunts/{identifier}/report")
     def hunt_report(identifier: UUID, db: DB, user: Reader) -> Any:

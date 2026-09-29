@@ -16,6 +16,7 @@ import { useControlEvents } from "../lib/use-control-events";
 import { Icon, type IconName } from "./icons";
 import { GlobeCdn } from "./globe-cdn";
 import { EndpointLifecycleTrace } from "./endpoint-lifecycle-trace";
+import { HypothesisAnalysis } from "./hypothesis-analysis";
 type Row = { id: string; [key: string]: unknown };
 type Data = {
   cases: Row[];
@@ -578,6 +579,7 @@ export function OperatorConsole({ section }: { section: string }) {
       )}
       {section === "findings" && (
         <>
+          <h2>Evidence-backed Findings</h2>
           <Table
             headers={[
               "Severity",
@@ -618,6 +620,7 @@ export function OperatorConsole({ section }: { section: string }) {
               close={() => setSelected(null)}
             />
           )}
+          <HypothesisAnalysis />
         </>
       )}
       {section === "timeline" && <TimelineView d={d} />}

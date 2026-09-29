@@ -659,6 +659,576 @@ def test_hunt_report_preserves_sandbox_zero_findings_and_failures(runtime):
     assert payload["endpoint_results"][0]["status"] == "FAILED"
 
 
+def _three_hypotheses(packet):
+    document = packet.document if hasattr(packet, "document") else packet
+    ids = [
+        identifier
+        for finding in document.get("findings", [])
+        for identifier in finding.get("observation_ids", [])
+    ]
+    ids += [row["id"] for row in document.get("representative_records", []) if row.get("id")]
+    actions = document.get("allowed_tattvastra_responses", [])
+    return {
+        "overall_assessment": "The available evidence permits several explanations.",
+        "hypotheses": [
+            {
+                "rank": rank,
+                "title": title,
+                "support": "LOW",
+                "what_it_may_mean": "The observed state may be routine.",
+                "likely_intent": "Intent is not established.",
+                "success_assessment": {
+                    "status": "NOT_ESTABLISHED",
+                    "explanation": "The report does not establish a successful action.",
+                },
+                "observed_weaknesses": [],
+                "evidence": ([{"id": ids[0], "reason": "Persisted sample"}] if ids else []),
+                "tattvastra_response": actions[:1],
+                "recommended_actions": ["Review the persisted evidence"],
+                "uncertainty": "Collection scope limits the conclusion.",
+            }
+            for rank, title in enumerate(
+                ["Expected operation", "Incomplete visibility", "Unestablished anomaly"], 1
+            )
+        ],
+    }
+
+
+def test_report_auto_analysis_ready_and_idempotent(runtime, monkeypatch):
+    from jocky_control_plane import hypotheses
+
+    factory, _, client, org_id, _ = runtime
+    ids = setup_job(factory, org_id, simulation=True)
+    calls = []
+
+    def mocked_openrouter(packet, model, *, attempt=1):
+        calls.append(packet)
+        return _three_hypotheses(packet)
+
+    monkeypatch.setattr(hypotheses, "request_openrouter", mocked_openrouter)
+    response = client.post(f"/api/hunts/{ids[1]}/report")
+    assert response.status_code == 201, response.text
+    report_id = response.json()["report"]["id"]
+    status = client.get(f"/api/reports/{report_id}").json()
+    assert status["analysis_status"] == "READY"
+    assert status["analysis_model"] == "openai/gpt-oss-20b"
+    assert len(status["analysis_document"]["hypotheses"]) == 3
+    assert status["analysis_input_hash"] == response.json()["artifact"]["content_hash"]
+    assert calls[0].document["report_identity"]["simulation"] is True
+    assert calls[0].document["report_identity"]["simulation_label"] == "TEST_FIXTURE"
+    assert calls[0].document["findings"] == []
+    assert "source" not in calls[0].document
+    assert len(calls[0].serialized) <= hypotheses.NORMAL_BRIEF_CHARS
+    retry = client.post(f"/api/reports/{report_id}/analysis/retry")
+    assert retry.status_code == 202
+    assert len(calls) == 1
+    assert client.get(f"/api/reports/{report_id}").json()["analysis_status"] == "READY"
+
+
+def test_report_analysis_failure_is_isolated_and_retryable(runtime, monkeypatch):
+    from jocky_control_plane import hypotheses
+
+    factory, _, client, org_id, _ = runtime
+    ids = setup_job(factory, org_id)
+
+    def unavailable(_packet, _model, *, attempt=1):
+        raise RuntimeError("test-only upstream failure")
+
+    monkeypatch.setattr(hypotheses, "request_openrouter", unavailable)
+    response = client.post(f"/api/hunts/{ids[1]}/report")
+    assert response.status_code == 201, response.text
+    report_id = response.json()["report"]["id"]
+    status = client.get(f"/api/reports/{report_id}").json()
+    assert status["analysis_status"] == "FAILED"
+    assert status["analysis_document"] is None
+    assert client.get(f"/api/reports/{report_id}/document").status_code == 200
+    monkeypatch.setattr(
+        hypotheses,
+        "request_openrouter",
+        lambda packet, model, *, attempt=1: _three_hypotheses(packet),
+    )
+    assert client.post(f"/api/reports/{report_id}/analysis/retry").status_code == 202
+    assert client.get(f"/api/reports/{report_id}").json()["analysis_status"] == "READY"
+
+
+def test_empty_model_response_is_persisted_as_its_own_failure(runtime, monkeypatch):
+    from jocky_control_plane import hypotheses
+
+    _, _, client, org_id, _ = runtime
+    ids = setup_job(runtime[0], org_id)
+    monkeypatch.setattr(
+        hypotheses,
+        "request_openrouter",
+        lambda _packet, _model, *, attempt=1: (_ for _ in ()).throw(
+            ValueError("EMPTY_MODEL_RESPONSE")
+        ),
+    )
+    response = client.post(f"/api/hunts/{ids[1]}/report")
+    assert response.status_code == 201
+    report_id = response.json()["report"]["id"]
+    status = client.get(f"/api/reports/{report_id}").json()
+    assert status["analysis_status"] == "FAILED"
+    assert status["analysis_error"] == "EMPTY_MODEL_RESPONSE"
+
+
+def test_hypothesis_rejects_unlinked_evidence_and_unperformed_response():
+    from jocky_control_plane.hypotheses import build_analysis_brief, validate_analysis
+
+    packet = build_analysis_brief({"findings": [], "observation_summary": [], "timeline": []})
+    value = _three_hypotheses(packet)
+    value["hypotheses"][0]["evidence"] = [{"id": "invented", "reason": "Not in report"}]
+    with pytest.raises(ValueError):
+        validate_analysis(value, packet)
+    value["hypotheses"][0]["evidence"] = []
+    value["hypotheses"][0]["tattvastra_response"] = ["Isolated endpoint"]
+    with pytest.raises(ValueError):
+        validate_analysis(value, packet)
+
+
+def test_hypothesis_evidence_is_resolved_server_side_and_deduplicated():
+    from jocky_control_plane.hypotheses import build_analysis_brief, validate_analysis
+
+    packet = build_analysis_brief(
+        {
+            "findings": [
+                {
+                    "id": "finding-1",
+                    "observation_ids": ["observation-1"],
+                    "affected_endpoints": [],
+                }
+            ],
+            "observation_summary": [],
+            "timeline": [],
+        }
+    )
+    assert packet.document["available_evidence_references"]["finding"] == ["finding-1"]
+    assert packet.document["available_evidence_references"]["observation"] == ["observation-1"]
+    value = _three_hypotheses(packet)
+    value["hypotheses"][0]["evidence"] = [
+        {"id": "finding-1", "reason": "Persisted finding"},
+        {"id": "finding-1", "reason": "Duplicate reference"},
+    ]
+    analysis = validate_analysis(value, packet)
+    assert analysis["hypotheses"][0]["evidence"] == [
+        {"type": "finding", "id": "finding-1", "reason": "Persisted finding"}
+    ]
+    value["hypotheses"][0]["evidence"] = [{"id": "unknown", "reason": "Invented"}]
+    with pytest.raises(ValueError, match="absent"):
+        validate_analysis(value, packet)
+
+
+def test_openrouter_schema_is_recursively_closed_and_evidence_has_no_type():
+    from jocky_control_plane.hypotheses import _schema
+
+    schema = _schema()
+
+    def assert_closed(node):
+        if isinstance(node, dict):
+            if node.get("type") == "object":
+                assert node["additionalProperties"] is False
+                assert set(node["required"]) == set(node["properties"])
+            for value in node.values():
+                assert_closed(value)
+        elif isinstance(node, list):
+            for value in node:
+                assert_closed(value)
+
+    assert_closed(schema)
+    evidence_schema = schema["$defs"]["GeneratedEvidence"]
+    assert "type" not in evidence_schema["properties"]
+
+
+def _observed_report():
+    """Report whose evidence permits every canonical platform response."""
+    return {
+        "executive_summary": {
+            "text": "Persisted summary.",
+            "metrics": {
+                "endpoints": 1,
+                "jobs": 1,
+                "successful_jobs": 1,
+                "observations": 5,
+                "findings": 1,
+                "evidence_artifacts": 2,
+                "verified_manifests": 1,
+            },
+        },
+        "endpoint_results": [
+            {
+                "endpoint_id": "endpoint-1",
+                "hostname": "HOST-1",
+                "platform": "linux",
+                "status": "SUCCESS",
+            }
+        ],
+        "findings": [
+            {
+                "id": "finding-1",
+                "rule_key": "process.review",
+                "title": "Persisted finding",
+                "severity": "LOW",
+                "affected_endpoints": ["HOST-1"],
+                "observation_ids": ["observation-1"],
+            }
+        ],
+        "observation_summary": [],
+        "timeline": [],
+        "evidence_integrity": {
+            "manifests": [{"id": "manifest-1"}],
+            "artifacts": [{"id": "artifact-1"}],
+            "audit_chain_verification": {"integrity_valid": True},
+        },
+    }
+
+
+def _platform_action_packet():
+    from jocky_control_plane import hypotheses
+
+    return hypotheses.build_analysis_brief(_observed_report()).document
+
+
+EVERY_PLATFORM_ACTION = [
+    "Collected and recorded endpoint observations",
+    "Preserved evidence artifact hashes",
+    "Recorded an audit trail",
+    "Surfaced persisted evidence-backed findings",
+    "Verified evidence manifests",
+]
+
+
+def _schema_enum(schema):
+    """The tattvastra_response item enum of a strict response schema."""
+    hypothesis = schema["$defs"]["GeneratedHypothesis"]["properties"]
+    return hypothesis["tattvastra_response"]["items"]["enum"]
+
+
+def test_brief_publishes_only_the_allowed_platform_actions():
+    from jocky_control_plane import hypotheses
+
+    packet = _platform_action_packet()
+    assert packet["allowed_tattvastra_responses"] == EVERY_PLATFORM_ACTION
+    assert packet["allowed_tattvastra_responses"] == hypotheses._allowed_tattvastra_responses(
+        packet
+    )
+
+
+def test_schema_enum_is_exactly_the_allowed_platform_actions():
+    from jocky_control_plane import hypotheses
+
+    packet = _platform_action_packet()
+    allowed = packet["allowed_tattvastra_responses"]
+    schema = hypotheses._schema(allowed)
+    assert _schema_enum(schema) == EVERY_PLATFORM_ACTION
+    assert schema["$defs"]["GeneratedEvidence"]["properties"].keys() == {"id", "reason"}
+
+
+def test_schema_enum_tracks_the_report_and_is_empty_without_actions():
+    from jocky_control_plane import hypotheses
+
+    limited = hypotheses.build_analysis_brief(_large_report_brief_fixture())
+    allowed = limited.document["allowed_tattvastra_responses"]
+    assert allowed == sorted(hypotheses._allowed_platform_actions(limited.document))
+    assert "Collected and recorded endpoint observations" in allowed
+    # Ten of sixteen artifacts exist but no manifest is registered, so verification
+    # is not an observed action and must not appear in the enum.
+    assert "Verified evidence manifests" not in allowed
+    for action in allowed:
+        assert f'"{action}"' in limited.serialized
+    assert _schema_enum(hypotheses._schema(allowed)) == allowed
+
+    empty = hypotheses.build_analysis_brief({"findings": [], "observation_summary": []}).document
+    assert empty["allowed_tattvastra_responses"] == []
+    assert _schema_enum(hypotheses._schema([])) == []
+
+
+def test_openrouter_request_constrains_tattvastra_responses(monkeypatch):
+    import httpx
+    from jocky_control_plane import hypotheses
+
+    packet = _platform_action_packet()
+    captured = {}
+
+    def handle(request):
+        captured.update(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": json.dumps(_three_hypotheses(packet))}}]},
+        )
+
+    original_client = httpx.Client
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-only-key")
+    monkeypatch.setattr(
+        hypotheses.httpx,
+        "Client",
+        lambda **kwargs: original_client(transport=httpx.MockTransport(handle), **kwargs),
+    )
+    result = hypotheses.request_openrouter(packet, "openai/gpt-oss-20b")
+    sent = captured["response_format"]["json_schema"]["schema"]
+    assert _schema_enum(sent) == EVERY_PLATFORM_ACTION
+    assert len(hypotheses.validate_analysis(result, packet)["hypotheses"]) == 3
+
+
+def test_allowed_platform_action_validates_and_paraphrase_does_not():
+    from jocky_control_plane import hypotheses
+
+    packet = _platform_action_packet()
+    value = _three_hypotheses(packet)
+    value["hypotheses"][0]["tattvastra_response"] = [
+        "Preserved evidence artifact hashes",
+        "Recorded an audit trail",
+    ]
+    analysis = hypotheses.validate_analysis(value, packet)
+    assert len(analysis["hypotheses"]) == 3
+    assert analysis["hypotheses"][0]["tattvastra_response"] == [
+        "Preserved evidence artifact hashes",
+        "Recorded an audit trail",
+    ]
+    assert analysis["hypotheses"][0]["evidence"] == [
+        {"type": "observation", "id": "observation-1", "reason": "Persisted sample"}
+    ]
+
+    for invented in (
+        ["preserved evidence artifact hashes"],
+        ["Preserved evidence artifact hashes."],
+        ["Collected endpoint observations"],
+        ["Isolated the affected endpoint"],
+    ):
+        value["hypotheses"][0]["tattvastra_response"] = invented
+        with pytest.raises(ValueError, match="Unobserved platform response claimed"):
+            hypotheses.validate_analysis(value, packet)
+    value["hypotheses"][0]["tattvastra_response"] = []
+    assert len(hypotheses.validate_analysis(value, packet)["hypotheses"]) == 3
+
+
+def test_openrouter_request_is_strict_bounded_and_has_no_tools(monkeypatch):
+    import httpx
+    from jocky_control_plane import hypotheses
+
+    packet = hypotheses.build_analysis_brief(
+        {"findings": [], "observation_summary": [], "timeline": []}
+    )
+    requests = []
+
+    def handle(request):
+        body = json.loads(request.content)
+        requests.append(body)
+        assert request.url == "https://openrouter.ai/api/v1/chat/completions"
+        assert request.headers["Authorization"] == "Bearer test-only-key"
+        assert body["model"] == "openai/gpt-oss-20b"
+        assert body["reasoning"] == {"effort": "low", "exclude": True}
+        assert "reasoning_effort" not in body
+        assert "include_reasoning" not in body
+        assert body["max_tokens"] == 3200
+        assert "max_completion_tokens" not in body
+        assert body["provider"]["require_parameters"] is True
+        assert body["response_format"]["type"] == "json_schema"
+        assert body["response_format"]["json_schema"]["strict"] is True
+        assert body["response_format"]["json_schema"]["name"] == ("tattvastra_hypothesis_analysis")
+        assert "tools" not in body
+        if len(requests) == 1:
+            return httpx.Response(503)
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": json.dumps(_three_hypotheses(packet))}}]},
+        )
+
+    original_client = httpx.Client
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-only-key")
+    monkeypatch.setenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    monkeypatch.setattr(
+        hypotheses.httpx,
+        "Client",
+        lambda **kwargs: original_client(transport=httpx.MockTransport(handle), **kwargs),
+    )
+    assert len(hypotheses.request_openrouter(packet, "openai/gpt-oss-20b")["hypotheses"]) == 3
+    assert len(requests) == 2
+
+
+def test_openrouter_key_is_required_even_if_groq_key_exists(monkeypatch):
+    from jocky_control_plane import hypotheses
+
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.setenv("GROQ_API_KEY", "old-provider-key")
+    brief = hypotheses.build_analysis_brief(
+        {"findings": [], "observation_summary": [], "timeline": []}
+    )
+    with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY"):
+        hypotheses.request_openrouter(brief, "openai/gpt-oss-20b")
+
+
+def test_openrouter_rejects_an_empty_structured_response(monkeypatch):
+    import httpx
+    from jocky_control_plane import hypotheses
+
+    brief = hypotheses.build_analysis_brief(
+        {"findings": [], "observation_summary": [], "timeline": []}
+    )
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-only-key")
+    original_client = httpx.Client
+
+    def handle(_request):
+        return httpx.Response(200, json={"choices": [{"message": {"content": None}}]})
+
+    monkeypatch.setattr(
+        hypotheses.httpx,
+        "Client",
+        lambda **kwargs: original_client(transport=httpx.MockTransport(handle), **kwargs),
+    )
+    with pytest.raises(ValueError, match="EMPTY_MODEL_RESPONSE"):
+        hypotheses.request_openrouter(brief, "openai/gpt-oss-20b")
+
+
+def _large_report_brief_fixture():
+    return {
+        "report_identity": {"report_id": "report-1", "investigation_id": "hunt-1"},
+        "executive_summary": {
+            "text": "Persisted investigation summary.",
+            "metrics": {
+                "endpoints": 12,
+                "successful_jobs": 11,
+                "jobs": 12,
+                "observations": 240,
+                "findings": 12,
+                "evidence_artifacts": 16,
+                "verified_manifests": 10,
+            },
+        },
+        "intent": {"declared_capabilities": ["process.read"], "execution_mode": "memory"},
+        "semantic_plan": {"operations": [{"description": "Enumerate processes"}]},
+        "endpoint_results": [
+            {
+                "endpoint_id": f"endpoint-{index}",
+                "job_id": f"job-{index}",
+                "hostname": f"HOST-{index}",
+                "platform": "linux",
+                "status": "SUCCESS",
+                "simulation": index == 12,
+            }
+            for index in range(1, 13)
+        ],
+        "findings": [
+            {
+                "id": f"finding-{index}",
+                "rule_key": "process.review",
+                "title": f"Persisted finding {index}",
+                "severity": "LOW",
+                "affected_endpoints": [f"HOST-{(index % 12) + 1}"],
+                "observation_ids": [f"observation-{index}-{support}" for support in range(5)],
+            }
+            for index in range(12)
+        ],
+        "observation_summary": [
+            {
+                "endpoint_id": f"endpoint-{index}",
+                "hostname": f"HOST-{index}",
+                "collector": "processes",
+                "count": 20,
+                "representative_records": [
+                    {
+                        "observation_id": f"sample-{index}-{sample}",
+                        "timestamp": "2026-09-29T00:00:00Z",
+                        "data": {
+                            "pid": sample,
+                            "path": "/usr/bin/process",
+                            "large_unrelated_document": "x" * 4000,
+                        },
+                    }
+                    for sample in range(3)
+                ],
+            }
+            for index in range(1, 13)
+        ],
+        "timeline": [
+            {"timestamp": f"2026-09-29T00:00:{index:02d}Z", "event": "Observation received"}
+            for index in range(20)
+        ],
+        "evidence_integrity": {
+            "manifests": [],
+            "audit_chain_verification": {"integrity_valid": True},
+        },
+        "limitations": [f"Persisted limitation {index}" for index in range(12)],
+        "simulation": True,
+        "simulation_label": "TEST_FIXTURE",
+        "source": {"text": "SECRET FULL JOCKY SOURCE"},
+    }
+
+
+def test_analysis_briefs_are_bounded_and_omit_raw_source():
+    from jocky_control_plane.hypotheses import build_analysis_brief
+
+    report = _large_report_brief_fixture()
+    normal = build_analysis_brief(report)
+    fallback = build_analysis_brief(report, fallback=True)
+    assert len(normal.serialized) <= 12_000
+    assert len(fallback.serialized) <= 6_000
+    for brief in (normal, fallback):
+        assert "SECRET FULL JOCKY SOURCE" not in brief.serialized
+        assert "large_unrelated_document" not in brief.serialized
+        assert len(brief.document["findings"]) == 12
+        assert brief.document["evidence_integrity"]["simulation"] is True
+        assert brief.document["evidence_integrity"]["simulation_label"] == "TEST_FIXTURE"
+        assert len(brief.document["endpoints"]) == 12
+    assert len(normal.document["representative_records"]) <= 22
+    assert len(fallback.document["timeline"]) <= 4
+
+
+def test_413_uses_one_small_fallback_and_can_ready_existing_report(runtime, monkeypatch):
+    import httpx
+    from jocky_control_plane import hypotheses
+
+    factory, settings, client, org_id, _ = runtime
+    ids = setup_job(factory, org_id, simulation=True)
+    calls = []
+
+    def openrouter(brief, model, *, attempt=1):
+        calls.append(brief)
+        if len(calls) == 1:
+            request = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+            response = httpx.Response(413, request=request)
+            raise httpx.HTTPStatusError("too large", request=request, response=response)
+        return _three_hypotheses(brief)
+
+    monkeypatch.setattr(hypotheses, "request_openrouter", openrouter)
+    created = client.post(f"/api/hunts/{ids[1]}/report")
+    assert created.status_code == 201, created.text
+    report_id = created.json()["report"]["id"]
+    artifact_id = created.json()["artifact"]["id"]
+    before = client.get(f"/api/artifacts/{artifact_id}/content").content
+    result = client.get(f"/api/reports/{report_id}").json()
+    assert result["analysis_status"] == "READY"
+    assert len(result["analysis_document"]["hypotheses"]) == 3
+    assert len(calls) == 2
+    assert len(calls[0].serialized) <= 12_000
+    assert calls[1].fallback is True
+    assert len(calls[1].serialized) <= 6_000
+    assert client.get(f"/api/artifacts/{artifact_id}/content").content == before
+
+
+def test_413_fallback_failure_marks_existing_report_failed(runtime, monkeypatch):
+    import httpx
+    from jocky_control_plane import hypotheses
+
+    factory, _, client, org_id, _ = runtime
+    ids = setup_job(factory, org_id)
+    calls = []
+
+    def too_large(brief, model, *, attempt=1):
+        calls.append(brief)
+        request = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+        response = httpx.Response(413, request=request)
+        raise httpx.HTTPStatusError("too large", request=request, response=response)
+
+    monkeypatch.setattr(hypotheses, "request_openrouter", too_large)
+    created = client.post(f"/api/hunts/{ids[1]}/report")
+    assert created.status_code == 201
+    report_id = created.json()["report"]["id"]
+    result = client.get(f"/api/reports/{report_id}").json()
+    assert result["analysis_status"] == "FAILED"
+    assert len(calls) == 2
+    assert calls[1].fallback is True
+
+
 @pytest.fixture
 def tls_relay(monkeypatch):
     """Exercise the production byte relay, preserving the real TLS handshake."""

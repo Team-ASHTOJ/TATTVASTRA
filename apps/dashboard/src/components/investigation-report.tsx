@@ -156,6 +156,12 @@ export function InvestigationReport({ huntId }: { huntId: string }) {
           >
             Print / Save PDF
           </button>
+          <Link
+            className="button secondary print-control"
+            href={`/findings?report=${String(report.data.report.id)}`}
+          >
+            View Hypothesis Analysis
+          </Link>
           <a
             className="button print-control"
             href={`/api/control/domain/artifacts/${String(report.data.artifact.id)}/content`}
@@ -384,7 +390,9 @@ export function InvestigationReport({ huntId }: { huntId: string }) {
       <Section title="Timeline">
         <details className="report-timeline-disclosure">
           <summary>
-            <span className="report-timeline-label">Investigation Timeline</span>
+            <span className="report-timeline-label">
+              Investigation Timeline
+            </span>
             <span>{timeline.length} events</span>
           </summary>
           <ol className="report-timeline">

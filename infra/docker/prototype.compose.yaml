@@ -23,6 +23,9 @@ services:
       JOCKY_LOCAL_LAUNCHER_URL: http://local-agent-launcher:8090
       JOCKY_LOCAL_LAUNCHER_TOKEN: ${JOCKY_LOCAL_LAUNCHER_TOKEN:?Run make configure-local}
       JOCKY_BOOTSTRAP_PASSWORD: ${JOCKY_BOOTSTRAP_PASSWORD:?Run make configure-local}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-oss-20b}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
     volumes: ["video_objects:/app/.local"]
     ports: ["127.0.0.1:18080:8000"]
     mem_limit: 2g

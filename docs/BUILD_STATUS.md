@@ -1,5 +1,15 @@
 # Build status
 
+## Report-grounded AI hypothesis analysis — 2026-09-29
+
+Status: **IMPLEMENTED and VERIFIED with mocked Groq; live Groq generation is not verified.**
+
+- A Hunt report queues optional analysis after its canonical artifact is persisted. Report rows retain PENDING, READY, or FAILED status, model, input artifact hash, generated document/time, and a sanitized failure message. Existing case reports and persisted Findings are unchanged. A failed analysis can be retried; READY/PENDING analysis for the same artifact hash is not regenerated.
+- The server sends a bounded packet derived from the persisted report to Groq GPT-OSS 20B using strict JSON Schema, low reasoning effort, no returned reasoning, no tools, a 30-second timeout and at most one transient retry. Exact source text and the full raw observation set are excluded. Server validation requires three ranked hypotheses, report-backed evidence IDs, and platform responses from report-derived allowed actions. The API key is read only from `GROQ_API_KEY` on the server; `GROQ_MODEL` defaults to `openai/gpt-oss-20b`.
+- Insight retains its evidence-backed Findings table and adds separate AI-assisted cards, report selection, polling, and failure retry. The canonical forensic report contains only an understated link to Insight.
+
+Executed checks: focused report/hypothesis API tests **7 passed** with Groq mocked; targeted Insight Playwright test **1 passed** against the current local production build. Backend Ruff/mypy, dashboard typecheck/build, Prettier and `git diff --check`: PASS. Live Groq requests were not made; missing `GROQ_API_KEY` yields FAILED analysis without failing report creation.
+
 # Build status
 
 ## Local Python package interoperability — 2026-09-29
