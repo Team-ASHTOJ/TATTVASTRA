@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import {
@@ -1635,6 +1635,253 @@ function RelatedLinks() {
     </div>
   );
 }
+type SemanticTimelineCategory =
+  | "SESSION"
+  | "INVESTIGATION"
+  | "COLLECTION"
+  | "DETECTION"
+  | "CORRELATION"
+  | "FINDING"
+  | "EVIDENCE"
+  | "VERIFICATION"
+  | "RESPONSE";
+type SemanticTimelineEvent = {
+  id: string;
+  category: SemanticTimelineCategory;
+  timestamp: string;
+  title: string;
+  summary: string;
+  endpointIds: string[];
+  severity: "INFO" | "ACTIVITY" | "SUSPICIOUS" | "HIGH" | "VERIFIED";
+  source: "PERSISTED" | "DEMO";
+  references: string[];
+  details?: string[];
+};
+const semanticIcons: Record<SemanticTimelineCategory, IconName> = {
+  SESSION: "clock",
+  INVESTIGATION: "workflow",
+  COLLECTION: "database",
+  DETECTION: "search",
+  CORRELATION: "network",
+  FINDING: "triangle",
+  EVIDENCE: "file",
+  VERIFICATION: "shield",
+  RESPONSE: "check",
+};
+const semanticTime = (row?: Row) =>
+  str(
+    row?.timestamp ??
+      row?.created_at ??
+      row?.received_at ??
+      row?.collected_at ??
+      row?.completed_at ??
+      row?.updated_at,
+  );
+const usableTime = (value: string) => !Number.isNaN(new Date(value).getTime());
+const observationLabel = (observation?: Row) => {
+  const record = payload(observation ?? { id: "" });
+  return str(
+    record.name ??
+      record.process_name ??
+      record.image ??
+      record.remote_address ??
+      record.remote ??
+      record.path ??
+      observation?.collector,
+  );
+};
+
+/** Groups persisted rows into an investigation narrative without changing the evidence API. */
+function buildSemanticTimeline(d: Data): SemanticTimelineEvent[] {
+  const jobs = new Map(d.jobs.map((job) => [job.id, job]));
+  const observations = new Map(
+    d.observations.map((observation) => [observation.id, observation]),
+  );
+  const timelineTimes = new Map<string, Row>();
+  d.timeline.forEach((entry) => {
+    if (entry.observation_id && !timelineTimes.has(str(entry.observation_id))) {
+      timelineTimes.set(str(entry.observation_id), entry);
+    }
+  });
+  const events: SemanticTimelineEvent[] = [];
+  d.timeline
+    .filter((entry) =>
+      /session|login|auth/i.test(`${str(entry.type)} ${str(entry.title)}`),
+    )
+    .slice(0, 1)
+    .forEach((entry) =>
+      events.push({
+        id: `session:${entry.id}`,
+        category: "SESSION",
+        timestamp: semanticTime(entry),
+        title: "Operator Session Started",
+        summary: "Operator activity recorded by Tattvastra.",
+        endpointIds: [],
+        severity: "INFO",
+        source: "PERSISTED",
+        references: [entry.id],
+      }),
+    );
+  d.hunts.forEach((hunt) => {
+    const huntJobs = d.jobs.filter((job) => job.hunt_id === hunt.id);
+    events.push({
+      id: `investigation:${hunt.id}`,
+      category: "INVESTIGATION",
+      timestamp: semanticTime(hunt),
+      title: "Investigation Launched",
+      summary: `${str(hunt.name ?? hunt.title ?? "Cross-Endpoint Investigation")} · ${huntJobs.length} endpoint${huntJobs.length === 1 ? "" : "s"}`,
+      endpointIds: huntJobs.map((job) => str(job.endpoint_id)),
+      severity: "ACTIVITY",
+      source: "PERSISTED",
+      references: [hunt.id, ...huntJobs.map((job) => job.id)],
+    });
+  });
+  const grouped = new Map<string, Row[]>();
+  d.observations.forEach((observation) => {
+    const huntId =
+      jobs.get(str(observation.job_id))?.hunt_id ??
+      observation.job_id ??
+      observation.case_id;
+    const key = str(huntId);
+    grouped.set(key, [...(grouped.get(key) ?? []), observation]);
+  });
+  grouped.forEach((group, key) => {
+    const collectors = new Map<string, number>();
+    group.forEach((observation) =>
+      collectors.set(
+        str(observation.collector),
+        (collectors.get(str(observation.collector)) ?? 0) + 1,
+      ),
+    );
+    events.push({
+      id: `collection:${key}`,
+      category: "COLLECTION",
+      timestamp: semanticTime(
+        timelineTimes.get(group[0]?.id ?? "") ?? group[0],
+      ),
+      title:
+        new Set(group.map((observation) => observation.endpoint_id)).size > 1
+          ? "Cross-Endpoint Collection Completed"
+          : "Evidence Collection Completed",
+      summary: `${new Set(group.map((observation) => observation.endpoint_id)).size} endpoint${new Set(group.map((observation) => observation.endpoint_id)).size === 1 ? "" : "s"} · ${group.length} observations`,
+      endpointIds: [
+        ...new Set(group.map((observation) => str(observation.endpoint_id))),
+      ],
+      severity: "ACTIVITY",
+      source: "PERSISTED",
+      references: group.map((observation) => observation.id),
+      details: [
+        [...collectors.entries()]
+          .map(([collector, count]) => `${collector} ${count}`)
+          .join(" · "),
+      ],
+    });
+  });
+  d.findings.forEach((finding) => {
+    const linked = items(finding.observation_ids)
+      .map((id) => observations.get(id))
+      .filter((observation): observation is Row => !!observation);
+    const process = linked.find(
+      (observation) => observation.collector === "processes",
+    );
+    const connection = linked.find(
+      (observation) => observation.collector === "connections",
+    );
+    const endpointIds = [
+      ...new Set(linked.map((observation) => str(observation.endpoint_id))),
+    ];
+    const refs = [finding.id, ...linked.map((observation) => observation.id)];
+    if (process)
+      events.push({
+        id: `detection:${finding.id}`,
+        category: "DETECTION",
+        timestamp: semanticTime(finding),
+        title: "Suspicious Process Identified",
+        summary: observationLabel(process),
+        endpointIds,
+        severity: "SUSPICIOUS",
+        source: "PERSISTED",
+        references: refs,
+      });
+    if (process && connection)
+      events.push({
+        id: `correlation:${finding.id}`,
+        category: "CORRELATION",
+        timestamp: semanticTime(finding),
+        title: "External Connection Correlated",
+        summary: `${observationLabel(process)} → ${observationLabel(connection)}`,
+        endpointIds,
+        severity: "SUSPICIOUS",
+        source: "PERSISTED",
+        references: refs,
+      });
+    events.push({
+      id: `finding:${finding.id}`,
+      category: "FINDING",
+      timestamp: semanticTime(finding),
+      title: "Finding Created",
+      summary: `${str(finding.title)} · ${str(finding.severity)}`,
+      endpointIds,
+      severity: /critical|high/i.test(str(finding.severity))
+        ? "HIGH"
+        : "SUSPICIOUS",
+      source: "PERSISTED",
+      references: refs,
+    });
+  });
+  const artifactJobs = new Set(
+    d.artifacts.map((artifact) => str(artifact.job_id)),
+  );
+  if (artifactJobs.size)
+    events.push({
+      id: "evidence:artifacts",
+      category: "EVIDENCE",
+      timestamp: semanticTime(d.artifacts[0]),
+      title: "Evidence Preserved",
+      summary: `${d.artifacts.length} artifact${d.artifacts.length === 1 ? "" : "s"} linked to job provenance.`,
+      endpointIds: [...artifactJobs].map((jobId) =>
+        str(jobs.get(jobId)?.endpoint_id),
+      ),
+      severity: "ACTIVITY",
+      source: "PERSISTED",
+      references: d.artifacts.map((artifact) => artifact.id),
+    });
+  const verified = d.manifests.filter((manifest) =>
+    /valid|verified/i.test(
+      `${str(manifest.status)} ${str(manifest.verification_status)}`,
+    ),
+  );
+  if (verified.length)
+    events.push({
+      id: "verification:manifests",
+      category: "VERIFICATION",
+      timestamp: semanticTime(verified[0]),
+      title: "Integrity Verified",
+      summary: `${verified.length} evidence manifest${verified.length === 1 ? "" : "s"} verified.`,
+      endpointIds: [],
+      severity: "VERIFIED",
+      source: "PERSISTED",
+      references: verified.map((manifest) => manifest.id),
+    });
+  const firstFinding = d.findings[0];
+  if (firstFinding)
+    events.push({
+      id: "response:review",
+      category: "RESPONSE",
+      timestamp: semanticTime(firstFinding),
+      title: "Finding Escalated",
+      summary:
+        "Evidence preserved and finding queued for analyst review; no automated remediation.",
+      endpointIds: [],
+      severity: "INFO",
+      source: "DEMO",
+      references: [firstFinding.id],
+    });
+  return events
+    .filter((event) => usableTime(event.timestamp))
+    .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+}
+
 function TimelineView({ d }: { d: Data }) {
   const [endpoint, setEndpoint] = useState("");
   const [type, setType] = useState("");
@@ -1642,27 +1889,34 @@ function TimelineView({ d }: { d: Data }) {
   const [search, setSearch] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
-  const [selected, setSelected] = useState<Row | null>(null);
-  const rows = d.timeline
+  const [selected, setSelected] = useState<SemanticTimelineEvent | null>(null);
+  const events = useMemo(() => buildSemanticTimeline(d), [d]);
+  const endpointLabel = (id: string) =>
+    str(d.endpoints.find((item) => item.id === id)?.hostname);
+  const rows = events.filter(
+    (event) =>
+      (!endpoint || event.endpointIds.includes(endpoint)) &&
+      (!type || event.category === type) &&
+      (!severity || event.severity === severity) &&
+      (!start || new Date(event.timestamp) >= new Date(start)) &&
+      (!end || new Date(event.timestamp) <= new Date(end)) &&
+      `${event.title} ${event.summary} ${event.endpointIds.map(endpointLabel).join(" ")} ${event.details?.join(" ") ?? ""}`
+        .toLowerCase()
+        .includes(search.toLowerCase()),
+  );
+  const story = rows
     .filter(
-      (t) =>
-        (!endpoint || t.endpoint_id === endpoint) &&
-        (!type || t.type === type) &&
-        (!severity || t.severity === severity) &&
-        (!start || new Date(str(t.timestamp)) >= new Date(start)) &&
-        (!end || new Date(str(t.timestamp)) <= new Date(end)) &&
-        `${str(t.collector)} ${JSON.stringify(payload(d.observations.find((o) => o.id === t.observation_id) ?? { id: "" }))}`
-          .toLowerCase()
-          .includes(search.toLowerCase()),
+      (event, index) =>
+        rows.findIndex((item) => item.category === event.category) === index,
     )
-    .sort((a, b) => str(a.timestamp).localeCompare(str(b.timestamp)));
+    .slice(0, 7);
   return (
     <>
       <section className="panel">
         <div className="timeline-filters">
           <input
             aria-label="Search timeline"
-            placeholder="Search process, file, IP…"
+            placeholder="Search process, IP, investigation…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -1672,9 +1926,9 @@ function TimelineView({ d }: { d: Data }) {
             onChange={(e) => setEndpoint(e.target.value)}
           >
             <option value="">All endpoints</option>
-            {d.endpoints.map((e) => (
-              <option key={e.id} value={e.id}>
-                {str(e.hostname)}
+            {d.endpoints.map((item) => (
+              <option key={item.id} value={item.id}>
+                {str(item.hostname)}
               </option>
             ))}
           </select>
@@ -1683,9 +1937,21 @@ function TimelineView({ d }: { d: Data }) {
             value={type}
             onChange={(e) => setType(e.target.value)}
           >
-            <option value="">All types</option>
-            {[...new Set(d.timeline.map((t) => str(t.type)))].map((v) => (
-              <option key={v}>{v}</option>
+            <option value="">All events</option>
+            {[
+              "INVESTIGATION",
+              "COLLECTION",
+              "DETECTION",
+              "CORRELATION",
+              "FINDING",
+              "EVIDENCE",
+              "VERIFICATION",
+              "RESPONSE",
+              "SESSION",
+            ].map((item) => (
+              <option key={item} value={item}>
+                {item[0] + item.slice(1).toLowerCase()}
+              </option>
             ))}
           </select>
           <select
@@ -1694,9 +1960,11 @@ function TimelineView({ d }: { d: Data }) {
             onChange={(e) => setSeverity(e.target.value)}
           >
             <option value="">All severities</option>
-            {[...new Set(d.timeline.map((t) => str(t.severity)))].map((v) => (
-              <option key={v}>{v}</option>
-            ))}
+            {["INFO", "ACTIVITY", "SUSPICIOUS", "HIGH", "VERIFIED"].map(
+              (item) => (
+                <option key={item}>{item}</option>
+              ),
+            )}
           </select>
           <label>
             From
@@ -1729,43 +1997,79 @@ function TimelineView({ d }: { d: Data }) {
           </button>
         </div>
       </section>
+      {story.length > 0 && (
+        <section
+          className="panel investigation-story"
+          aria-label="Investigation story"
+        >
+          <div className="panel-heading">
+            <span>INVESTIGATION STORY</span>
+            <p>
+              Semantic chain of custody from persisted investigation evidence.
+            </p>
+          </div>
+          <ol>
+            {story.map((event) => (
+              <li key={event.id}>
+                <Icon
+                  name={semanticIcons[event.category]}
+                  width={15}
+                  height={15}
+                />
+                <time>
+                  {new Date(event.timestamp).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </time>
+                <strong>{event.title}</strong>
+                <span>{event.summary}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
       <section className="panel">
         <ol className="forensic-timeline">
-          {rows.map((t) => {
-            const observation = d.observations.find(
-              (o) => o.id === t.observation_id,
-            );
-            const fields = payload(observation ?? { id: "" });
-            const related = d.findings.some((f) =>
-              items(f.observation_ids).includes(str(t.observation_id)),
-            );
-            return (
-              <li key={t.id}>
-                <time>{date(t.timestamp)}</time>
-                <button
-                  className="timeline-event"
-                  onClick={() => setSelected(t)}
-                >
-                  <strong>
-                    {str(
-                      d.endpoints.find((e) => e.id === t.endpoint_id)?.hostname,
-                    )}{" "}
-                    ·{" "}
-                    {str(
-                      fields.name ??
-                        fields.remote_address ??
-                        fields.path ??
-                        t.type,
-                    )}
-                  </strong>
-                  <span>
-                    {str(t.collector)} · {str(t.severity)}{" "}
-                    {related ? "· Related finding" : ""}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
+          {rows.map((event) => (
+            <li
+              key={event.id}
+              className={`semantic-${event.severity.toLowerCase()}`}
+            >
+              <time>{date(event.timestamp)}</time>
+              <button
+                className="timeline-event"
+                onClick={() => setSelected(event)}
+              >
+                <span className="timeline-event-topline">
+                  <Icon
+                    name={semanticIcons[event.category]}
+                    width={15}
+                    height={15}
+                  />
+                  <em
+                    className={`timeline-severity ${event.severity.toLowerCase()}`}
+                  >
+                    {event.severity}
+                  </em>
+                </span>
+                <strong>{event.title}</strong>
+                <span>
+                  {event.endpointIds
+                    .map(endpointLabel)
+                    .filter((name) => name !== "Not available")
+                    .join(" · ")}
+                  {event.endpointIds.length ? " · " : ""}
+                  {event.summary}
+                </span>
+                <span className="timeline-chips">
+                  <em>{event.source === "DEMO" ? "DEMO" : "PERSISTED"}</em>
+                  {event.category === "VERIFICATION" && <em>VERIFIED</em>}
+                  {event.category === "EVIDENCE" && <em>PROVENANCE LINKED</em>}
+                </span>
+              </button>
+            </li>
+          ))}
         </ol>
         {!rows.length && <p>No events match these filters.</p>}
       </section>
@@ -1774,29 +2078,20 @@ function TimelineView({ d }: { d: Data }) {
           <Fields
             data={{
               timestamp: selected.timestamp,
-              endpoint: d.endpoints.find((e) => e.id === selected.endpoint_id)
-                ?.hostname,
-              collector: selected.collector,
+              category: selected.category,
+              endpoints:
+                selected.endpointIds.map(endpointLabel).join(", ") || undefined,
               severity: selected.severity,
-              time_basis: selected.time_basis,
+              source:
+                selected.source === "DEMO"
+                  ? "DEMO context (not forensic evidence)"
+                  : "Persisted API evidence",
             }}
           />
-          <Fields
-            data={payload(
-              d.observations.find((o) => o.id === selected.observation_id) ?? {
-                id: "",
-              },
-            )}
-          />
-          <p>
-            Related finding:{" "}
-            {d.findings
-              .filter((f) =>
-                items(f.observation_ids).includes(str(selected.observation_id)),
-              )
-              .map((f) => str(f.title))
-              .join(", ") || "None"}
-          </p>
+          {selected.details?.map((detail) => (
+            <p key={detail}>{detail}</p>
+          ))}
+          <p className="hash">References: {selected.references.join(", ")}</p>
           <RelatedLinks />
         </Drawer>
       )}
