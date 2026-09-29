@@ -62,4 +62,7 @@ For an honest local endpoint run, see [Agent runtime](docs/AGENT_RUNTIME.md). Th
 | `infra`                                      | Local Compose, reverse-proxy template, monitoring, native/Rust builds          |
 | `examples`, `fixtures`, `benchmark`, `tests` | Language acceptance inputs, labeled fixture data, validation                   |
 
-Start with [AGENTS.md](AGENTS.md), [architecture](docs/ARCHITECTURE.md), [traceability](docs/REQUIREMENT_TRACEABILITY.md), and [definition of done](docs/DEFINITION_OF_DONE.md).
+Start with [AGENTS.md](AGENTS.md), [features](docs/FEATURES.md),
+[architecture](docs/ARCHITECTURE.md),
+[traceability](docs/REQUIREMENT_TRACEABILITY.md), and
+[definition of done](docs/DEFINITION_OF_DONE.md).

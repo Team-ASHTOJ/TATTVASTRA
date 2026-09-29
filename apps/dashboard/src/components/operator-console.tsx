@@ -2925,32 +2925,35 @@ function VariantView({
               ).replaceAll("_", " "),
             }}
           />
-          <Table
-            headers={[
-              "Variant",
-              "Artifact",
-              "LLVM",
-              "Variant build (ms)",
-              "AOT (ms)",
-              "Bytes / delta from A",
-              "Structure",
-            ]}
-            rows={variants.slice(0, 3).map((v, i) => [
-              `Variant ${String.fromCharCode(65 + i)}`,
-              <HashValue key={v.id} value={v.content_hash} />,
-              <HashValue key={v.id} value={obj(v.manifest).llvm_ir_hash} />,
-              str(obj(obj(v.manifest).profile).variant_ms ?? "Not measured"),
-              str(obj(obj(v.manifest).profile).aot_ms ?? "Not measured"),
-              typeof obj(v.manifest).artifact_size_bytes === "number" &&
-              typeof obj(variants[0]?.manifest).artifact_size_bytes === "number"
-                ? `${obj(v.manifest).artifact_size_bytes} B / ${Number(obj(v.manifest).artifact_size_bytes) - Number(obj(variants[0]?.manifest).artifact_size_bytes)} B`
-                : "Not measured",
-              Object.entries(obj(obj(v.manifest).structural_metrics))
-                .filter(([, value]) => typeof value === "number")
-                .map(([k, value]) => `${k}: ${value}`)
-                .join(" · "),
-            ])}
-          />
+          <div className="variant-comparison-table">
+            <Table
+              headers={[
+                "Variant",
+                "Artifact",
+                "LLVM",
+                "Variant build (ms)",
+                "AOT (ms)",
+                "Bytes / delta from A",
+                "Structure",
+              ]}
+              rows={variants.slice(0, 3).map((v, i) => [
+                `Variant ${String.fromCharCode(65 + i)}`,
+                <HashValue key={v.id} value={v.content_hash} />,
+                <HashValue key={v.id} value={obj(v.manifest).llvm_ir_hash} />,
+                str(obj(obj(v.manifest).profile).variant_ms ?? "Not measured"),
+                str(obj(obj(v.manifest).profile).aot_ms ?? "Not measured"),
+                typeof obj(v.manifest).artifact_size_bytes === "number" &&
+                typeof obj(variants[0]?.manifest).artifact_size_bytes ===
+                  "number"
+                  ? `${obj(v.manifest).artifact_size_bytes} B / ${Number(obj(v.manifest).artifact_size_bytes) - Number(obj(variants[0]?.manifest).artifact_size_bytes)} B`
+                  : "Not measured",
+                Object.entries(obj(obj(v.manifest).structural_metrics))
+                  .filter(([, value]) => typeof value === "number")
+                  .map(([k, value]) => `${k}: ${value}`)
+                  .join(" · "),
+              ])}
+            />
+          </div>
           <p>
             {comparison.semantic_equivalence === "VERIFIED"
               ? "Equivalent source/JIR/plan and deterministic compiler fixture results verified. This is not universal or endpoint equivalence."

@@ -1498,6 +1498,15 @@ dd {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.variant-comparison-table .hash-value {
+  min-width: max-content;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  word-break: normal;
+}
+.variant-comparison-table .hash-value > button {
+  flex: 0 0 auto;
+}
 .artifact-integrity-actions {
   display: flex;
   align-items: center;
