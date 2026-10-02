@@ -4,24 +4,25 @@
 
 Status: **IMPLEMENTED and VERIFIED as a standalone static Next.js application.**
 
-- Added `apps/website` as a separate npm workspace without changing the existing
-  dashboard entry points. The single-page public site presents JOCKY, typed JIR,
+- Built the product website as a standalone application, now maintained outside
+  this repository at the sibling `tattvastra-website` directory. The single-page
+  public site presents JOCKY, typed JIR,
   mandatory LLVM compilation, Build Forge, authorized Agent execution, evidence,
   reports, bounded AI hypotheses, local Python interoperability and the CLI using
   repository-grounded claims and explicit current boundaries.
 - The site has no backend, authentication, environment-variable, Docker or
-  operational-console dependency. It uses the existing TATTVASTRA mark, wordmark,
-  logo and icon copied from the dashboard and is independently deployable with
-  `apps/website` as the Vercel root directory.
+  operational-console dependency. It uses copies of the TATTVASTRA mark,
+  wordmark, logo and icon and is independently deployable with the standalone
+  project root selected in Vercel.
 - Client JavaScript is limited to mobile navigation, active-section tracking,
   one-time scroll reveals, code tabs/copy and pausing decorative SVG motion while
   the document is hidden. The page is otherwise statically prerendered.
 
 Executed checks:
 
-- `npm run typecheck --workspace @jocky/website`: PASS.
-- `npm run build --workspace @jocky/website`: PASS; `/` is statically prerendered.
-- Website ESLint and scoped Prettier checks: PASS. `git diff --check`: PASS.
+- `(cd ../tattvastra-website && npm run typecheck)`: PASS.
+- `(cd ../tattvastra-website && npm run build)`: PASS; `/` is statically prerendered.
+- Standalone website scoped formatting and `git diff --check`: PASS.
 - Headless Chromium at 1440 × 1000, 768 × 1024 and 390 × 844: PASS with 23
   sections, zero browser errors, working mobile navigation and no page-level
   horizontal overflow.

@@ -2,13 +2,68 @@
 
 **One Language. Every Endpoint. No Noise.**
 
-JOCKY is an independent forensic DSL, typed JIR, mandatory LLVM compiler, build-diversity system, and distributed evidence platform for Windows and Ubuntu.
+JOCKY is TATTVASTRA's defensive forensic platform: a typed language and native
+compiler path that carries investigation intent from `.jky` source through typed
+JIR, LLVM, authorized endpoint execution, normalized observations, findings,
+reports, and verifiable evidence.
 
-This repository includes the engineering foundation, C++20 JOCKY frontend/JIR/LLVM AOT+ORC compiler, and a local standalone Rust endpoint runtime. On supported hosts the Agent performs real read-only collection, signed-job admission, normalized signed evidence, resource supervision and encrypted offline spooling. Remote enrollment/transport, control-plane ingestion, compiler-artifact execution inside the Agent, persistent evidence vault, and full Judge Mode remain incomplete. An available route or contract does not imply the corresponding subsystem works.
+```text
+.jky source
+  → typed, effect-aware JIR
+  → LLVM IR / ORC JIT / AOT object
+  → signed job to an authorized Rust Agent
+  → supervised JOCKY-owned worker
+  → fixed read-only collectors
+  → normalized evidence
+  → findings / graph / timeline / Hunt report
+```
+
+Python orchestrates the CLI and control plane. It does not parse, type-check, or
+interpret JOCKY.
+
+## What is implemented
+
+- Handwritten C++20 lexer, parser, type system, capability validation, diagnostics,
+  collector schemas, correlation, findings, timelines, and report plans.
+- Versioned typed JIR with deterministic canonical identity, SSA-like dataset
+  handles, explicit effect ordering, target constraints, budgets, and provenance.
+- Mandatory LLVM lowering with verified IR, optimization, real AOT objects, and
+  LLVM ORC LLJIT memory execution. There is no interpreter fallback.
+- Real Linux ELF and Windows COFF objects from the same semantic JIR. Linux
+  endpoint execution is verified; Windows linking and live endpoint execution
+  remain environment-dependent.
+- Build Forge with one to eight deterministic seeded variants, structural
+  fingerprints, real artifact hashes, bounded fixture equivalence, protected
+  literal pools, and Ed25519 build manifests.
+- Rust Agent identity, one-time enrollment, mTLS, signed expiring jobs,
+  nonce-bound replay protection, artifact re-hashing, cancellation, supervision,
+  and encrypted offline spooling.
+- Three independently enrolled Linux Agent instances in the verified prototype:
+  two direct connections and one trusted relay, all on a shared Docker host.
+- Read-only collection for system, users, processes, interfaces, connections,
+  routes, approved-path files, services, startup, scheduled tasks, logs,
+  software, drivers, and kernel modules.
+- Content-addressed artifact/evidence verification, Ed25519 manifests, and a
+  per-organization append-only SHA-256 audit hash chain.
+- Hunt-scoped reports with canonical JSON, stored-byte re-hashing, browser/PDF
+  presentation, findings, graph, timeline, and explicit limitations.
+- Optional report-grounded AI hypothesis cards. AI receives a bounded report
+  brief, returns exactly three schema-validated hypotheses, and cannot mutate
+  Findings or the canonical report.
+- Bounded local Python interoperability through typed `PYTHON_CALL` JIR and the
+  `jocky_rt_analysis` ABI. It is not unrestricted FFI or remote collection.
+- Responsive Next.js operator console with Workbench, Compiler Explorer, Build
+  Forge, endpoint lifecycle, investigations, evidence, Insight, Judge Mode, and
+  live SSE-backed workflow state.
+
+See [docs/FEATURES.md](docs/FEATURES.md) for the detailed product surface and
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for layer boundaries and flows.
 
 ## Start locally
 
-Requires Python 3.12+, uv, Node 22+, and npm. Rust 1.90, protobuf, CMake 3.25+, LLVM 18 development files, and GoogleTest are required for host native/agent builds. Docker provides isolated alternatives.
+Requires Python 3.12+, uv, Node 22+, npm, Rust 1.90, protobuf, CMake 3.25+,
+LLVM development files, and GoogleTest for the full host toolchain. Docker
+provides isolated native and Agent alternatives.
 
 ```sh
 make bootstrap
@@ -17,52 +72,101 @@ make dev-api
 make dev-dashboard
 ```
 
-Open <http://127.0.0.1:3000>. API documentation: <http://127.0.0.1:8000/docs>. The dashboard fetches actual capability status. An unavailable API displays a connection error and retry; it never falls back to synthetic endpoints.
+Open <http://127.0.0.1:3000>. The API documentation is at
+<http://127.0.0.1:8000/docs>.
 
-The default is REAL mode with **no operational endpoint inventory**. `JOCKY_MODE=DEMO make dev-api` declares intended demo mode but does not manufacture fixtures or make execution available. No remote authentication is implemented; the scaffold binds to loopback and refuses production/relay environment settings.
+The default is REAL mode with no operational endpoint inventory. Demo and
+fixture-backed paths are explicitly labelled; synthetic data carries
+`simulation=true` and cannot enter a REAL job. An unavailable API produces an
+error/retry state rather than fabricated endpoints.
 
-## Run a hunt from the terminal
+## Run the compiler from the terminal
 
 ```sh
-make jockey-install   # builds jockyc, links scripts/jockey into ~/.local/bin
-jockey hunt.jky       # compile and execute the hunt file
-jockey check hunt.jky # frontend validation only
-jockey --help         # full jockyc command list
+make jockey-install
+jockey check hunt.jky
+jockey jir hunt.jky
+jockey llvm hunt.jky
+jockey compile hunt.jky --target linux-x86_64
+jockey pipeline hunt.jky --count 3
 ```
 
-A first argument naming a `.jky` file is run; any other argument is passed straight through to `jockyc` (`check`, `tokens`, `ast`, `jir`, `llvm`, `plan`, `compile`, `run`, `variants`, `variant-info`, `benchmark`). Local execution uses the deterministic SIMULATED fixture collector: the hunt file is compiled and JIT-executed in process, and is not endpoint evidence. Set `JOCKYC` to point at a different compiler binary. For other machines and platforms, see [installing JOCKY](docs/INSTALL.md).
+The terminal entry point dispatches to the authoritative `jockyc` compiler. It
+supports these command families:
 
-## Verify
+| Family          | Commands                                                              |
+| --------------- | --------------------------------------------------------------------- |
+| Build / inspect | `check`, `tokens`, `ast`, `jir`, `plan`, `llvm`, `compile`, `run`     |
+| Variants        | `variants`, `variant-info`, `diverge`, `diff`, `equivalence`, `forge` |
+| Explain         | `caps`, `budget`, `types`, `metrics`, `fingerprint`                   |
+| Validate        | `verify`, `manifest`, `benchmark`, `pipeline`, `doctor`               |
+| Python          | `install`, `packages`                                                 |
+
+`jockey <file.jky>` runs local ORC execution against the labelled deterministic
+fixture. That path is not endpoint evidence and does not hold control-plane
+credentials.
+
+## Verify the repository
 
 ```sh
-make verify-foundation  # Python/TS, format/lint, schemas, tests, packages, Next build
-make test-e2e          # actual API + browser; install Chromium with make browser-install
+make verify-foundation
 make verify-native-container
 make verify-agent-container
-make configure-local  # unique credentials in ignored .env; never overwrites existing .env
+make test-e2e
 make infra-check
+make verify
 ```
 
-`make verify` requires all host toolchains and fails when they are missing. `make verify-containers` uses Docker for native/Rust and local tooling for web/Python. See [BUILD_STATUS](docs/BUILD_STATUS.md) for the exact checks run and what remains unverified. `make help` lists operational commands. `make infra-up` starts only local backing services; `make stack-up` adds the scaffold API and dashboard. Neither starts an operational forensic fleet.
+`make verify` requires all required host toolchains and fails when one is
+missing. See [docs/BUILD_STATUS.md](docs/BUILD_STATUS.md) for dated commands,
+test evidence, environment limitations, and current verification status.
 
-For an honest local endpoint run, see [Agent runtime](docs/AGENT_RUNTIME.md). The shortest flow is `jocky-agent init`, `jocky-agent doctor`, then `jocky-agent collect system` (or `processes` / `connections`).
+## Architecture at a glance
 
-## Repository
+| Layer                                        | Responsibility                                                                            |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `native/compiler`                            | C++20 frontend, typed JIR, plans, LLVM lowering, diversity, AOT/ORC, metrics              |
+| `native/runtime`                             | Versioned C ABI, dataset ownership, protected literals, local Python bridge               |
+| `services/agent`                             | Endpoint identity/policy, collectors, signed jobs, supervision, mTLS, replay, spool       |
+| `services/control-plane`                     | FastAPI APIs, PostgreSQL state, Build Forge, scheduler, gRPC, evidence, analysis, reports |
+| `apps/dashboard`                             | Authenticated Next.js console and SSE-driven resource refresh                             |
+| `cli`, `scripts/jockey`                      | Compiler discovery, command composition, isolated Python packages                         |
+| `packages/contracts`                         | Pydantic authority and generated JSON Schema/TypeScript                                   |
+| `proto`                                      | Versioned Agent transport around canonical JSON                                           |
+| `packages/jocky-language`                    | Editor metadata only; never an alternate compiler                                         |
+| `infra`                                      | Images, Compose topologies, monitoring, and relay configuration                           |
+| `examples`, `fixtures`, `tests`, `benchmark` | Programs, labelled data, acceptance tests, and measurement methodology                    |
 
-| Path                                         | Responsibility                                                                 |
-| -------------------------------------------- | ------------------------------------------------------------------------------ |
-| `native/compiler`                            | C++20 frontend, typed JIR/static plans; real ORC toolchain probe               |
-| `native/runtime`                             | Versioned C ABI; collector calls explicitly unavailable                        |
-| `services/agent`                             | Rust identity/policy, real collectors, worker governor, signed evidence/spool  |
-| `services/control-plane`                     | FastAPI status, error boundaries, stateless verification, persistence baseline |
-| `apps/dashboard`                             | Next.js console shell, coverage browser, observation verifier                  |
-| `packages/contracts`                         | Pydantic source of truth; generated JSON Schema and TypeScript                 |
-| `packages/jocky-language`, `packages/ui`     | Editor vocabulary and shared UI primitives                                     |
-| `proto`                                      | Agent transport schema; no active remote gRPC client/server yet                |
-| `infra`                                      | Local Compose, reverse-proxy template, monitoring, native/Rust builds          |
-| `examples`, `fixtures`, `benchmark`, `tests` | Language acceptance inputs, labeled fixture data, validation                   |
+The public-facing TATTVASTRA website is maintained as a separate standalone
+project at `../tattvastra-website` and has no backend or dashboard dependency.
 
-Start with [AGENTS.md](AGENTS.md), [features](docs/FEATURES.md),
-[architecture](docs/ARCHITECTURE.md),
-[traceability](docs/REQUIREMENT_TRACEABILITY.md), and
-[definition of done](docs/DEFINITION_OF_DONE.md).
+## Trust and safety boundaries
+
+JOCKY keeps integrity, authenticity, provenance, and audit continuity as separate
+verdicts. It uses canonical JSON and SHA-256 for integrity, Ed25519 manifests for
+producer authenticity, source-to-evidence identities for provenance, and a
+linear previous-hash audit chain for continuity. It does **not** claim a
+cryptographic Merkle tree.
+
+Execution is limited to compiler-generated, authorized programs in a dedicated
+JOCKY-owned worker. The platform does not provide shell execution, arbitrary
+native payloads, process injection or hollowing, callback removal, EDR/AV
+disabling, kernel tampering, privilege escalation, persistence installation,
+covert SOCKS routing, or domain fronting.
+
+Known limits include live Windows endpoint execution, hard CPU/RAM/network
+governance, certificate rotation and production credential storage, external
+audit checkpoints, broad remote JIR execution, fleet-scale trials, and optional
+YARA/Volatility/osquery adapter execution. Missing measurements remain
+unavailable rather than being shown as zero.
+
+## Further reading
+
+- [Features](docs/FEATURES.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Build status](docs/BUILD_STATUS.md)
+- [Requirement traceability](docs/REQUIREMENT_TRACEABILITY.md)
+- [Definition of done](docs/DEFINITION_OF_DONE.md)
+- [Agent runtime](docs/AGENT_RUNTIME.md)
+- [Install guide](docs/INSTALL.md)
+- [Repository instructions](AGENTS.md)
