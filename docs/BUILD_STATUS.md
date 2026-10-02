@@ -1,5 +1,46 @@
 # Build status
 
+## Compatibility Lab V1 — 2026-10-03
+
+Status: **IMPLEMENTED** for the additive CompatibilityRun API, provenance snapshot,
+job-linked measurement derivation, and `/compatibility` operator UI. **VERIFIED**
+only by the checks listed below. Windows/Defender execution compatibility is
+**NOT_MEASURED / BLOCKED_ENVIRONMENT**; no real Windows security-product run
+was recorded.
+
+- The existing CompatibilityRun table and `compatibility.recorded` event remain
+  authoritative. The typed request contract adds optional measurement metadata;
+  generated JSON Schema and TypeScript were regenerated. Historical request
+  payloads still work. No database migration or CLI control-plane capability was
+  added.
+- The server snapshots persisted variant, compilation/JIR, source, endpoint,
+  recorder, and REAL/SIMULATED identity into each run's `observations`. A linked
+  job must match tenant, variant, and supplied endpoint. Its execution status,
+  reported duration/CPU/memory where present, and persisted observation counts
+  are server-derived; client overrides are rejected. Unreported Peak RSS and
+  other missing metrics remain null/UNAVAILABLE.
+- The authenticated Compatibility Lab displays only persisted measurements,
+  provides ADMIN/ANALYST recording with an optional read-only job preview, and
+  compares distinct variants only when compilation/JIR, recorded OS and policy
+  environment, and security-product name/version/realtime state match. Alert
+  observations do not rank variants or feed the compiler. Existing admission
+  remains correctness-only and endpoint-scoped: `FAIL` may reject, while an
+  alert by itself does not.
+
+Executed checks:
+
+- `make contracts-check`: PASS (schema, TypeScript, coverage drift).
+- `.venv/bin/pytest services/control-plane/tests/test_compatibility_lab.py services/control-plane/tests/test_phase4.py -q`: **14 passed** using persisted protocol fixtures, not Windows measurements.
+- Focused Ruff check and repository-configured `.venv/bin/mypy`: PASS.
+- Dashboard typecheck and production build: PASS.
+- `npx playwright test tests/e2e/compatibility.spec.ts --project=chromium`: **4 passed** with mocked UI responses; selected run, exact disclaimer, equivalence filter, empty state, and job-derived read-only fields were exercised.
+- `git diff --check`: PASS.
+- `make verify-foundation`: **NOT PASSED**. It stopped at the repository-wide
+  Ruff format check because 12 pre-existing unrelated files would be reformatted;
+  those files were not changed for this feature. The remaining foundation stages
+  were not run by that command.
+
+
 ## Standalone TATTVASTRA product website — 2026-09-30
 
 Status: **IMPLEMENTED and VERIFIED as a standalone static Next.js application.**

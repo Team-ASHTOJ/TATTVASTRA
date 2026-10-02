@@ -1,6 +1,6 @@
 """Additive v1 request contracts for the persistent prototype APIs."""
 
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import AwareDatetime, Field, JsonValue
@@ -94,6 +94,19 @@ class CompatibilityCreate(Contract):
     alert_observed: Literal["YES", "NO", "NOT_OBSERVED"]
     notes: str = Field(max_length=10000)
     endpoint_id: UUID | None = None
+    job_id: UUID | None = None
+    measurement_source: Literal["JOB_DERIVED", "OPERATOR_RECORDED"] | None = None
+    measured_at: AwareDatetime | None = None
+    os_name: str | None = Field(default=None, min_length=1, max_length=200)
+    os_version: str | None = Field(default=None, min_length=1, max_length=200)
+    architecture: str | None = Field(default=None, min_length=1, max_length=100)
+    security_product_version: str | None = Field(default=None, min_length=1, max_length=200)
+    realtime_protection: Literal["ENABLED", "DISABLED", "UNKNOWN"] = "UNKNOWN"
+    execution_status: Literal["SUCCESS", "FAILED", "NOT_MEASURED"] = "NOT_MEASURED"
+    runtime_ms: float | None = Field(default=None, ge=0)
+    cpu_percent: float | None = Field(default=None, ge=0, le=100)
+    peak_memory_bytes: int | None = Field(default=None, ge=0)
+    collector_counts: dict[str, Annotated[int, Field(ge=0)]] | None = None
 
 
 class ReportCreate(Contract):

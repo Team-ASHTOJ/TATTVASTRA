@@ -96,6 +96,14 @@ export const sections = [
       "Collected driver inventory and clearly separated lab-risk metadata.",
   },
   {
+    slug: "compatibility",
+    name: "Compatibility Lab",
+    group: "VALIDATE",
+    phase: "P9",
+    description:
+      "Measured execution compatibility under explicitly recorded security environments.",
+  },
+  {
     slug: "performance",
     name: "Performance",
     group: "VALIDATE",

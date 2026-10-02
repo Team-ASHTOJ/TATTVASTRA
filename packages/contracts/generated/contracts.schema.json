@@ -1253,6 +1253,36 @@
           "title": "Alert Observed",
           "type": "string"
         },
+        "architecture": {
+          "anyOf": [
+            {
+              "maxLength": 100,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Architecture"
+        },
+        "collector_counts": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Collector Counts"
+        },
         "correctness": {
           "enum": [
             "PASS",
@@ -1261,6 +1291,20 @@
           ],
           "title": "Correctness",
           "type": "string"
+        },
+        "cpu_percent": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cpu Percent"
         },
         "endpoint_id": {
           "anyOf": [
@@ -1281,10 +1325,126 @@
           "title": "Environment",
           "type": "string"
         },
+        "execution_status": {
+          "default": "NOT_MEASURED",
+          "enum": [
+            "SUCCESS",
+            "FAILED",
+            "NOT_MEASURED"
+          ],
+          "title": "Execution Status",
+          "type": "string"
+        },
+        "job_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Job Id"
+        },
+        "measured_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Measured At"
+        },
+        "measurement_source": {
+          "anyOf": [
+            {
+              "enum": [
+                "JOB_DERIVED",
+                "OPERATOR_RECORDED"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Measurement Source"
+        },
         "notes": {
           "maxLength": 10000,
           "title": "Notes",
           "type": "string"
+        },
+        "os_name": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Os Name"
+        },
+        "os_version": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Os Version"
+        },
+        "peak_memory_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Peak Memory Bytes"
+        },
+        "realtime_protection": {
+          "default": "UNKNOWN",
+          "enum": [
+            "ENABLED",
+            "DISABLED",
+            "UNKNOWN"
+          ],
+          "title": "Realtime Protection",
+          "type": "string"
+        },
+        "runtime_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Runtime Ms"
         },
         "schema_version": {
           "const": "1.0.0",
@@ -1297,6 +1457,20 @@
           "minLength": 1,
           "title": "Security Product Label",
           "type": "string"
+        },
+        "security_product_version": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Security Product Version"
         },
         "variant_id": {
           "format": "uuid",

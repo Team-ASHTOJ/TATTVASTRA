@@ -1,5 +1,128 @@
 @import "tailwindcss";
 
+.compat-panel {
+  margin-bottom: 20px;
+  padding: 26px;
+}
+.compat-panel h2 {
+  margin: 4px 0 18px;
+}
+.compat-panel h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+.compat-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.compat-panel-head select {
+  min-width: 260px;
+}
+.compat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+  gap: 20px;
+  margin: 18px 0;
+}
+.compat-grid > div {
+  padding: 18px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  min-width: 0;
+}
+.compat-grid p {
+  overflow-wrap: anywhere;
+}
+.compat-datum {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-default);
+}
+.compat-datum span {
+  color: var(--text-muted);
+}
+.compat-datum strong {
+  text-align: right;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+.compat-status.good {
+  color: var(--success);
+}
+.compat-status.danger {
+  color: var(--danger);
+}
+.compat-status.warning {
+  color: var(--warning);
+}
+.compat-status.info {
+  color: var(--info);
+}
+.compat-status.muted {
+  color: var(--text-muted);
+}
+.compat-disclaimer {
+  margin: 14px 0 0;
+  padding: 12px;
+  border-left: 3px solid var(--info);
+  background: var(--info-soft);
+}
+.compat-simulation {
+  display: inline-block;
+  padding: 4px 9px;
+  color: var(--warning);
+  background: var(--warning-soft);
+  border-radius: 5px;
+}
+.compat-provenance {
+  padding-top: 16px;
+  border-top: 1px solid var(--border-default);
+}
+.compat-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 560px;
+}
+.compat-table th,
+.compat-table td {
+  padding: 10px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-default);
+}
+.compat-table th {
+  color: var(--text-secondary);
+}
+.compat-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.compat-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.compat-form input,
+.compat-form select,
+.compat-form textarea {
+  width: 100%;
+}
+.compat-form .compat-notes,
+.compat-form .compat-source,
+.compat-form p[role="alert"] {
+  grid-column: 1 / -1;
+}
+.compat-form button {
+  justify-self: start;
+}
+
 :root {
   color-scheme: dark;
   --bg-base: #05080c;

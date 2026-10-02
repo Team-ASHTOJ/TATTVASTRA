@@ -224,7 +224,13 @@ def test_multi_endpoint_hunt_isolates_variants_failures_retries_and_evidence(run
         )
 
 
-def test_recorded_compatibility_failure_is_endpoint_scoped(runtime, monkeypatch):
+@pytest.mark.parametrize(
+    ("correctness", "alert", "expected_status"),
+    [("FAIL", "NOT_OBSERVED", State.INCOMPATIBLE), ("PASS", "YES", State.QUEUED)],
+)
+def test_recorded_compatibility_failure_is_endpoint_scoped(
+    runtime, monkeypatch, correctness, alert, expected_status
+):
     factory, settings, client, org_id, _ = runtime
     user_id, hunt_id, compilation_id, endpoint_ids = _orchestration_fixture(factory, org_id)
 
@@ -268,8 +274,8 @@ def test_recorded_compatibility_failure_is_endpoint_scoped(runtime, monkeypatch)
             "endpoint_id": str(endpoint_ids[1]),
             "environment": "linux-x86_64",
             "security_product_label": "not-measured",
-            "correctness": "FAIL",
-            "alert_observed": "NOT_OBSERVED",
+            "correctness": correctness,
+            "alert_observed": alert,
             "notes": "recorded endpoint compatibility failure",
         },
     )
@@ -277,8 +283,9 @@ def test_recorded_compatibility_failure_is_endpoint_scoped(runtime, monkeypatch)
     with factory.begin() as db:
         hunts.start(db, db.get(Hunt, hunt_id), db.get(User, user_id), settings)
         jobs = db.scalars(select(Job).where(Job.hunt_id == hunt_id).order_by(Job.created_at)).all()
-        assert jobs[1].status == State.INCOMPATIBLE
-        assert "compatibility" in jobs[1].reason.lower()
+        assert jobs[1].status == expected_status
+        if correctness == "FAIL":
+            assert "compatibility" in jobs[1].reason.lower()
         assert jobs[0].status == State.QUEUED
         assert jobs[2].status == State.QUEUED
 

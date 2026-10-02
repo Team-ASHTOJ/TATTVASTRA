@@ -55,6 +55,9 @@ interpret JOCKY.
 - Responsive Next.js operator console with Workbench, Compiler Explorer, Build
   Forge, endpoint lifecycle, investigations, evidence, Insight, Judge Mode, and
   live SSE-backed workflow state.
+- PostgreSQL-backed organization tenancy and RBAC, immutable script versions,
+  durable Hunts/jobs/outbox events, generated JSON Schema/TypeScript contracts,
+  and versioned protobuf transport carrying canonical JSON.
 
 See [docs/FEATURES.md](docs/FEATURES.md) for the detailed product surface and
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for layer boundaries and flows.
@@ -105,6 +108,19 @@ supports these command families:
 `jockey <file.jky>` runs local ORC execution against the labelled deterministic
 fixture. That path is not endpoint evidence and does not hold control-plane
 credentials.
+
+## Durable workflow and contracts
+
+PostgreSQL is authoritative for organizations, users and sessions, cases,
+immutable scripts, compilations, Build Forge runs, variants, execution plans,
+Hunts, per-endpoint Jobs, observations, evidence, findings, timelines, reports,
+benchmarks, audit events, and committed outbox events. Organization scope and
+ADMIN/ANALYST/VIEWER permissions are enforced server-side.
+
+Pydantic defines canonical application documents. Generated JSON Schema and
+TypeScript are drift-checked consumers, while protobuf v1 frames exact
+canonical JSON for Agent transport. Required-field, enum, canonicalization, or
+signature changes require an explicit version transition.
 
 ## Verify the repository
 

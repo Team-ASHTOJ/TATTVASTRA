@@ -16,6 +16,7 @@ from jocky_contracts import control as contracts
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from jocky_control_plane import compatibility as compatibility_service
 from jocky_control_plane import forge, hunts, investigation, local_agent, sandbox
 from jocky_control_plane.builds import build_variants, compile_version
 from jocky_control_plane.config import Settings
@@ -1027,19 +1028,13 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
 
     @router.post("/compatibility-runs", status_code=201)
     def compatibility(payload: contracts.CompatibilityCreate, db: DB, user: Writer) -> Any:
-        from jocky_control_plane.models import Variant
-
-        variant = owned(db, Variant, payload.variant_id, user)
-        if payload.endpoint_id is not None:
-            endpoint = owned(db, Endpoint, payload.endpoint_id, user)
-            if endpoint.simulation != variant.simulation:
-                raise HTTPException(409, "Compatibility provenance mismatch")
+        variant, endpoint_id, observations = compatibility_service.snapshot(db, payload, user)
         row = CompatibilityRun(
             **provenance(variant),
             variant_id=variant.id,
-            endpoint_id=payload.endpoint_id,
+            endpoint_id=endpoint_id,
             recorded_by=user.id,
-            observations=payload.model_dump(mode="json"),
+            observations=observations,
         )
         db.add(row)
         db.flush()
@@ -1052,6 +1047,22 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
             simulation_label=row.simulation_label,
         )
         return document(row)
+
+    @router.get("/compatibility-runs/job-preview")
+    def compatibility_job_preview(job_id: UUID, variant_id: UUID, db: DB, user: Reader) -> Any:
+        variant = owned(db, Variant, variant_id, user)
+        job = owned(db, Job, job_id, user)
+        if job.variant_id != variant.id or job.simulation != variant.simulation:
+            raise HTTPException(409, "Job variant or provenance does not match")
+        endpoint = owned(db, Endpoint, job.endpoint_id, user)
+        return {
+            **compatibility_service.job_measurements(db, job, user),
+            "endpoint_id": str(endpoint.id),
+            "endpoint_hostname": endpoint.hostname,
+            "endpoint_platform": endpoint.target_os,
+            "endpoint_architecture": endpoint.target_arch,
+            "measurement_source": "JOB_DERIVED",
+        }
 
     @router.get("/compatibility-runs")
     def compatibility_runs(db: DB, user: Reader) -> Any:

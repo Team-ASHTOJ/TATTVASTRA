@@ -8,6 +8,7 @@ import { EvidenceVerifier } from "../../components/evidence-verifier";
 import { CompilerWorkbench } from "../../components/compiler-workbench";
 import { LanguageDocumentation } from "../../components/language-documentation";
 import { DemoScreen } from "../../components/demo-presentation";
+import { CompatibilityView } from "../../components/compatibility-view";
 
 export function generateStaticParams() {
   return [
@@ -32,6 +33,7 @@ export default async function SectionPage({
       </Suspense>
     );
   if (section === "language") return <LanguageDocumentation />;
+  if (section === "compatibility") return <CompatibilityView />;
   if (section === "live") redirect("/investigations");
   if (section === "architecture") return <PlatformOverview coverageOnly />;
   if (section === "workbench" || section === "compiler") {

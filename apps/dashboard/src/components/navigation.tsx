@@ -18,6 +18,7 @@ const sectionIcons: Record<string, IconName> = {
   timeline: "clock",
   evidence: "shield",
   drivers: "cpu",
+  compatibility: "shield",
   performance: "activity",
   architecture: "database",
 };
