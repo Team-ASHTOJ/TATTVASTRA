@@ -86,9 +86,14 @@ async function mockLab(
       body = run("9", String(submitted.variant_id), {
         ...submitted,
         ...provenance,
-        environment_fingerprint: null,
+        correctness: "PASS",
+        security_product_label: submitted.security_product_label,
+        alert_observed: submitted.alert_observed,
+        environment_fingerprint: "ENV-BASE01",
       });
-      rows.push(body as ReturnType<typeof run>);
+      const index = rows.findIndex((row) => row.id === "9");
+      if (index >= 0) rows[index] = body as ReturnType<typeof run>;
+      else rows.push(body as ReturnType<typeof run>);
     } else if (path.endsWith("/compatibility-runs")) body = rows;
     await route.fulfill({
       status: 200,
@@ -118,7 +123,7 @@ test("recorded measurement renders the lab instrument and exact disclaimer", asy
   ).toBeVisible();
 });
 
-test("completed job auto-hydrates provenance with click fallback", async ({
+test("analyze immediately records a job-derived baseline with click fallback", async ({
   page,
 }) => {
   await mockLab(page, []);
@@ -143,36 +148,54 @@ test("completed job auto-hydrates provenance with click fallback", async ({
   await expect(page.getByText("Artifact SHA-256")).toBeVisible();
   await expect(page.getByText(/processes/i).first()).toBeVisible();
   await expect(page.getByText("Peak RSS")).toBeVisible();
-  await expect(
-    page.getByText("Not measured for this execution."),
-  ).toBeVisible();
+  await expect(page.getByText("MEASUREMENT RECORDED")).toBeVisible();
+  await expect(page.locator(".compat-axis-list")).toContainText(
+    "EXECUTION COMPATIBILITY",
+  );
+  await expect(page.locator(".compat-axis-list")).toContainText(
+    "SEMANTIC CORRECTNESS",
+  );
+  await expect(page.locator(".compat-axis-list")).toContainText("NOT ASSESSED");
+  await expect(page.locator(".compat-history-list > button")).toHaveCount(1);
+  await job.click();
+  await page.getByRole("button", { name: "Analyze Execution" }).click();
+  await expect(page.locator(".compat-history-list > button")).toHaveCount(1);
 });
 
-test("not measured records no invented security product or derived override", async ({
+test("security observation enriches the baseline without client-derived overrides", async ({
   page,
 }) => {
   const rows: ReturnType<typeof run>[] = [];
-  let submitted: Record<string, unknown> | undefined;
+  const submissions: Record<string, unknown>[] = [];
   await mockLab(page, rows, [candidate], (body) => {
-    submitted = body;
+    submissions.push(body);
   });
   await page.goto("/compatibility");
   await page
     .getByRole("button", { name: /comprehensive-endpoint-sweep/ })
     .click();
   await page.getByRole("button", { name: "Analyze Execution" }).click();
-  await page.getByRole("button", { name: "Add Security Observation" }).click();
+  await page.getByRole("button", { name: /Add Security Observation/ }).click();
   await page
     .getByRole("dialog")
-    .getByRole("button", { name: "Record as Not Measured" })
+    .getByLabel("Security Product")
+    .fill("Recorded Product");
+  await page
+    .getByRole("dialog")
+    .getByLabel("Exact Product Version")
+    .fill("1.2.3");
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Save Measurement" })
     .click();
   await expect
-    .poll(() => submitted?.security_product_label)
-    .toBe("NOT_MEASURED");
-  expect(submitted).not.toHaveProperty("artifact_sha256");
-  expect(submitted).not.toHaveProperty("runtime_ms");
-  expect(submitted).not.toHaveProperty("collector_counts");
-  expect(submitted?.alert_observed).toBe("NOT_OBSERVED");
+    .poll(() => submissions.at(-1)?.security_product_label)
+    .toBe("Recorded Product");
+  expect(submissions).toHaveLength(2);
+  expect(submissions.at(-1)).not.toHaveProperty("artifact_sha256");
+  expect(submissions.at(-1)).not.toHaveProperty("runtime_ms");
+  expect(submissions.at(-1)).not.toHaveProperty("collector_counts");
+  await expect(page.locator(".compat-history-list > button")).toHaveCount(1);
 });
 
 test("comparison includes only an identical server fingerprint", async ({

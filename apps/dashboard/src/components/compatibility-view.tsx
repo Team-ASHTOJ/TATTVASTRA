@@ -50,7 +50,13 @@ const alertLabel = (value: unknown) =>
     ? "NO ALERT OBSERVED"
     : value === "YES"
       ? "ALERT OBSERVED"
-      : "NOT MEASURED";
+      : "NOT ASSESSED";
+const executionCompatibility = (value: unknown) =>
+  value === "SUCCESS" ? "PASS" : value === "FAILED" ? "FAIL" : "UNAVAILABLE";
+const semanticCorrectness = (value: unknown) =>
+  value === "PASS" ? "PASS" : "NOT VERIFIED";
+const securityEnvironmentLabel = (value: unknown) =>
+  value && value !== "NOT_MEASURED" ? shown(value) : "NOT ASSESSED";
 const tone = (value: unknown) =>
   value === "PASS" || value === "SUCCESS" || value === "NO"
     ? "good"
@@ -74,13 +80,14 @@ function Datum({ label, value }: { label: string; value: unknown }) {
 
 function Signal({ data, variantId }: { data: LabData; variantId: string }) {
   const axes = [
-    ["execution", data.execution_status ?? "NOT_MEASURED"],
-    ["semantics", data.correctness ?? "NOT_MEASURED"],
-    ["security", data.alert_observed ?? "NOT_MEASURED"],
+    ["execution", executionCompatibility(data.execution_status)],
+    ["semantics", semanticCorrectness(data.correctness)],
+    ["security", alertLabel(data.alert_observed)],
   ] as const;
   return (
     <div className="compat-signal" aria-label="Compatibility Signal">
       <div className="compat-signal-title">COMPATIBILITY SIGNAL</div>
+      <div className="compat-result-label">COMPATIBILITY RESULT</div>
       <div
         className="compat-orbit"
         key={`${variantId}-${axes.map((axis) => axis[1]).join("-")}`}
@@ -103,15 +110,17 @@ function Signal({ data, variantId }: { data: LabData; variantId: string }) {
       </div>
       <div className="compat-axis-list">
         <span>
-          EXECUTION{" "}
-          <strong className={tone(data.execution_status)}>
-            {shown(data.execution_status)}
+          EXECUTION COMPATIBILITY{" "}
+          <strong
+            className={tone(executionCompatibility(data.execution_status))}
+          >
+            {executionCompatibility(data.execution_status)}
           </strong>
         </span>
         <span>
-          SEMANTICS{" "}
-          <strong className={tone(data.correctness)}>
-            {shown(data.correctness ?? "NOT_MEASURED")}
+          SEMANTIC CORRECTNESS{" "}
+          <strong className={tone(semanticCorrectness(data.correctness))}>
+            {semanticCorrectness(data.correctness)}
           </strong>
         </span>
         <span>
@@ -170,12 +179,12 @@ function Inspection({ kind, data }: { kind: InspectToken; data: LabData }) {
             ["Transport", data.transport_mode],
           ]
         : [
-            ["Product", data.security_product_label ?? "NOT MEASURED"],
+            ["Product", securityEnvironmentLabel(data.security_product_label)],
             [
               "Version / policy",
               data.security_product_version ?? data.environment,
             ],
-            ["Fingerprint", data.environment_fingerprint ?? "NOT MEASURED"],
+            ["Fingerprint", data.environment_fingerprint ?? "UNAVAILABLE"],
           ];
   return (
     <div className="compat-inspection" role="status">
@@ -244,6 +253,49 @@ export function CompatibilityView() {
     setError("");
   }
 
+  async function analyzeExecution() {
+    if (!activeCandidate) return;
+    setBusy(true);
+    setError("");
+    try {
+      const created = await api<CompatibilityRun>("domain/compatibility-runs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          variant_id: activeCandidate.variant_id,
+          job_id: activeCandidate.job_id,
+          environment: "Job-derived endpoint environment",
+          security_product_label: "NOT_MEASURED",
+          correctness: "NOT_MEASURED",
+          alert_observed: "NOT_OBSERVED",
+          notes: "",
+          measurement_source: "JOB_DERIVED",
+        }),
+      });
+      queryClient.setQueryData<CompatibilityRun[]>(
+        ["compatibility-runs"],
+        (rows) => {
+          const current = rows ?? [];
+          return current.some((row) => row.id === created.id)
+            ? current.map((row) => (row.id === created.id ? created : row))
+            : [created, ...current];
+        },
+      );
+      await queryClient.invalidateQueries({ queryKey: ["compatibility-runs"] });
+      setSelectedRunId(created.id);
+      setActiveJobId("");
+      setAnalyzedJobId("");
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Unable to derive baseline measurement",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function recordMeasurement(
     fields: {
       product?: string;
@@ -253,7 +305,7 @@ export function CompatibilityView() {
       note?: string;
     } = {},
   ) {
-    if (!preview.data || !analyzedJobId) return;
+    if (!data?.job_id || !data.variant_id) return;
     const measured = !!fields.product;
     setBusy(true);
     setError("");
@@ -262,8 +314,8 @@ export function CompatibilityView() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          variant_id: preview.data.variant_id,
-          job_id: analyzedJobId,
+          variant_id: data.variant_id,
+          job_id: data.job_id,
           environment:
             fields.note ||
             (measured
@@ -277,10 +329,13 @@ export function CompatibilityView() {
           notes: fields.note || "",
         }),
       });
+      queryClient.setQueryData<CompatibilityRun[]>(
+        ["compatibility-runs"],
+        (rows) =>
+          (rows ?? []).map((row) => (row.id === created.id ? created : row)),
+      );
       await queryClient.invalidateQueries({ queryKey: ["compatibility-runs"] });
       setSelectedRunId(created.id);
-      setActiveJobId("");
-      setAnalyzedJobId("");
       setObservationOpen(false);
     } catch (cause) {
       setError(
@@ -309,15 +364,15 @@ export function CompatibilityView() {
         ["ENDPOINT", shown(data.endpoint_hostname), "monitor"],
         [
           "SECURITY ENVIRONMENT",
-          shown(data.security_product_label ?? "NOT MEASURED"),
+          securityEnvironmentLabel(data.security_product_label),
           "shield",
         ],
-        ["EXECUTION", shown(data.execution_status), "activity"],
         [
-          "RESULT",
-          `${shown(data.correctness ?? "NOT_MEASURED")} · ${alertLabel(data.alert_observed)}`,
-          "check",
+          "EXECUTION",
+          executionCompatibility(data.execution_status),
+          "activity",
         ],
+        ["RESULT", executionCompatibility(data.execution_status), "check"],
       ] as [string, string, IconName][])
     : [];
 
@@ -434,9 +489,10 @@ export function CompatibilityView() {
               </p>
               <button
                 type="button"
-                onClick={() => setAnalyzedJobId(activeCandidate.job_id)}
+                disabled={busy}
+                onClick={() => void analyzeExecution()}
               >
-                Analyze Execution
+                {busy ? "Analyzing…" : "Analyze Execution"}
               </button>
             </div>
           ) : data ? (
@@ -544,7 +600,7 @@ export function CompatibilityView() {
                     <ProvenanceToken
                       kind="environment"
                       title={short(
-                        data.environment_fingerprint ?? "NOT MEASURED",
+                        data.environment_fingerprint ?? "UNAVAILABLE",
                         12,
                       )}
                       onInspect={setInspect}
@@ -552,26 +608,36 @@ export function CompatibilityView() {
                   </div>
                   <Signal data={data} variantId={variantId} />
                   <Inspection kind={inspect} data={data} />
-                  {preview.data && canRecord && (
-                    <div className="compat-inline-observation">
-                      <div>
-                        <span>SECURITY ENVIRONMENT</span>
-                        <strong>Not measured for this execution.</strong>
+                  {data.alert_observed !== "NO" &&
+                    data.alert_observed !== "YES" &&
+                    canRecord && (
+                      <div className="compat-inline-observation">
+                        <div>
+                          <span>SECURITY ENVIRONMENT</span>
+                          <strong>Not assessed for this execution.</strong>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setObservationOpen(true)}
+                        >
+                          + Add Security Observation
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setObservationOpen(true)}
-                      >
-                        Add Security Observation
-                      </button>
-                    </div>
-                  )}
+                    )}
                 </div>
               </div>
               {data.alert_observed === "NO" && (
                 <p className="compat-disclaimer">
                   Compatibility measurement: no alert observed in this tested
                   environment.
+                </p>
+              )}
+              {selectedRun?.observations.measurement_source ===
+                "JOB_DERIVED" && (
+                <p className="compat-baseline-recorded">
+                  <strong>MEASUREMENT RECORDED</strong>
+                  Baseline execution compatibility was derived from the
+                  completed JOCKY job.
                 </p>
               )}
             </>
@@ -597,12 +663,11 @@ export function CompatibilityView() {
             <div className="compat-history-head" aria-hidden="true">
               <span>Variant</span>
               <span>Endpoint</span>
-              <span>Environment</span>
-              <span>Execution</span>
-              <span>Correctness</span>
-              <span>Alert</span>
+              <span>Execution compatibility</span>
+              <span>Semantic correctness</span>
+              <span>Security observation</span>
+              <span>Runtime</span>
               <span>Measured at</span>
-              <span>Source</span>
             </div>
             {[...runs.data]
               .sort((a, b) => b.created_at.localeCompare(a.created_at))
@@ -621,20 +686,19 @@ export function CompatibilityView() {
                   >
                     <strong>Variant {short(run.variant_id, 8)}</strong>
                     <span>{shown(observation.endpoint_hostname)}</span>
-                    <span>
-                      {shown(
-                        observation.environment_fingerprint ?? "NOT MEASURED",
+                    <span
+                      className={tone(
+                        executionCompatibility(observation.execution_status),
                       )}
+                    >
+                      {executionCompatibility(observation.execution_status)}
                     </span>
-                    <span className={tone(observation.execution_status)}>
-                      {shown(observation.execution_status)}
-                    </span>
-                    <span>{shown(observation.correctness)}</span>
+                    <span>{semanticCorrectness(observation.correctness)}</span>
                     <span>{alertLabel(observation.alert_observed)}</span>
+                    <span>{duration(observation.runtime_ms)}</span>
                     <time>
                       {displayDate(observation.measured_at ?? run.created_at)}
                     </time>
-                    <em>{run.simulation ? "SIMULATED" : "REAL"}</em>
                   </button>
                 );
               })}
@@ -747,7 +811,7 @@ export function CompatibilityView() {
               <label>
                 Alert Observed
                 <select name="alert" defaultValue="NOT_OBSERVED">
-                  <option value="NOT_OBSERVED">NOT MEASURED</option>
+                  <option value="NOT_OBSERVED">NOT ASSESSED</option>
                   <option value="NO">NO</option>
                   <option value="YES">YES</option>
                 </select>
@@ -767,7 +831,7 @@ export function CompatibilityView() {
                   disabled={busy}
                   onClick={() => void recordMeasurement()}
                 >
-                  Record as Not Measured
+                  Record as Not Assessed
                 </button>
               </div>
             </form>

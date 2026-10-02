@@ -151,6 +151,49 @@ def test_completed_job_candidate_auto_resolves_provenance(runtime):
     assert candidate["measurement_source"] == "JOB_DERIVED"
 
 
+def test_job_baseline_is_idempotent_and_security_observation_enriches_it(runtime):
+    factory, _, client, org_id, _ = runtime
+    ids = setup_job(factory, org_id, simulation=False)
+    with factory.begin() as db:
+        job = db.get(Job, ids[2])
+        job.status = State.SUCCESS
+        job.progress = {"execution_duration_ms": 184}
+        variant = db.get(Variant, ids[4])
+        variant.manifest = {**variant.manifest, "equivalence_status": "VERIFIED"}
+    baseline = payload(ids, job_id=str(ids[2]), measurement_source="JOB_DERIVED")
+    first = client.post("/api/compatibility-runs", json=baseline)
+    second = client.post("/api/compatibility-runs", json=baseline)
+    assert first.status_code == 201 and second.status_code == 201
+    assert first.json()["id"] == second.json()["id"]
+    observations = first.json()["observations"]
+    assert observations["measurement_source"] == "JOB_DERIVED"
+    assert observations["execution_status"] == "SUCCESS"
+    assert observations["correctness"] == "PASS"
+    assert observations["alert_observed"] == "NOT_OBSERVED"
+    assert observations["environment_fingerprint"].startswith("ENV-")
+    assert observations["baseline_environment_fingerprint"].startswith("ENV-")
+    assert observations["measured_at"]
+
+    enriched = client.post(
+        "/api/compatibility-runs",
+        json={
+            **baseline,
+            "environment": "Recorded security environment",
+            "security_product_label": "Fixture Product",
+            "security_product_version": "1.2.3",
+            "realtime_protection": "ENABLED",
+            "alert_observed": "NO",
+        },
+    )
+    assert enriched.status_code == 201
+    assert enriched.json()["id"] == first.json()["id"]
+    enriched_observations = enriched.json()["observations"]
+    assert enriched_observations["artifact_sha256"] == observations["artifact_sha256"]
+    assert enriched_observations["runtime_ms"] == 184
+    assert enriched_observations["security_product_label"] == "Fixture Product"
+    assert enriched_observations["alert_observed"] == "NO"
+
+
 def test_environment_fingerprint_is_normalized_and_security_specific(runtime):
     factory, _, client, org_id, _ = runtime
     ids = setup_job(factory, org_id, simulation=False)

@@ -26,10 +26,11 @@ recorded.
   security product/version, realtime state, alert observation, and policy note.
   The existing POST remains authoritative and rejects client overrides of
   job-derived execution measurements.
-- A normalized SHA-256-derived `ENV-XXXXXX` fingerprint identifies fully recorded
-  OS/architecture/product/version/realtime environments. Missing security-product
-  measurements do not receive a fingerprint, and comparisons require the exact
-  same persisted fingerprint. Alert observations do not rank variants or feed
+- A normalized SHA-256-derived `ENV-XXXXXX` fingerprint identifies a persisted
+  job baseline from OS/architecture/transport/execution context, then records a
+  more specific product/version/realtime environment when an operator adds that
+  observation. Comparisons require the exact persisted fingerprint. Alert
+  observations do not rank variants or feed
   the compiler. Existing admission remains correctness-only and endpoint-scoped:
   `FAIL` may reject, while an alert by itself does not.
 - The bench presents a fixed build → endpoint → security environment → execution
@@ -43,7 +44,7 @@ Executed checks:
 - `.venv/bin/pytest services/control-plane/tests/test_compatibility_lab.py services/control-plane/tests/test_phase4.py -q`: **16 passed** using persisted protocol fixtures, not Windows measurements.
 - Focused Ruff check and repository-configured `.venv/bin/mypy`: PASS.
 - Dashboard typecheck and production build: PASS.
-- `npx playwright test tests/e2e/compatibility.spec.ts --project=chromium --workers=1`: **5 passed** with mocked UI responses; persisted history, drag/drop plus click fallback, server-derived fields, no-override `NOT_MEASURED`, exact-fingerprint comparison, actionable empty state, and mobile overflow were exercised.
+- `npx playwright test tests/e2e/compatibility.spec.ts --project=chromium --workers=1`: **6 passed** with mocked UI responses; immediate idempotent job-derived baseline recording, optional security-observation enrichment, persisted history, drag/drop plus click fallback, server-derived fields, exact-fingerprint comparison, actionable empty state, and mobile overflow were exercised.
 - `git diff --check`: PASS.
 - `make verify-foundation`: **NOT PASSED**. It stopped at the repository-wide
   Ruff format check because 12 pre-existing unrelated files would be reformatted;

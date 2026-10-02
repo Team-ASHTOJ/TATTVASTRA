@@ -2,6 +2,7 @@
 
 import json
 from collections import Counter
+from datetime import UTC, datetime
 from hashlib import sha256
 from math import isfinite
 from typing import Any
@@ -142,18 +143,30 @@ def _identity(
 
 def _environment_fingerprint(values: dict[str, Any]) -> str | None:
     product = values.get("security_product_label")
+    platform = values.get("os_name") or values.get("endpoint_platform")
+    architecture = values.get("architecture") or values.get("endpoint_architecture")
+    if not platform or not architecture:
+        return None
     if not product or str(product).upper() == "NOT_MEASURED":
-        return None
-    fields = (
-        values.get("os_name") or values.get("endpoint_platform"),
-        values.get("os_version"),
-        values.get("architecture") or values.get("endpoint_architecture"),
-        product,
-        values.get("security_product_version"),
-        values.get("realtime_protection"),
-    )
-    if any(value is None or str(value).strip() == "" for value in fields):
-        return None
+        fields = (
+            "job-baseline",
+            platform,
+            values.get("os_version") or "UNREPORTED",
+            architecture,
+            values.get("transport_mode") or "UNREPORTED",
+            values.get("execution_mode") or "UNREPORTED",
+        )
+    else:
+        fields = (
+            platform,
+            values.get("os_version"),
+            architecture,
+            product,
+            values.get("security_product_version"),
+            values.get("realtime_protection"),
+        )
+        if any(value is None or str(value).strip() == "" for value in fields):
+            return None
     normalized = [" ".join(str(value).strip().lower().split()) for value in fields]
     encoded = json.dumps(normalized, ensure_ascii=True, separators=(",", ":")).encode()
     return f"ENV-{sha256(encoded).hexdigest()[:6].upper()}"
@@ -226,8 +239,19 @@ def snapshot(
     if job:
         measurements = job_measurements(db, job, user)
         observations.update(measurements)
+        observations["correctness"] = (
+            "PASS"
+            if (variant.manifest or {}).get("equivalence_status") == "VERIFIED"
+            else "NOT_MEASURED"
+        )
         observations["os_name"] = endpoint.target_os if endpoint else None
         observations["architecture"] = endpoint.target_arch if endpoint else None
         observations["os_version"] = measurements.get("os_version")
+        observations["measured_at"] = (
+            payload.measured_at.isoformat()
+            if payload.measured_at
+            else datetime.now(UTC).isoformat()
+        )
+        observations["baseline_environment_fingerprint"] = _environment_fingerprint(observations)
     observations["environment_fingerprint"] = _environment_fingerprint(observations)
     return variant, endpoint_id, observations

@@ -1029,6 +1029,39 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
     @router.post("/compatibility-runs", status_code=201)
     def compatibility(payload: contracts.CompatibilityCreate, db: DB, user: Writer) -> Any:
         variant, endpoint_id, observations = compatibility_service.snapshot(db, payload, user)
+        if payload.job_id:
+            existing = next(
+                (
+                    item
+                    for item in db.scalars(
+                        select(CompatibilityRun)
+                        .where(
+                            CompatibilityRun.organization_id == user.organization_id,
+                            CompatibilityRun.variant_id == variant.id,
+                            CompatibilityRun.endpoint_id == endpoint_id,
+                        )
+                        .order_by(CompatibilityRun.created_at.desc())
+                    ).all()
+                    if item.observations.get("job_id") == str(payload.job_id)
+                    and item.observations.get("measurement_source") == "JOB_DERIVED"
+                ),
+                None,
+            )
+            if existing:
+                security_observed = payload.security_product_label.upper() != "NOT_MEASURED"
+                if security_observed:
+                    existing.observations = {
+                        **existing.observations,
+                        "environment": observations["environment"],
+                        "security_product_label": observations["security_product_label"],
+                        "security_product_version": observations["security_product_version"],
+                        "realtime_protection": observations["realtime_protection"],
+                        "alert_observed": observations["alert_observed"],
+                        "notes": observations["notes"],
+                        "environment_fingerprint": observations["environment_fingerprint"],
+                    }
+                    db.flush()
+                return document(existing)
         row = CompatibilityRun(
             **provenance(variant),
             variant_id=variant.id,
