@@ -1049,20 +1049,33 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
         return document(row)
 
     @router.get("/compatibility-runs/job-preview")
-    def compatibility_job_preview(job_id: UUID, variant_id: UUID, db: DB, user: Reader) -> Any:
-        variant = owned(db, Variant, variant_id, user)
+    def compatibility_job_preview(
+        job_id: UUID, db: DB, user: Reader, variant_id: UUID | None = None
+    ) -> Any:
         job = owned(db, Job, job_id, user)
-        if job.variant_id != variant.id or job.simulation != variant.simulation:
+        if variant_id is not None and job.variant_id != variant_id:
             raise HTTPException(409, "Job variant or provenance does not match")
-        endpoint = owned(db, Endpoint, job.endpoint_id, user)
-        return {
-            **compatibility_service.job_measurements(db, job, user),
-            "endpoint_id": str(endpoint.id),
-            "endpoint_hostname": endpoint.hostname,
-            "endpoint_platform": endpoint.target_os,
-            "endpoint_architecture": endpoint.target_arch,
-            "measurement_source": "JOB_DERIVED",
-        }
+        return compatibility_service.job_preview(db, job, user)
+
+    @router.get("/compatibility-runs/candidates")
+    def compatibility_candidates(db: DB, user: Reader) -> Any:
+        jobs = db.scalars(
+            select(Job)
+            .where(
+                Job.organization_id == user.organization_id,
+                Job.status == State.SUCCESS,
+                Job.variant_id.is_not(None),
+            )
+            .order_by(Job.created_at.desc())
+            .limit(20)
+        ).all()
+        return [
+            {
+                **compatibility_service.job_preview(db, job, user),
+                "created_at": job.created_at,
+            }
+            for job in jobs
+        ]
 
     @router.get("/compatibility-runs")
     def compatibility_runs(db: DB, user: Reader) -> Any:

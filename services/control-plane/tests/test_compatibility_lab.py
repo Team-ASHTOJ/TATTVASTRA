@@ -120,6 +120,73 @@ def test_server_identity_job_metrics_and_listing(runtime):
     assert any(item["id"] == row["id"] and item["observations"] == o for item in listed.json())
 
 
+def test_completed_job_candidate_auto_resolves_provenance(runtime):
+    factory, _, client, org_id, _ = runtime
+    ids = setup_job(factory, org_id, simulation=False)
+    with factory.begin() as db:
+        job = db.get(Job, ids[2])
+        job.status = State.SUCCESS
+        db.add(
+            Observation(
+                **provenance(job),
+                case_id=ids[0],
+                job_id=job.id,
+                endpoint_id=job.endpoint_id,
+                producer_id=str(uuid4()),
+                collector="system",
+                integrity_hash=digest(b"system-version"),
+                document={"data": {"release": "fixture-release"}, "simulation": False},
+            )
+        )
+        job.progress = {"execution_duration_ms": 184, "execution_engine": "LLVM_ORC_JIT"}
+    response = client.get("/api/compatibility-runs/candidates")
+    assert response.status_code == 200, response.text
+    candidate = next(row for row in response.json() if row["job_id"] == str(ids[2]))
+    assert candidate["variant_id"] == str(ids[4])
+    assert candidate["endpoint_id"] == str(ids[3])
+    assert candidate["endpoint_hostname"] == "TEST-ONLY"
+    assert candidate["execution_status"] == "SUCCESS"
+    assert candidate["runtime_ms"] == 184
+    assert candidate["artifact_sha256"] == digest(b"fixture")
+    assert candidate["measurement_source"] == "JOB_DERIVED"
+
+
+def test_environment_fingerprint_is_normalized_and_security_specific(runtime):
+    factory, _, client, org_id, _ = runtime
+    ids = setup_job(factory, org_id, simulation=False)
+    with factory.begin() as db:
+        job = db.get(Job, ids[2])
+        job.status = State.SUCCESS
+        db.add(
+            Observation(
+                **provenance(job),
+                case_id=ids[0],
+                job_id=job.id,
+                endpoint_id=job.endpoint_id,
+                producer_id=str(uuid4()),
+                collector="system",
+                integrity_hash=digest(b"fingerprint-system-version"),
+                document={"data": {"release": "fixture-release"}, "simulation": False},
+            )
+        )
+    common = {
+        **payload(ids),
+        "job_id": str(ids[2]),
+        "security_product_label": " Fixture Product ",
+        "security_product_version": " 1.2.3 ",
+        "realtime_protection": "ENABLED",
+    }
+    first = client.post("/api/compatibility-runs", json=common)
+    second = client.post(
+        "/api/compatibility-runs",
+        json={**common, "security_product_label": "fixture   product"},
+    )
+    assert first.status_code == 201 and second.status_code == 201
+    fingerprint = first.json()["observations"]["environment_fingerprint"]
+    assert fingerprint.startswith("ENV-") and len(fingerprint) == 10
+    assert second.json()["observations"]["environment_fingerprint"] == fingerprint
+
+
 def test_job_link_rejects_other_variant_endpoint_and_tenant(runtime):
     factory, _, client, org_id, _ = runtime
     ids = setup_job(factory, org_id, simulation=False)

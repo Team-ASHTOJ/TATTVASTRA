@@ -1,72 +1,440 @@
 @import "tailwindcss";
 
-.compat-panel {
+.compat-heading small {
+  color: var(--text-muted);
+  font:
+    600 10px/1.4 "Cascadia Code",
+    Consolas,
+    monospace;
+  letter-spacing: 0.08em;
+}
+.compat-bench-panel,
+.compat-empty,
+.compat-security-card,
+.compat-history,
+.compat-comparison,
+.compat-meaning {
   margin-bottom: 20px;
-  padding: 26px;
 }
-.compat-panel h2 {
-  margin: 4px 0 18px;
+.compat-bench-panel h2,
+.compat-security-card h2,
+.compat-history h2,
+.compat-comparison h2 {
+  margin: 5px 0 0;
 }
-.compat-panel h3 {
-  margin: 0 0 8px;
-  font-size: 14px;
-  color: var(--text-primary);
-}
-.compat-panel-head {
+.compat-panel-head,
+.compat-security-card,
+.compat-dialog-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
   flex-wrap: wrap;
 }
-.compat-panel-head select {
-  min-width: 260px;
+.compat-automation-counts,
+.compat-security-actions,
+.compat-dialog-actions,
+.compat-tokens {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
-.compat-grid {
+.compat-automation-counts span {
+  padding: 7px 9px;
+  border: 1px solid var(--border-structural);
+  border-radius: 5px;
+  color: var(--text-muted);
+  font:
+    600 9px/1.2 "Cascadia Code",
+    Consolas,
+    monospace;
+  letter-spacing: 0.05em;
+}
+.compat-automation-counts strong {
+  color: var(--ice);
+  font-size: 12px;
+}
+.compat-workspace {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
-  gap: 20px;
-  margin: 18px 0;
-}
-.compat-grid > div {
-  padding: 18px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius);
+  grid-template-columns: minmax(210px, 260px) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 18px;
   min-width: 0;
 }
-.compat-grid p {
-  overflow-wrap: anywhere;
+.compat-candidates {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.compat-list-title {
+  margin-bottom: 3px;
+  color: var(--text-subtle);
+  font:
+    600 9px/1.2 "Cascadia Code",
+    Consolas,
+    monospace;
+  letter-spacing: 0.09em;
+}
+.compat-candidates > button,
+.compat-history-list > button {
+  border: 1px solid var(--border-default);
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  text-align: left;
+}
+.compat-candidates > button {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 12px;
+  cursor: grab;
+}
+.compat-candidates > button:hover,
+.compat-candidates > button.active,
+.compat-history-list > button:hover,
+.compat-history-list > button.active {
+  border-color: var(--border-selected);
+  background: var(--surface-3);
+}
+.compat-candidates > button strong {
+  color: var(--text-primary);
+  font-size: 12px;
+}
+.compat-candidates > button span {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.compat-candidates > button small {
+  color: var(--text-muted);
+  font:
+    9px/1.4 "Cascadia Code",
+    Consolas,
+    monospace;
+}
+.compat-candidates > button em {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  color: var(--warning);
+  font:
+    600 8px/1 "Cascadia Code",
+    Consolas,
+    monospace;
+  font-style: normal;
+}
+.compat-no-jobs {
+  padding: 15px;
+  border: 1px dashed var(--border-structural);
+  border-radius: 7px;
+}
+.compat-bench {
+  min-height: 420px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px dashed var(--border-structural);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 50% 46%, rgb(60 113 139 / 9%), transparent 38%),
+    linear-gradient(145deg, rgb(10 18 25 / 92%), rgb(6 11 16 / 96%));
+  overflow: hidden;
+}
+.compat-drop-zone,
+.compat-analysis-ready {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 9px;
+  min-height: 380px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.compat-drop-zone svg,
+.compat-analysis-ready svg {
+  color: var(--ice);
+}
+.compat-drop-zone strong,
+.compat-analysis-ready h3 {
+  color: var(--text-primary);
+}
+.compat-analysis-ready > span {
+  color: var(--text-subtle);
+  font:
+    600 9px/1.2 "Cascadia Code",
+    Consolas,
+    monospace;
+  letter-spacing: 0.08em;
+}
+.compat-real,
+.compat-simulation {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font:
+    600 9px/1.2 "Cascadia Code",
+    Consolas,
+    monospace;
+  letter-spacing: 0.06em;
+}
+.compat-real {
+  color: var(--success);
+  background: var(--success-soft);
+}
+.compat-simulation {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+.compat-chain {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 15px;
+  margin: 15px 0 18px;
+  padding: 0;
+  list-style: none;
+}
+.compat-chain li {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 7px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  background: rgb(15 24 32 / 88%);
+  animation: compat-stage-settle 500ms ease-out both;
+}
+.compat-chain li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: 16px;
+  height: 1px;
+  background: var(--border-selected);
+  animation: compat-pulse 700ms ease-out 1;
+}
+.compat-chain svg {
+  color: var(--ice);
+}
+.compat-chain span {
+  color: var(--text-subtle);
+  font:
+    600 8px/1.4 "Cascadia Code",
+    Consolas,
+    monospace;
+  letter-spacing: 0.06em;
+}
+.compat-chain strong {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.compat-instrument {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(360px, 1.2fr);
+  gap: 16px;
+  min-width: 0;
+}
+.compat-stage-details {
+  display: grid;
+  gap: 9px;
+}
+.compat-stage-details > div,
+.compat-inspection {
+  padding: 12px;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  background: rgb(13 21 29 / 86%);
+}
+.compat-stage-details h3 {
+  margin: 0 0 6px;
+  color: var(--text-primary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 .compat-datum {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 6px 0;
+  padding: 4px 0;
   border-bottom: 1px solid var(--border-default);
 }
 .compat-datum span {
   color: var(--text-muted);
+  font-size: 10px;
 }
 .compat-datum strong {
   text-align: right;
   overflow-wrap: anywhere;
-  font-weight: 600;
+  color: var(--text-secondary);
+  font:
+    600 10px/1.4 "Cascadia Code",
+    Consolas,
+    monospace;
 }
-.compat-status.good {
+.compat-center-console {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(205px, 0.8fr);
+  grid-template-areas: "tokens tokens" "signal inspect";
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border-structural);
+  border-radius: 8px;
+  background: rgb(5 10 15 / 64%);
+}
+.compat-tokens {
+  grid-area: tokens;
+  justify-content: center;
+}
+.compat-token {
+  display: grid;
+  gap: 2px;
+  min-width: 110px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-structural);
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  cursor: grab;
+}
+.compat-token:hover,
+.compat-token:focus-visible {
+  border-color: var(--border-selected);
+  transform: translateY(-1px);
+}
+.compat-token span {
+  color: var(--text-subtle);
+  font:
+    600 8px/1.2 "Cascadia Code",
+    Consolas,
+    monospace;
+  letter-spacing: 0.08em;
+}
+.compat-token strong {
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.compat-signal {
+  grid-area: signal;
+  min-width: 0;
+  text-align: center;
+}
+.compat-signal-title,
+.compat-inspection > span {
+  color: var(--text-subtle);
+  font:
+    600 9px/1.2 "Cascadia Code",
+    Consolas,
+    monospace;
+  letter-spacing: 0.08em;
+}
+.compat-orbit {
+  position: relative;
+  width: min(100%, 240px);
+  margin: 4px auto;
+  aspect-ratio: 1;
+}
+.compat-orbit svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.compat-arc {
+  fill: none;
+  stroke: var(--text-subtle);
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-dasharray: 320 540;
+  transform-origin: 110px 110px;
+  animation: compat-arc-settle 650ms ease-out both;
+}
+.compat-arc.arc-1 {
+  animation-delay: 90ms;
+}
+.compat-arc.arc-2 {
+  animation-delay: 180ms;
+}
+.compat-arc.good {
+  stroke: var(--success);
+}
+.compat-arc.warning {
+  stroke: var(--warning);
+}
+.compat-arc.danger {
+  stroke: var(--danger);
+}
+.compat-signal-center {
+  position: absolute;
+  inset: 37%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  border: 1px solid var(--border-selected);
+  border-radius: 50%;
+  background: var(--surface-1);
+}
+.compat-signal-center small {
+  color: var(--text-subtle);
+  font:
+    7px/1.2 "Cascadia Code",
+    Consolas,
+    monospace;
+}
+.compat-signal-center strong {
+  color: var(--text-primary);
+  font:
+    600 10px/1.2 "Cascadia Code",
+    Consolas,
+    monospace;
+}
+.compat-axis-list {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+}
+.compat-axis-list span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-subtle);
+  font:
+    8px/1.35 "Cascadia Code",
+    Consolas,
+    monospace;
+}
+.compat-axis-list strong.good,
+.compat-history-list .good {
   color: var(--success);
 }
-.compat-status.danger {
-  color: var(--danger);
-}
-.compat-status.warning {
+.compat-axis-list strong.warning,
+.compat-history-list .warning {
   color: var(--warning);
 }
-.compat-status.info {
-  color: var(--info);
+.compat-axis-list strong.danger,
+.compat-history-list .danger {
+  color: var(--danger);
 }
-.compat-status.muted {
+.compat-axis-list strong.muted {
   color: var(--text-muted);
+}
+.compat-inspection {
+  grid-area: inspect;
+  align-self: stretch;
+}
+.compat-inspection > span {
+  display: block;
+  margin-bottom: 8px;
 }
 .compat-disclaimer {
   margin: 14px 0 0;
@@ -74,53 +442,457 @@
   border-left: 3px solid var(--info);
   background: var(--info-soft);
 }
-.compat-simulation {
-  display: inline-block;
-  padding: 4px 9px;
-  color: var(--warning);
-  background: var(--warning-soft);
-  border-radius: 5px;
+.compat-empty {
+  border-style: dashed;
 }
-.compat-provenance {
-  padding-top: 16px;
-  border-top: 1px solid var(--border-default);
+.compat-empty h2 {
+  margin-top: 0;
+  text-transform: uppercase;
+}
+.compat-security-card {
+  align-items: center;
+}
+.compat-security-card p,
+.compat-meaning p {
+  max-width: 780px;
+  margin-bottom: 0;
+}
+.compat-history-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 16px;
+}
+.compat-history-head {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 0.8fr 0.65fr 0.65fr 0.9fr 1.2fr auto;
+  gap: 10px;
+  padding: 0 12px 3px;
+  color: var(--text-subtle);
+  font:
+    600 8px/1.2 "Cascadia Code",
+    Consolas,
+    monospace;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.compat-history-list > button {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 0.8fr 0.65fr 0.65fr 0.9fr 1.2fr auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  font-size: 10px;
+}
+.compat-history-list strong {
+  color: var(--text-primary);
+}
+.compat-history-list time {
+  color: var(--text-muted);
+}
+.compat-history-list em {
+  color: var(--text-subtle);
+  font:
+    600 8px/1 "Cascadia Code",
+    Consolas,
+    monospace;
+  font-style: normal;
 }
 .compat-table {
   width: 100%;
-  border-collapse: collapse;
   min-width: 560px;
+  border-collapse: collapse;
 }
 .compat-table th,
 .compat-table td {
   padding: 10px 16px;
-  text-align: left;
   border-bottom: 1px solid var(--border-default);
+  text-align: left;
 }
 .compat-table th {
   color: var(--text-secondary);
 }
-.compat-form {
+.compat-dialog-backdrop {
+  position: fixed;
+  z-index: 90;
+  inset: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
+  place-items: center;
+  padding: 20px;
+  background: rgb(1 4 7 / 76%);
+  backdrop-filter: blur(4px);
 }
-.compat-form label {
+.compat-dialog {
+  width: min(620px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid var(--border-structural);
+  border-radius: 10px;
+  background: var(--surface-1);
+  box-shadow: var(--shadow);
+}
+.compat-dialog-head h2 {
+  margin: 4px 0 18px;
+}
+.compat-observation-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.compat-observation-form label {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.compat-form input,
-.compat-form select,
-.compat-form textarea {
+.compat-observation-form input,
+.compat-observation-form select,
+.compat-observation-form textarea {
   width: 100%;
 }
-.compat-form .compat-notes,
-.compat-form .compat-source,
-.compat-form p[role="alert"] {
+.compat-observation-form .wide,
+.compat-observation-form p[role="alert"],
+.compat-dialog-actions {
   grid-column: 1 / -1;
 }
-.compat-form button {
-  justify-self: start;
+@keyframes compat-stage-settle {
+  from {
+    opacity: 0;
+    transform: translateX(-5px);
+  }
+}
+@keyframes compat-pulse {
+  0% {
+    opacity: 0;
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+}
+@keyframes compat-arc-settle {
+  from {
+    opacity: 0;
+    transform: rotate(-18deg);
+  }
+}
+@media (max-width: 1100px) {
+  .compat-instrument {
+    grid-template-columns: 1fr;
+  }
+  .compat-history-list > button {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .compat-history-head {
+    display: none;
+  }
+}
+@media (max-width: 850px) {
+  .compat-workspace {
+    grid-template-columns: 1fr;
+  }
+  .compat-candidates {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  }
+  .compat-list-title,
+  .compat-no-jobs {
+    grid-column: 1 / -1;
+  }
+  .compat-chain {
+    grid-template-columns: 1fr;
+  }
+  .compat-chain li:not(:last-child)::after {
+    display: none;
+  }
+}
+@media (max-width: 620px) {
+  .compat-bench-panel,
+  .compat-bench {
+    padding: 14px;
+  }
+  .compat-center-console {
+    grid-template-columns: 1fr;
+    grid-template-areas: "tokens" "signal" "inspect";
+  }
+  .compat-history-list > button,
+  .compat-observation-form {
+    grid-template-columns: 1fr;
+  }
+  .compat-security-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .compat-observation-form .wide,
+  .compat-observation-form p[role="alert"],
+  .compat-dialog-actions {
+    grid-column: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .compat-chain li,
+  .compat-chain li::after,
+  .compat-arc {
+    animation: none;
+  }
+}
+
+/* Compatibility Lab bench: a contained horizontal job strip followed by one
+   fixed instrument layout. These overrides deliberately avoid viewport-sized
+   tracks so the sidebar never becomes part of the bench's coordinate system. */
+.compat-bench-panel {
+  min-width: 0;
+  padding: 20px;
+  overflow: hidden;
+}
+html:has(.compat-bench-panel),
+body:has(.compat-bench-panel),
+.workspace:has(.compat-bench-panel),
+main:has(.compat-bench-panel) {
+  overflow-x: clip;
+}
+.compat-panel-head > div:first-child {
+  min-width: 0;
+}
+.compat-automation-counts {
+  margin-top: 9px;
+}
+.compat-candidates {
+  display: block;
+  min-width: 0;
+  margin: 16px 0 14px;
+  overflow: hidden;
+}
+.compat-candidate-strip {
+  display: flex;
+  gap: 10px;
+  inline-size: 100%;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-inline-size: 0;
+  contain: inline-size paint;
+  padding: 2px 1px 8px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+.compat-candidates > .compat-candidate-strip > button {
+  flex: 0 0 clamp(220px, 21vw, 252px);
+  min-width: 0;
+  max-width: 252px;
+  min-height: 82px;
+  overflow: hidden;
+}
+.compat-candidates > .compat-candidate-strip > button strong,
+.compat-candidates > .compat-candidate-strip > button span,
+.compat-candidates > .compat-candidate-strip > button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.compat-bench {
+  min-width: 0;
+  min-height: 0;
+  padding: 16px;
+  overflow: hidden;
+}
+.compat-drop-zone,
+.compat-analysis-ready {
+  min-height: 220px;
+}
+.compat-chain {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 13px;
+  margin: 10px 0 16px;
+}
+.compat-chain li {
+  min-width: 0;
+  min-height: 72px;
+  padding: 9px;
+}
+.compat-chain li:not(:last-child)::after {
+  width: 13px;
+}
+.compat-main-bench {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(0, 1.35fr);
+  gap: 22px;
+  min-width: 0;
+}
+.compat-main-bench > * {
+  min-width: 0;
+}
+.compat-stage-details {
+  grid-template-columns: 1fr;
+  align-content: start;
+  gap: 10px;
+}
+.compat-stage-details > div {
+  min-width: 0;
+  padding: 12px 14px;
+}
+.compat-datum {
+  min-width: 0;
+}
+.compat-datum span,
+.compat-datum strong {
+  min-width: 0;
+}
+.compat-datum strong {
+  max-width: 62%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.compat-center-console {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "tokens" "signal" "inspect" "observation";
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+}
+.compat-tokens {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.8fr) minmax(0, 1fr);
+  grid-template-areas:
+    ". variant ."
+    "endpoint . environment";
+  align-items: center;
+  justify-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+}
+.compat-token {
+  width: min(100%, 154px);
+  min-width: 0;
+}
+.compat-token:nth-child(1) {
+  grid-area: variant;
+}
+.compat-token:nth-child(2) {
+  grid-area: endpoint;
+}
+.compat-token:nth-child(3) {
+  grid-area: environment;
+}
+.compat-signal {
+  width: min(100%, 350px);
+  margin-inline: auto;
+}
+.compat-orbit {
+  width: min(100%, 250px);
+}
+.compat-axis-list {
+  width: min(100%, 330px);
+  margin-inline: auto;
+}
+.compat-inspection {
+  width: 100%;
+  min-width: 0;
+}
+.compat-inline-observation {
+  display: flex;
+  grid-area: observation;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--border-structural);
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+.compat-inline-observation > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.compat-inline-observation span {
+  color: var(--text-subtle);
+  font:
+    600 9px/1.2 "Cascadia Code",
+    Consolas,
+    monospace;
+  letter-spacing: 0.07em;
+}
+.compat-inline-observation strong {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.compat-history,
+.compat-history-list,
+.compat-history-list > button,
+.compat-history-list > button > * {
+  min-width: 0;
+}
+.compat-history {
+  overflow: hidden;
+  contain: inline-size;
+}
+.compat-history-list {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+.compat-history-list > button > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.compat-history-list > button {
+  overflow: hidden;
+}
+
+@media (max-width: 1100px) {
+  .compat-main-bench {
+    grid-template-columns: minmax(330px, 0.9fr) minmax(0, 1.1fr);
+    gap: 18px;
+  }
+}
+@media (max-width: 900px) {
+  .compat-main-bench {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .compat-history-list > button {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .compat-chain {
+    gap: 9px;
+  }
+  .compat-chain li:not(:last-child)::after {
+    display: block;
+    width: 9px;
+  }
+}
+@media (max-width: 700px) {
+  .compat-bench-panel {
+    padding: 16px;
+  }
+  .compat-candidates > .compat-candidate-strip > button {
+    flex-basis: 220px;
+  }
+  .compat-chain {
+    grid-template-columns: 1fr;
+  }
+  .compat-chain li:not(:last-child)::after {
+    display: none;
+  }
+  .compat-main-bench {
+    gap: 14px;
+  }
+  .compat-inline-observation {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .compat-chain li,
+  .compat-chain li::after,
+  .compat-arc {
+    animation: none;
+  }
 }
 
 :root {

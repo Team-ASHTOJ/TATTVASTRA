@@ -9,33 +9,21 @@ export type CompatibilityRun = {
   observations: Record<string, unknown>;
 };
 
-const comparable = [
-  "compilation_id",
-  "jir_sha256",
-  "environment",
-  "os_name",
-  "os_version",
-  "architecture",
-  "security_product_label",
-  "security_product_version",
-  "realtime_protection",
-] as const;
-
 export function equivalentRuns(
   runs: CompatibilityRun[],
   selected: CompatibilityRun,
 ): CompatibilityRun[] {
   const baseline = selected.observations;
-  // A missing identity is not evidence that two environments are equivalent.
-  if (comparable.some((key) => baseline[key] == null || baseline[key] === ""))
+  const fingerprint = baseline.environment_fingerprint;
+  // An unknown environment is never evidence that two runs are equivalent.
+  if (typeof fingerprint !== "string" || !fingerprint.startsWith("ENV-"))
     return [];
   const byVariant = new Map<string, CompatibilityRun>();
   for (const run of [...runs].sort((a, b) =>
     a.created_at.localeCompare(b.created_at),
   )) {
     if (run.simulation !== selected.simulation) continue;
-    if (comparable.some((key) => run.observations[key] !== baseline[key]))
-      continue;
+    if (run.observations.environment_fingerprint !== fingerprint) continue;
     byVariant.set(run.variant_id, run);
   }
   const peers = [...byVariant.values()].filter(

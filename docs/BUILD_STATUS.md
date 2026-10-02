@@ -2,11 +2,12 @@
 
 ## Compatibility Lab V1 — 2026-10-03
 
-Status: **IMPLEMENTED** for the additive CompatibilityRun API, provenance snapshot,
-job-linked measurement derivation, and `/compatibility` operator UI. **VERIFIED**
-only by the checks listed below. Windows/Defender execution compatibility is
-**NOT_MEASURED / BLOCKED_ENVIRONMENT**; no real Windows security-product run
-was recorded.
+Status: **IMPLEMENTED** for the existing CompatibilityRun API, server-resolved
+completed-job candidates, job-linked measurement derivation, environment
+fingerprints, and the interactive `/compatibility` bench. **VERIFIED** only by
+the checks listed below. Windows/Defender execution compatibility is
+**NOT_MEASURED / BLOCKED_ENVIRONMENT**; no real Windows security-product run was
+recorded.
 
 - The existing CompatibilityRun table and `compatibility.recorded` event remain
   authoritative. The typed request contract adds optional measurement metadata;
@@ -19,21 +20,30 @@ was recorded.
   reported duration/CPU/memory where present, and persisted observation counts
   are server-derived; client overrides are rejected. Unreported Peak RSS and
   other missing metrics remain null/UNAVAILABLE.
-- The authenticated Compatibility Lab displays only persisted measurements,
-  provides ADMIN/ANALYST recording with an optional read-only job preview, and
-  compares distinct variants only when compilation/JIR, recorded OS and policy
-  environment, and security-product name/version/realtime state match. Alert
-  observations do not rank variants or feed the compiler. Existing admission
-  remains correctness-only and endpoint-scoped: `FAIL` may reject, while an
-  alert by itself does not.
+- The authenticated Compatibility Lab now starts with persisted successful jobs.
+  Selection or native drag/drop hydrates build, endpoint, execution, collector,
+  and simulation provenance server-side; the operator modal contains only the
+  security product/version, realtime state, alert observation, and policy note.
+  The existing POST remains authoritative and rejects client overrides of
+  job-derived execution measurements.
+- A normalized SHA-256-derived `ENV-XXXXXX` fingerprint identifies fully recorded
+  OS/architecture/product/version/realtime environments. Missing security-product
+  measurements do not receive a fingerprint, and comparisons require the exact
+  same persisted fingerprint. Alert observations do not rank variants or feed
+  the compiler. Existing admission remains correctness-only and endpoint-scoped:
+  `FAIL` may reject, while an alert by itself does not.
+- The bench presents a fixed build → endpoint → security environment → execution
+  → result chain, a three-axis compatibility signal (not a score), movable
+  provenance tokens with click/focus fallback, measurement history, a truthful
+  `NOT_MEASURED` path, reduced-motion behavior, and a stacked mobile layout.
 
 Executed checks:
 
 - `make contracts-check`: PASS (schema, TypeScript, coverage drift).
-- `.venv/bin/pytest services/control-plane/tests/test_compatibility_lab.py services/control-plane/tests/test_phase4.py -q`: **14 passed** using persisted protocol fixtures, not Windows measurements.
+- `.venv/bin/pytest services/control-plane/tests/test_compatibility_lab.py services/control-plane/tests/test_phase4.py -q`: **16 passed** using persisted protocol fixtures, not Windows measurements.
 - Focused Ruff check and repository-configured `.venv/bin/mypy`: PASS.
 - Dashboard typecheck and production build: PASS.
-- `npx playwright test tests/e2e/compatibility.spec.ts --project=chromium`: **4 passed** with mocked UI responses; selected run, exact disclaimer, equivalence filter, empty state, and job-derived read-only fields were exercised.
+- `npx playwright test tests/e2e/compatibility.spec.ts --project=chromium --workers=1`: **5 passed** with mocked UI responses; persisted history, drag/drop plus click fallback, server-derived fields, no-override `NOT_MEASURED`, exact-fingerprint comparison, actionable empty state, and mobile overflow were exercised.
 - `git diff --check`: PASS.
 - `make verify-foundation`: **NOT PASSED**. It stopped at the repository-wide
   Ruff format check because 12 pre-existing unrelated files would be reformatted;
