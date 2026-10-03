@@ -43,6 +43,7 @@ int main(int argc, char **argv) {
   JOCKY_BIND(jocky_rt_services);
   JOCKY_BIND(jocky_rt_events);
   JOCKY_BIND(jocky_rt_drivers);
+  JOCKY_BIND(jocky_rt_yara);
   JOCKY_BIND(jocky_rt_analysis);
   JOCKY_BIND(jocky_rt_register_literal_pool);
 #undef JOCKY_BIND
