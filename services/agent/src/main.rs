@@ -66,6 +66,8 @@ enum Command {
         #[arg(long)]
         path: Option<String>,
         #[arg(long)]
+        ruleset: Option<String>,
+        #[arg(long)]
         recursive: bool,
         #[arg(long)]
         hash: bool,
@@ -204,6 +206,7 @@ async fn execute(cli: Cli) -> Result<()> {
         Command::Collect {
             collector,
             path,
+            ruleset,
             recursive,
             hash,
             limit,
@@ -213,6 +216,7 @@ async fn execute(cli: Cli) -> Result<()> {
             let request = CollectorRequest {
                 collector,
                 path,
+                ruleset,
                 recursive,
                 hash,
                 limit,
@@ -244,6 +248,7 @@ async fn execute(cli: Cli) -> Result<()> {
                         .then(|| path.clone())
                         .flatten(),
                     collector,
+                    ruleset: None,
                     recursive: false,
                     hash: false,
                     limit: 1_000,

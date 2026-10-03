@@ -597,6 +597,8 @@ def create_domain_router(factory: sessionmaker[Session], settings: Settings) -> 
                             "persistence.read",
                             "logs.read",
                             "drivers.read",
+                            "filesystem.content",
+                            "adapter.yara",
                         ],
                     ),
                     db,

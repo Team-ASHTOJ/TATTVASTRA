@@ -126,6 +126,7 @@ COLLECTOR_ACTIONS = {
     "driver_hash": "Collect driver hashes",
     "driver_signatures": "Inspect driver signatures",
     "modules": "Enumerate loaded modules",
+    "yara": "Scan approved files with an approved YARA ruleset",
 }
 
 

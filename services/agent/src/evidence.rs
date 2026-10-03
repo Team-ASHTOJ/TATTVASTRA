@@ -148,6 +148,7 @@ mod tests {
             issues: Vec::new(),
             files_examined: 0,
             bytes_read: 0,
+            metadata: None,
         };
         let mut observation = normalize(&job(), &output, &Utc::now().to_rfc3339())
             .unwrap()

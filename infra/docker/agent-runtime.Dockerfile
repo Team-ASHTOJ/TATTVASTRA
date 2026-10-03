@@ -11,7 +11,7 @@ RUN cargo build --locked --workspace
 
 FROM ${RUNTIME_IMAGE}
 USER root
-RUN apt-get update && apt-get install -y --no-install-recommends openssl \
+RUN apt-get update && apt-get install -y --no-install-recommends openssl yara \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=agent /src/target/debug/jocky-agent /usr/local/bin/jocky-agent
 RUN mkdir -p /endpoint && chown 10001:10001 /endpoint

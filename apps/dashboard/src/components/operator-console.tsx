@@ -1185,6 +1185,11 @@ function EndpointDetail({
                 ? "Fixture identity"
                 : "Enrolled transport identity",
             source: provenance(endpoint),
+            ...(str(endpoint.hostname).startsWith("LOCAL-LINUX")
+              ? { yara: items(endpoint.capabilities).includes("adapter.yara") && endpoint.status === "ONLINE"
+                  ? "AUTHORIZED (check agent collector availability)"
+                  : "UNAVAILABLE" }
+              : {}),
             current_investigation: jobs[0]?.status,
           }}
         />
@@ -1492,6 +1497,20 @@ function InvestigationDetail({
   const artifacts = d.artifacts.filter((artifact) =>
     jobs.some((job) => job.id === artifact.job_id),
   );
+  const yaraMatches = observations.filter(
+    (observation) => observation.collector === "yara" && payload(observation).matched === true,
+  );
+  const compiledJir = obj(obj(compilation?.outputs).jir);
+  const yaraInstruction = (Array.isArray(compiledJir.instructions)
+    ? compiledJir.instructions
+    : []
+  ).find((instruction) => obj(instruction).opcode === "YARA_SCAN");
+  const yaraOptions = obj(obj(obj(yaraInstruction).attributes).options);
+  const yaraJob = yaraInstruction
+    ? jobs.find((job) => job.status === "SUCCESS" || job.status === "FAILED")
+    : undefined;
+  const yaraData = yaraMatches[0] ? payload(yaraMatches[0]) : {};
+  const yaraMeasurements = obj(yaraJob?.progress);
   return (
     <Drawer title="Investigation Detail" close={close}>
       <h3>{title(d.cases.find((r) => r.id === hunt.case_id))}</h3>
@@ -1506,6 +1525,28 @@ function InvestigationDetail({
           evidence: artifacts.length,
         }}
       />
+      {yaraJob && (
+        <section className="panel">
+          <h3>YARA Analysis</h3>
+          <Fields data={{
+            ruleset: yaraData.ruleset ?? obj(yaraOptions.ruleset).value,
+            ruleset_sha256: yaraData.ruleset_sha256,
+            files_scanned: yaraData.files_scanned ?? yaraMeasurements.files_examined ?? "Unavailable",
+            matches: yaraMatches.length,
+            status: yaraJob.status,
+          }} />
+          {yaraMatches.length > 0 && (
+            <>
+              <h4>Matches</h4>
+              {yaraMatches.map((match) => (
+                <p key={match.id}>
+                  {str(payload(match).rule)} · {str(payload(match).path)}
+                </p>
+              ))}
+            </>
+          )}
+        </section>
+      )}
       <button
         className="button"
         disabled={reportBusy}
@@ -1787,6 +1828,9 @@ function buildSemanticTimeline(d: Data): SemanticTimelineEvent[] {
     const connection = linked.find(
       (observation) => observation.collector === "connections",
     );
+    const yara = linked.find(
+      (observation) => observation.collector === "yara" && payload(observation).matched === true,
+    );
     const endpointIds = [
       ...new Set(linked.map((observation) => str(observation.endpoint_id))),
     ];
@@ -1798,6 +1842,18 @@ function buildSemanticTimeline(d: Data): SemanticTimelineEvent[] {
         timestamp: semanticTime(finding),
         title: "Suspicious Process Identified",
         summary: observationLabel(process),
+        endpointIds,
+        severity: "SUSPICIOUS",
+        source: "PERSISTED",
+        references: refs,
+      });
+    if (yara)
+      events.push({
+        id: `detection:${finding.id}`,
+        category: "DETECTION",
+        timestamp: semanticTime(yara),
+        title: "YARA Match Observed",
+        summary: `${str(payload(yara).rule)} matched on ${str(payload(yara).path)}`,
         endpointIds,
         severity: "SUSPICIOUS",
         source: "PERSISTED",

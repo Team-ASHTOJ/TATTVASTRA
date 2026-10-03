@@ -150,7 +150,8 @@ std::string collector_symbol(const std::string &opcode) {
       {"FILE_HASH", "jocky_rt_file_hash"},
       {"SERVICE_ENUMERATE", "jocky_rt_services"},
       {"EVENT_QUERY", "jocky_rt_events"},
-      {"DRIVER_ENUMERATE", "jocky_rt_drivers"}};
+      {"DRIVER_ENUMERATE", "jocky_rt_drivers"},
+      {"YARA_SCAN", "jocky_rt_yara"}};
   auto found = symbols.find(opcode);
   return found == symbols.end() ? std::string{} : found->second;
 }

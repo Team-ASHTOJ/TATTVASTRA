@@ -113,7 +113,12 @@ services:
       ["/app/.venv/bin/python", "-m", "jocky_control_plane.local_launcher"]
     environment:
       JOCKY_LOCAL_LAUNCHER_TOKEN: ${JOCKY_LOCAL_LAUNCHER_TOKEN:?Run make configure-local}
-    volumes: ["local_agent_state:/endpoint"]
+      JOCKY_YARA_RULESETS_DIR: /opt/jocky/yara/rules
+      JOCKY_YARA_EVIDENCE_ROOT: /opt/jocky/evidence
+    volumes:
+      - local_agent_state:/endpoint
+      - ../../fixtures/yara/rules:/opt/jocky/yara/rules:ro
+      - ../../fixtures/yara/evidence:/opt/jocky/evidence:ro
     init: true
     restart: unless-stopped
     stop_grace_period: 10s
@@ -146,7 +151,12 @@ services:
       JOCKY_LOCAL_ENROLLMENT_SERVER: https://trusted-relay:50052
       JOCKY_LOCAL_CONTROL_SERVER: https://trusted-relay:50051
       JOCKY_LOCAL_LAUNCHER_TOKEN: ${JOCKY_LOCAL_LAUNCHER_TOKEN:?Run make configure-local}
-    volumes: ["local_agent_state_2:/endpoint"]
+      JOCKY_YARA_RULESETS_DIR: /opt/jocky/yara/rules
+      JOCKY_YARA_EVIDENCE_ROOT: /opt/jocky/evidence
+    volumes:
+      - local_agent_state_2:/endpoint
+      - ../../fixtures/yara/rules:/opt/jocky/yara/rules:ro
+      - ../../fixtures/yara/evidence:/opt/jocky/evidence:ro
     init: true
     restart: unless-stopped
     stop_grace_period: 10s
@@ -178,7 +188,12 @@ services:
     environment:
       JOCKY_LOCAL_AGENT_SLOT: "3"
       JOCKY_LOCAL_LAUNCHER_TOKEN: ${JOCKY_LOCAL_LAUNCHER_TOKEN:?Run make configure-local}
-    volumes: ["local_agent_state_3:/endpoint"]
+      JOCKY_YARA_RULESETS_DIR: /opt/jocky/yara/rules
+      JOCKY_YARA_EVIDENCE_ROOT: /opt/jocky/evidence
+    volumes:
+      - local_agent_state_3:/endpoint
+      - ../../fixtures/yara/rules:/opt/jocky/yara/rules:ro
+      - ../../fixtures/yara/evidence:/opt/jocky/evidence:ro
     init: true
     restart: unless-stopped
     stop_grace_period: 10s

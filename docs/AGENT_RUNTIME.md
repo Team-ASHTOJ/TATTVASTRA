@@ -71,7 +71,7 @@ The fixed registry includes system, users/sessions, processes, interfaces/connec
 
 Every collected record becomes an `Observation` containing endpoint/job/case/collector identity, collection/source times, platform, data, RFC 8785/SHA-256 integrity hash, and `simulation=false`. An ordered evidence manifest is signed by the endpoint identity. Permission, missing-source and adapter errors are `PARTIAL`, `DENIED`, or `UNAVAILABLE`; they are never converted to an empty successful inventory.
 
-YARA, Volatility 3 and osquery are optional. `collectors` detects their executables. Execution remains unavailable until an explicitly supplied policy-approved input is supported; Volatility will only accept supplied memory images. No memory acquisition or exploit path is present.
+YARA is an optional bounded file adapter. When `yara` is installed and `JOCKY_YARA_RULESETS_DIR` resolves to a local approved directory, `collectors` reports it as available. `collect yara --path ... --ruleset ... --limit ...` uses the same approved-root collector as remote jobs; `JOCKY_YARA_EVIDENCE_ROOT` narrows the scan further to a dedicated evidence root. The ruleset is a logical name, never a job-supplied rule path. The local prototype mounts `/opt/jocky/evidence` and `/opt/jocky/yara/rules` read-only. It invokes `yara` directly per approved regular file under file-count, byte-read, output, and time bounds, and a no-match scan is a successful zero-row result. Volatility 3 and osquery remain detected but execution-unavailable; no memory acquisition or exploit path is present. Live container execution of YARA remains BLOCKED_ENVIRONMENT until the Docker daemon and native/Rust toolchains are available for acceptance.
 
 ## Governor and storage limits
 

@@ -79,11 +79,18 @@ impl AgentState {
             "persistence.read",
             "logs.read",
             "drivers.read",
+            "adapter.yara",
         ]
         .into_iter()
         .map(str::to_owned)
         .collect();
         let allowed_root = std::env::current_dir()?.canonicalize()?;
+        let mut approved_roots = vec![allowed_root.to_string_lossy().into_owned()];
+        if let Ok(root) = std::env::var("JOCKY_YARA_EVIDENCE_ROOT") {
+            if let Ok(canonical) = Path::new(&root).canonicalize() {
+                approved_roots.push(canonical.to_string_lossy().into_owned());
+            }
+        }
         let config = AgentConfig {
             schema_version: SCHEMA_VERSION.to_owned(),
             endpoint_id,
@@ -91,7 +98,7 @@ impl AgentState {
             identity_public_key_base64: base64::engine::general_purpose::STANDARD.encode(public),
             trusted_job_authorities,
             capabilities,
-            allowed_roots: vec![allowed_root.to_string_lossy().into_owned()],
+            allowed_roots: approved_roots,
             max_budget: ResourceBudget::default(),
             max_concurrency: 1,
             local_development: true,
@@ -106,7 +113,18 @@ impl AgentState {
     }
 
     pub fn load(root: &Path) -> Result<Self> {
-        let config: AgentConfig = serde_json::from_slice(&fs::read(root.join(CONFIG))?)?;
+        let mut config: AgentConfig = serde_json::from_slice(&fs::read(root.join(CONFIG))?)?;
+        if let Ok(value) = std::env::var("JOCKY_YARA_EVIDENCE_ROOT") {
+            if let Ok(canonical) = Path::new(&value).canonicalize() {
+                let path = canonical.to_string_lossy().into_owned();
+                if !config.allowed_roots.contains(&path) {
+                    config.allowed_roots.push(path);
+                }
+            }
+        }
+        if std::env::var_os("JOCKY_YARA_RULESETS_DIR").is_some() {
+            config.capabilities.insert("adapter.yara".to_owned());
+        }
         if config.schema_version != SCHEMA_VERSION {
             return Err(AgentError::rejected(
                 "STATE_VERSION_MISMATCH",

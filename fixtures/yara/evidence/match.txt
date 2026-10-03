@@ -1,0 +1,1 @@
+This benign fixture contains TATTVASTRA_YARA_DEMO_MARKER for an approved local test.

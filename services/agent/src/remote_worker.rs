@@ -163,22 +163,57 @@ pub fn run_child(path: &Path) -> Result<Vec<Value>> {
             Some(9) => "services",
             Some(10) => "events",
             Some(11) => "drivers",
+            Some(12) => "yara",
             _ => "",
         };
         let capability = required_capability(collector).unwrap_or("");
-        let authorized = state.config.capabilities.contains(capability)
+        let mut authorized = state.config.capabilities.contains(capability)
             && job["required_capabilities"]
                 .as_array()
                 .is_some_and(|items| items.iter().any(|item| item == capability));
+        if collector == "yara" {
+            authorized &= state.config.capabilities.contains("filesystem.content")
+                && job["required_capabilities"]
+                    .as_array()
+                    .is_some_and(|items| items.iter().any(|item| item == "filesystem.content"));
+        }
         let options = &call["config"]["options"];
         // Current REAL bridge supports bounded inventory only. Reject richer
         // operations rather than silently ignoring DSL predicates or options.
-        if !authorized || options.as_object().is_some_and(|items| !items.is_empty()) {
+        if !authorized || (collector != "yara" && options.as_object().is_some_and(|items| !items.is_empty())) {
             writeln!(input, "2 0")?;
             failed = true;
             break;
         }
-        let output = collect(&CollectorRequest::new(collector), &mut context);
+        let mut collector_request = CollectorRequest::new(collector);
+        if collector == "yara" {
+            let map = options.as_object();
+            let valid_keys = map.is_some_and(|items| items.keys().all(|key| matches!(key.as_str(), "path" | "ruleset" | "recursive")));
+            let path = options["path"]["children"][0]["value"].as_str();
+            let ruleset = options["ruleset"]["value"].as_str();
+            let recursive = options["recursive"]["value"].as_str();
+            let limit = call["config"]["scan_limit"].as_i64();
+            if !valid_keys
+                || options["path"]["kind"] != "call"
+                || options["path"]["value"] != "path"
+                || options["path"]["children"][0]["kind"] != "literal"
+                || options["ruleset"]["kind"] != "literal"
+                || options["ruleset"]["literal_kind"] != "string"
+                || (recursive.is_some() && (options["recursive"]["kind"] != "literal" || options["recursive"]["literal_kind"] != "bool"))
+                || !path.is_some_and(|value| !value.is_empty())
+                || !ruleset.is_some_and(|value| !value.is_empty())
+                || (recursive.is_some() && !matches!(recursive, Some("true" | "false")))
+                || !limit.is_some_and(|value| (1..=100_000).contains(&value)) {
+                writeln!(input, "2 0")?;
+                failed = true;
+                break;
+            }
+            collector_request.path = path.map(str::to_owned);
+            collector_request.ruleset = ruleset.map(str::to_owned);
+            collector_request.recursive = recursive == Some("true");
+            collector_request.limit = limit.unwrap_or(0) as usize;
+        }
+        let output = collect(&collector_request, &mut context);
         failed |= output.availability != Availability::Available;
         issues.push(serde_json::to_value(&output)?);
         for data in &output.records {

@@ -91,6 +91,8 @@ pub struct CollectorRequest {
     #[serde(default)]
     pub path: Option<String>,
     #[serde(default)]
+    pub ruleset: Option<String>,
+    #[serde(default)]
     pub recursive: bool,
     #[serde(default)]
     pub hash: bool,
@@ -107,6 +109,7 @@ impl CollectorRequest {
         Self {
             collector: collector.into(),
             path: None,
+            ruleset: None,
             recursive: false,
             hash: false,
             limit: default_limit(),
@@ -131,6 +134,8 @@ pub struct CollectorOutput {
     pub issues: Vec<CollectorIssue>,
     pub files_examined: u64,
     pub bytes_read: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<Value>,
 }
 
 impl CollectorOutput {
@@ -146,6 +151,7 @@ impl CollectorOutput {
             }],
             files_examined: 0,
             bytes_read: 0,
+            metadata: None,
         }
     }
 }

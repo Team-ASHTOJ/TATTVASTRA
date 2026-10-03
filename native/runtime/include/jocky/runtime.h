@@ -40,6 +40,7 @@ typedef enum jocky_operation {
   JOCKY_OP_SERVICE_ENUMERATE = 9,
   JOCKY_OP_EVENT_QUERY = 10,
   JOCKY_OP_DRIVER_ENUMERATE = 11,
+  JOCKY_OP_YARA_SCAN = 12,
   JOCKY_OP_ANALYSIS = 100
 } jocky_operation;
 
@@ -122,6 +123,8 @@ JOCKY_RUNTIME_API jocky_status jocky_rt_events(jocky_context *, uint32_t, const 
                                                jocky_dataset_handle *);
 JOCKY_RUNTIME_API jocky_status jocky_rt_drivers(jocky_context *, uint32_t, const uint8_t *, size_t,
                                                 jocky_dataset_handle *);
+JOCKY_RUNTIME_API jocky_status jocky_rt_yara(jocky_context *, uint32_t, const uint8_t *, size_t,
+                                             jocky_dataset_handle *);
 
 /* Accepts only the compiler's closed analysis/evidence opcode allowlist. */
 JOCKY_RUNTIME_API jocky_status jocky_rt_analysis(jocky_context *, uint32_t, const char *, size_t,

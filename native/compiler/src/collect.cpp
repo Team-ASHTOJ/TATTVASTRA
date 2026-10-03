@@ -21,6 +21,10 @@ void SemanticAnalyzer::collect(const Statement &s) {
   if (spec.path_required && !options.contains("path"))
     fail("E230", "Collector requires an explicit path scope.", s.span,
          "Add path path(\"approved-path\") to the option block.");
+  if (s.collector == "yara" && !options.contains("ruleset"))
+    fail("E230", "YARA requires an explicit approved ruleset name.", s.span);
+  if (s.collector == "yara" && !options.contains("limit"))
+    fail("E230", "YARA requires an explicit bounded file limit.", s.span);
   if (options.contains("fields"))
     type = project_type(type, options.at("fields")->fields, options.at("fields")->span);
   else
@@ -28,7 +32,7 @@ void SemanticAnalyzer::collect(const Statement &s) {
       type.fields.erase(field);
   std::set<std::string> caps{require(spec.capability, s.span, s.collector)};
   if (type.fields.contains("sha256") || s.collector == "process_hash" ||
-      s.collector == "driver_hash" || s.collector == "file_content")
+      s.collector == "driver_hash" || s.collector == "file_content" || s.collector == "yara")
     caps.insert(require("filesystem.content", s.span, s.collector));
   llvm::json::Object attributes{{"collector", s.collector},
                                 {"binding", s.name},
@@ -53,9 +57,18 @@ void SemanticAnalyzer::collect(const Statement &s) {
            option->span, "Use a typed literal constructor where appropriate.");
     if (name == "protocol" && option->value->value != "tcp" && option->value->value != "udp")
       fail("E230", "protocol must be \"tcp\" or \"udp\".", option->span);
+    if (name == "ruleset" &&
+        (option->value->kind != Expr::Kind::Literal || option->value->literal_kind != "string"))
+      fail("E230", "ruleset must be a constant string literal.", option->span);
     typed_options[name] = std::move(value.value);
   }
   attributes["options"] = std::move(typed_options);
+  if (s.collector == "yara" && options.contains("limit")) {
+    auto count = limit_value(options.at("limit")->value, options.at("limit")->span);
+    if (count > 100000)
+      fail("E230", "YARA file limit cannot exceed 100000.", options.at("limit")->span);
+    attributes["scan_limit"] = count;
+  }
   llvm::json::Array requested_fields;
   for (const auto &[name, field] : type.fields)
     requested_fields.push_back(name);
@@ -81,7 +94,7 @@ void SemanticAnalyzer::collect(const Statement &s) {
     if (predicate.inputs.empty())
       pushdown_candidate(module_, input, id, "filter", std::move(attrs));
   }
-  if (options.contains("limit")) {
+  if (options.contains("limit") && s.collector != "yara") {
     auto option = options.at("limit");
     auto amount = limit_value(option->value, option->span);
     id = emit("LIMIT", type, {id}, llvm::json::Object{{"count", amount}}, option->span);

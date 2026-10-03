@@ -128,6 +128,7 @@ def start(db: Session, hunt: Hunt, user: User, settings: Settings) -> None:
             "SERVICE_ENUMERATE",
             "EVENT_QUERY",
             "DRIVER_ENUMERATE",
+            "YARA_SCAN",
         }
         if endpoint.status == State.REVOKED:
             reason = "Endpoint identity has been revoked"
@@ -144,12 +145,16 @@ def start(db: Session, hunt: Hunt, user: User, settings: Settings) -> None:
         elif not hunt.simulation and (
             not instructions
             or any(
-                instruction["opcode"] not in supported or instruction["attributes"].get("options")
+                instruction["opcode"] not in supported
+                or (
+                    instruction["opcode"] != "YARA_SCAN"
+                    and instruction["attributes"].get("options")
+                )
                 for instruction in instructions
             )
         ):
             reason = (
-                "REAL execution bridge supports bounded inventory collectors without options; "
+                "REAL execution bridge supports bounded inventory and approved YARA scans; "
                 "this JIR requires an unavailable host operation"
             )
         elif endpoint.last_seen is None or datetime.now(UTC) - aware(

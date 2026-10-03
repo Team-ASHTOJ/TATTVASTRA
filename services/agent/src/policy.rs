@@ -151,6 +151,9 @@ fn capabilities_for(collectors: &[CollectorRequest]) -> Result<BTreeSet<String>>
             )
         })?;
         capabilities.insert(capability.to_owned());
+        if request.collector == "yara" {
+            capabilities.insert("filesystem.content".to_owned());
+        }
         if request.hash && request.collector == "processes" {
             capabilities.insert("filesystem.content".to_owned());
         }

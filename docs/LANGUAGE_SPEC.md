@@ -60,7 +60,7 @@ Precedence, lowest first: `or`, `and`, `== !=`, `< <= > >=`, `+ -`, `* /`, unary
 
 ## Collector and capability registry
 
-All collectors accept `fields`, `where`, and `limit`. Extra options are listed here. `fields` determines the available collector schema before `where`; predicates cannot implicitly fetch omitted fields. This deliberately requires an explicit field request for expensive hashes. Options are constant typed expressions: `pid` uses `pid(...)`, `path` uses `path(...)`, `recursive` is bool, `since`/`until` use `time(...)`, other options are strings. Protocol is exactly `"tcp"` or `"udp"`. Path-scoped collectors require `path`.
+Most collectors accept `fields`, `where`, and `limit`; bounded `yara` accepts only `path`, `ruleset`, `recursive`, and `limit`. `fields` determines the available collector schema before `where`; predicates cannot implicitly fetch omitted fields. This deliberately requires an explicit field request for expensive hashes. Options are constant typed expressions: `pid` uses `pid(...)`, `path` uses `path(...)`, `recursive` is bool, `since`/`until` use `time(...)`, other options are strings. Protocol is exactly `"tcp"` or `"udp"`. Path-scoped collectors require `path`.
 
 | Collector names                                               | Dataset domain                               | Required base capability | Extra options                       |
 | ------------------------------------------------------------- | -------------------------------------------- | ------------------------ | ----------------------------------- |
@@ -78,10 +78,13 @@ All collectors accept `fields`, `where`, and `limit`. Extra options are listed h
 | file_metadata                                                 | File                                         | filesystem.metadata      | path (required)                     |
 | directories                                                   | File                                         | filesystem.metadata      | path (required), recursive          |
 | hash, file_hash, file_content                                 | File                                         | filesystem.content       | path (required)                     |
+| yara                                                          | YaraMatch                                    | adapter.yara             | path, ruleset, limit (required); recursive |
 | logs, events                                                  | Event                                        | logs.read                | since, until, channel               |
 | services, startup, scheduled_tasks                            | Service, Startup, ScheduledTask respectively | persistence.read         | —                                   |
 | drivers, driver_hash, driver_signatures                       | Driver                                       | drivers.read             | —                                   |
 | modules                                                       | Module                                       | drivers.read             | —                                   |
+
+`yara` additionally requires `filesystem.content`. Its `path` must be a typed `path(...)` literal, its `ruleset` a constant logical string name (never a rule-file path), and its `limit` a bounded file count. The agent resolves static approved rules and approved-root files. `YaraMatch` contains `matched`, `rule`, `path`, `ruleset`, `ruleset_sha256`, optional `file_sha256`, and optional `size`. A successful scan with no matches yields zero match rows.
 
 `scheduled tasks` is an alias for `scheduled_tasks`. A requested `sha256` field additionally requires `filesystem.content`; process_hash, driver_hash and file_content require it even when projection omits sha256. Hash fields are omitted by default for processes, process_metadata, process_signatures, files, file_metadata, directories, drivers, driver_signatures and modules. File hash/content and dedicated process/driver hash collectors include hash by default. Missing grants produce E241. Compatibility aliases preserve older examples: `filesystem.read` grants content reading; `services.read` grants services collection only, never startup or scheduled tasks. Alias use warns W241. Content permission does not implicitly grant metadata permission. Unknown/duplicate capabilities are errors; unused grants warn W240. Actual endpoint policy still intersects declarations, path scopes and collector availability.
 

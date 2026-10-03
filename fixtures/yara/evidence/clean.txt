@@ -1,0 +1,1 @@
+This is a benign clean-file fixture for bounded YARA integration testing.

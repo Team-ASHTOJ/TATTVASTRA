@@ -528,7 +528,7 @@ export function InvestigationReport({ huntId }: { huntId: string }) {
           headers={["Endpoint", "Collector", "Count", "Representative records"]}
           rows={observed.map((group) => [
             String(group.hostname),
-            String(group.collector),
+            group.collector === "yara" ? "YARA Analysis" : String(group.collector),
             String(group.count),
             <details key={String(group.collector)}>
               <summary>Inspect samples</summary>

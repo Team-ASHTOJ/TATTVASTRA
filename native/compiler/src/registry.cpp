@@ -58,6 +58,15 @@ Type dataset(const std::string &domain) {
                    {"created_at", scalar(TypeKind::Time, true)},
                    {"is_directory", scalar(TypeKind::Bool, true)},
                    {"sha256", scalar(TypeKind::Hash, true)}};
+  if (domain == "YaraMatch")
+    type.fields = {{"matched", scalar(TypeKind::Bool, false)},
+                   {"rule", scalar(TypeKind::String, false)},
+                   {"path", scalar(TypeKind::Path, false)},
+                   {"ruleset", scalar(TypeKind::String, false)},
+                   {"ruleset_sha256", scalar(TypeKind::Hash, false)},
+                   {"file_sha256", scalar(TypeKind::Hash, true)},
+                   {"size", scalar(TypeKind::Bytes, true)},
+                   {"files_scanned", scalar(TypeKind::Int, true)}};
   if (domain == "Event")
     type.fields = {
         {"event_id", scalar(TypeKind::String, false)}, {"timestamp", scalar(TypeKind::Time, true)},
@@ -230,6 +239,13 @@ const std::map<std::string, CollectorSpec> &collectors() {
         {"fields", "where", "limit", "path"},
         {},
         true}},
+      {"yara",
+       {"YARA_SCAN",
+        "YaraMatch",
+        "adapter.yara",
+        {"path", "ruleset", "recursive", "limit"},
+        {},
+        true}},
       {"directories",
        {"DIRECTORY_ENUMERATE",
         "File",
@@ -319,6 +335,7 @@ const std::map<std::string, OpcodeSpec> &opcodes() {
       {"FILE_METADATA", {"FILESYSTEM", "read", "bounded_inventory", 0, 0}},
       {"FILE_HASH", {"FILESYSTEM", "read", "bounded_content_io", 0, 0}},
       {"FILE_COLLECT", {"FILESYSTEM", "read", "bounded_content_io", 0, 0}},
+      {"YARA_SCAN", {"FILESYSTEM", "read", "bounded_content_io", 0, 0}},
       {"DIRECTORY_ENUMERATE", {"FILESYSTEM", "read", "bounded_inventory", 0, 0}},
       {"EVENT_QUERY", {"LOGS", "read", "bounded_inventory", 0, 0}},
       {"EVENT_FILTER", {"LOGS", "pure", "linear_transform", 1, 32768}},
@@ -352,7 +369,8 @@ const std::set<std::string> &capability_names() {
   static const std::set<std::string> names = {
       "python.interop", "system.read",         "users.read",         "process.read",
       "network.read",   "filesystem.metadata", "filesystem.content", "filesystem.read",
-      "logs.read",      "persistence.read",    "services.read",      "drivers.read"};
+      "logs.read",      "persistence.read",    "services.read",      "drivers.read",
+      "adapter.yara"};
   return names;
 }
 } // namespace jocky

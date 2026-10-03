@@ -210,8 +210,10 @@ The fixed registry covers:
 Linux uses procfs/sysfs and fixed read-only utilities where necessary. Windows
 uses fixed non-interactive PowerShell/CIM/NetTCPIP calls; that code cross-builds,
 but live Windows acceptance remains open. Errors become `PARTIAL`, `DENIED` or
-`UNAVAILABLE`, never a fabricated empty success. YARA, Volatility 3 and osquery
-are detected but optional-adapter execution is not operational.
+`UNAVAILABLE`, never a fabricated empty success. A bounded YARA collector is
+implemented for static approved rulesets and approved file roots, but its live
+Linux-container acceptance is BLOCKED_ENVIRONMENT on this development host.
+Volatility 3 and osquery remain detected but execution-unavailable.
 
 ## 10. Multi-endpoint investigations
 

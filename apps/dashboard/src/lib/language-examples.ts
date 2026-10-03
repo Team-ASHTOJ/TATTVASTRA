@@ -1,5 +1,22 @@
 export const languageExamples = [
   {
+    name: "YARA File Triage",
+    source: `case "YARA File Triage" {
+  hunt "yara-file-triage" {
+    targets { group "AUTHORIZED" os windows | linux }
+    runtime { backend llvm execution memory }
+    capabilities { filesystem.content adapter.yara }
+    budget { cpu <= 20% memory <= 256MB io <= 64MB duration <= 60s }
+    collect yara {
+      path path("/opt/jocky/evidence")
+      ruleset "approved-demo"
+      recursive true
+      limit 128
+    } as yara_matches
+  }
+}`,
+  },
+  {
     name: "System & Identity Baseline",
     source: `case "Baseline triage" {
   hunt "system-identity-baseline" {

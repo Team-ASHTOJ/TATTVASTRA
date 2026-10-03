@@ -130,7 +130,10 @@ TEST(Semantics, BudgetRuntimeAndVariant) {
 }
 TEST(Capabilities, EveryCollectorRequiresGrant) {
   for (const auto &[name, spec] : collectors()) {
-    auto body = "collect " + name + (spec.path_required ? " { path path(\"/approved\") }" : "") +
+    auto body = "collect " + name +
+                (name == "yara" ? " { path path(\"/approved\") ruleset \"approved-demo\" limit 10 }"
+                 : spec.path_required ? " { path path(\"/approved\") }"
+                                      : "") +
                 " as rows";
     rejects(body, "E241");
     EXPECT_NO_THROW(compile("capabilities { " + spec.capability +
@@ -138,6 +141,32 @@ TEST(Capabilities, EveryCollectorRequiresGrant) {
                             " } " + body))
         << name;
   }
+}
+TEST(Capabilities, YaraRequiresBoundedApprovedInputsAndBothGrants) {
+  const std::string grants = "capabilities { adapter.yara filesystem.content } ";
+  rejects(grants + "collect yara { ruleset \"approved-demo\" limit 10 } as matches", "E230");
+  rejects(grants + "collect yara { path path(\"/approved\") limit 10 } as matches", "E230");
+  rejects(grants + "collect yara { path path(\"/approved\") ruleset \"approved-demo\" } as matches",
+          "E230");
+  rejects("capabilities { adapter.yara } collect yara { path path(\"/approved\") ruleset "
+          "\"approved-demo\" limit 10 } as matches",
+          "E241");
+  rejects("capabilities { filesystem.content } collect yara { path path(\"/approved\") ruleset "
+          "\"approved-demo\" limit 10 } as matches",
+          "E241");
+  rejects(grants +
+              "collect yara { path path(\"/approved\") ruleset path(\"bad\") limit 10 } as matches",
+          "E230");
+  rejects(grants + "collect yara { path path(\"/approved\") ruleset \"approved-demo\" nonsense "
+                   "true limit 10 } as matches",
+          "E230");
+  auto module = compile(grants + "collect yara { path path(\"/approved\") ruleset "
+                                 "\"approved-demo\" recursive true limit 10 } as matches");
+  ASSERT_EQ(module.instructions.size(), 1U);
+  EXPECT_EQ(module.instructions[0].opcode, "YARA_SCAN");
+  EXPECT_EQ(module.instructions[0].result_type.domain, "YaraMatch");
+  EXPECT_TRUE(module.instructions[0].result_type.fields.contains("rule"));
+  EXPECT_EQ(module.instructions[0].attributes.getInteger("scan_limit"), 10);
 }
 TEST(Capabilities, HashNeedsContentAndLegacyIsNarrow) {
   rejects("capabilities { process.read } collect processes { fields [pid, sha256] } as proc",

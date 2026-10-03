@@ -18,6 +18,7 @@ use crate::model::{
 mod linux;
 #[cfg(windows)]
 mod windows;
+mod yara;
 
 const COLLECTORS: &[(&str, &str)] = &[
     ("system", "system.read"),
@@ -101,6 +102,9 @@ impl CollectorContext {
 }
 
 pub fn required_capability(name: &str) -> Option<&'static str> {
+    if name == "yara" {
+        return Some("adapter.yara");
+    }
     COLLECTORS
         .iter()
         .find_map(|(collector, capability)| (*collector == name).then_some(*capability))
@@ -121,11 +125,7 @@ pub fn catalog() -> Vec<CollectorDescriptor> {
             }
         })
         .collect::<Vec<_>>();
-    for (name, executable) in [
-        ("yara", "yara"),
-        ("volatility3", "vol.py"),
-        ("osquery", "osqueryi"),
-    ] {
+    for (name, executable) in [("volatility3", "vol.py"), ("osquery", "osqueryi")] {
         let available = command_available(executable);
         result.push(CollectorDescriptor {
             name: name.to_owned(),
@@ -143,6 +143,7 @@ pub fn catalog() -> Vec<CollectorDescriptor> {
             platform: platform.clone(),
         });
     }
+    result.push(yara::descriptor(platform));
     result
 }
 
@@ -187,7 +188,8 @@ pub fn collect(request: &CollectorRequest, context: &mut CollectorContext) -> Co
     let before_bytes = context.bytes_read;
     let result = match request.collector.as_str() {
         "files" | "file_metadata" | "file_hash" => collect_files(request, context),
-        "yara" | "volatility3" | "osquery" => Ok(CollectorOutput::unavailable(
+        "yara" => yara::collect(request, context),
+        "volatility3" | "osquery" => Ok(CollectorOutput::unavailable(
             &request.collector,
             "ADAPTER_INPUT_REQUIRED",
             "optional adapters require an explicitly supplied, policy-approved input",
@@ -222,7 +224,8 @@ fn platform_collect(
 
 fn error_output(collector: &str, error: AgentError) -> CollectorOutput {
     let (availability, code) = match &error {
-        AgentError::Rejected { code, .. } if *code == "PATH_DENIED" => {
+        AgentError::Rejected { code, .. }
+            if matches!(*code, "PATH_DENIED" | "RULESET_NOT_APPROVED" | "RULESET_INVALID") => {
             (Availability::Denied, *code)
         }
         AgentError::Rejected { code, .. } => (Availability::Partial, *code),
@@ -242,6 +245,7 @@ fn error_output(collector: &str, error: AgentError) -> CollectorOutput {
         }],
         files_examined: 0,
         bytes_read: 0,
+        metadata: None,
     }
 }
 
@@ -331,6 +335,7 @@ fn collect_files(
         issues,
         files_examined: 0,
         bytes_read: 0,
+        metadata: None,
     })
 }
 
@@ -385,6 +390,7 @@ pub(crate) fn output(collector: &str, records: Vec<Value>) -> CollectorOutput {
         issues: Vec::new(),
         files_examined: 0,
         bytes_read: 0,
+        metadata: None,
     }
 }
 

@@ -369,6 +369,7 @@ JOCKY_COLLECTOR(jocky_rt_file_hash, JOCKY_OP_FILE_HASH, "FILE_HASH")
 JOCKY_COLLECTOR(jocky_rt_services, JOCKY_OP_SERVICE_ENUMERATE, "SERVICE_ENUMERATE")
 JOCKY_COLLECTOR(jocky_rt_events, JOCKY_OP_EVENT_QUERY, "EVENT_QUERY")
 JOCKY_COLLECTOR(jocky_rt_drivers, JOCKY_OP_DRIVER_ENUMERATE, "DRIVER_ENUMERATE")
+JOCKY_COLLECTOR(jocky_rt_yara, JOCKY_OP_YARA_SCAN, "YARA_SCAN")
 
 jocky_status jocky_rt_analysis(jocky_context *context, uint32_t instruction_id, const char *opcode,
                                size_t opcode_size, const uint8_t *config, size_t config_size,

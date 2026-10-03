@@ -21,6 +21,7 @@ def graph(db: Session, case_id: UUID, user: User, *, persist: bool = False) -> d
     network = nx.MultiDiGraph()
     processes: dict[tuple[str, str, str], list[Observation]] = {}
     connections: list[Observation] = []
+    yara_matches: list[Observation] = []
     for observation in observations:
         endpoint = str(observation.endpoint_id)
         data = observation.document["data"]
@@ -33,6 +34,11 @@ def graph(db: Session, case_id: UUID, user: User, *, persist: bool = False) -> d
             "observation_id": str(observation.id),
         }
         network.add_node(endpoint, type="Endpoint", **meta)
+        if observation.collector == "yara" and data.get("matched") is True:
+            yara_matches.append(observation)
+            node = f"file:{observation.id}"
+            network.add_node(node, type="File", path=data.get("path"), **meta)
+            network.add_edge(endpoint, node, relationship="Endpoint -> File", **meta)
         if observation.collector == "processes" and pid is not None:
             processes.setdefault(process_key, []).append(observation)
             network.add_node(process, type="Process", pid=pid, **meta)
@@ -85,6 +91,51 @@ def graph(db: Session, case_id: UUID, user: User, *, persist: bool = False) -> d
                 relationship=f"{'Endpoint' if kind == 'Driver' else 'Process'} -> {kind}",
                 **meta,
             )
+
+    for observation in yara_matches:
+        if observation.simulation:
+            continue
+        data = observation.document["data"]
+        rule = data.get("rule")
+        if not isinstance(rule, str) or not rule:
+            continue
+        rule_key = f"yara-match:{observation.id}"
+        finding = db.scalar(
+            select(Finding).where(Finding.case_id == case_id, Finding.rule_key == rule_key)
+        )
+        if finding is None:
+            if not persist:
+                continue
+            finding = Finding(
+                **provenance(observation),
+                case_id=case_id,
+                rule_key=rule_key,
+                title=f"YARA signature match: {rule}"[:200],
+                severity="MEDIUM",
+                observation_ids=[str(observation.id)],
+            )
+            db.add(finding)
+            db.flush()
+            publish(
+                db,
+                user,
+                "finding.created",
+                finding.id,
+                simulation=finding.simulation,
+                simulation_label=finding.simulation_label,
+            )
+        node = "finding:" + str(finding.id)
+        network.add_node(node, type="Finding", simulation=False, simulation_label=None)
+        network.add_node(
+            str(observation.id), type="Observation", simulation=False, simulation_label=None
+        )
+        network.add_edge(
+            node,
+            str(observation.id),
+            relationship="Finding -> Observation",
+            simulation=False,
+            simulation_label=None,
+        )
 
     for connection in connections:
         data = connection.document["data"]
